@@ -58,7 +58,6 @@ fn handle_events() -> io::Result<bool> {
 }
 
 fn ui(size: u16, frame: &mut Frame) {
-
     let main_layout = Layout::new(
         Direction::Vertical,
         [
@@ -81,7 +80,10 @@ fn ui(size: u16, frame: &mut Frame) {
 
     let layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(size), Constraint::Percentage(100 - size)])
+        .constraints([
+            Constraint::Percentage(size),
+            Constraint::Percentage(100 - size),
+        ])
         .split(main_layout[1]);
 
     frame.render_widget(
