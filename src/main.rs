@@ -1,6 +1,6 @@
-// fn main() {
-//     println!("Hello, world!");
-// }
+pub mod tui;
+pub mod utils;
+
 use std::io::{self, stdout};
 
 use crossterm::{
