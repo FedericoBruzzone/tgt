@@ -9,9 +9,7 @@ use std::io::{self, stderr};
 //     task::JoinHandle,
 // };
 
-use crate::utils;
-
-// pub type Frame<'a> = ratatui::Frame<'a, CrosstermBackend<std::io::Stderr>>;
+use crate::utils::unwrap_or_fail;
 
 pub struct Tui {
   pub terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stderr>>,
@@ -21,40 +19,52 @@ pub struct Tui {
 
 impl Tui {
   pub fn new() -> Result<Self, io::Error> {
-    let terminal = ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(stderr()))
-      .unwrap_or_else(|e| utils::fail_with("Failed to create terminal", e));
+    let terminal = unwrap_or_fail(
+      ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(stderr())),
+      "Failed to create terminal",
+    );
     let mouse = false;
     let paste = false;
     Ok(Self { terminal, mouse, paste })
   }
 
   pub fn enter(&self) -> Result<(), io::Error> {
-    crossterm::terminal::enable_raw_mode().unwrap_or_else(|e| utils::fail_with("Failed to enable raw mode", e));
-    crossterm::execute!(std::io::stderr(), EnterAlternateScreen, cursor::Hide)
-      .unwrap_or_else(|e| utils::fail_with("Failed to enter alternate screen", e));
+    unwrap_or_fail(crossterm::terminal::enable_raw_mode(), "Failed to enable raw mode");
+    unwrap_or_fail(crossterm::execute!(std::io::stderr(), EnterAlternateScreen, cursor::Hide), "Failed to hide cursor");
     if self.mouse {
-      crossterm::execute!(std::io::stderr(), EnableMouseCapture)
-        .unwrap_or_else(|e| utils::fail_with("Failed to enable mouse capture", e));
+      unwrap_or_fail(crossterm::execute!(std::io::stderr(), EnableMouseCapture), "Failed to enable mouse capture");
     }
     if self.paste {
-      crossterm::execute!(std::io::stderr(), crossterm::event::EnableBracketedPaste)
-        .unwrap_or_else(|e| utils::fail_with("Failed to enable paste", e));
+      unwrap_or_fail(
+        crossterm::execute!(std::io::stderr(), crossterm::event::EnableBracketedPaste),
+        "Failed to enable paste",
+      );
     }
     Ok(())
   }
 
   pub fn exit(&self) -> Result<(), io::Error> {
-    crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, DisableMouseCapture, cursor::Show)
-      .unwrap_or_else(|e| utils::fail_with("Failed to leave alternate screen", e));
-    crossterm::terminal::disable_raw_mode().unwrap_or_else(|e| utils::fail_with("Failed to disable raw mode", e));
+    unwrap_or_fail(crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show), "Failed to show cursor");
+    unwrap_or_fail(crossterm::terminal::disable_raw_mode(), "Failed to disable raw mode");
+    if self.mouse {
+      unwrap_or_fail(crossterm::execute!(std::io::stderr(), DisableMouseCapture), "Failed to disable mouse capture");
+    }
+    if self.paste {
+      unwrap_or_fail(
+        crossterm::execute!(std::io::stderr(), crossterm::event::DisableBracketedPaste),
+        "Failed to disable paste",
+      );
+    }
     Ok(())
   }
 
   pub fn suspend(&self) -> Result<(), io::Error> {
     self.exit()?;
     #[cfg(not(windows))]
-    signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)
-      .unwrap_or_else(|e| utils::fail_with("Failed to suspend", e));
+    unwrap_or_fail(
+      signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP),
+      "Failed to leave alternate screen",
+    );
     Ok(())
   }
 
