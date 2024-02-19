@@ -1,4 +1,4 @@
-use crate::tui;
+use crate::{action, tui, utils};
 use crossterm::event;
 use ratatui::{
   layout,
@@ -18,13 +18,24 @@ impl App {
   }
 
   pub async fn run(&mut self) -> Result<(), io::Error> {
-    let (action_tx, mut action_rx) = mpsc::unbounded_channel();
+    let (action_tx, mut action_rx) = mpsc::unbounded_channel::<action::Action>();
     let mut tui = tui::Tui::new()?.mouse(true).paste(true);
     tui.enter()?;
 
     loop {
       if let Some(event) = tui.next().await {
-        match event {}
+        match event {
+          tui::Event::Quit => {
+            utils::unwrap_or_fail(action_tx.send(action::Action::Quit), "Failed to send quit action");
+            // TODO: Remove this break and handle the quit action properly
+            break;
+          },
+          tui::Event::Key(key) => utils::unwrap_or_fail(
+            action_tx.send(action::Action::Key(key)),
+            format!("Failed to send key action: {:?}", key).as_str(),
+          ),
+          _ => {},
+        }
       }
     }
 

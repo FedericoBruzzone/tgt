@@ -1,4 +1,4 @@
-use crate::utils::unwrap_or_fail;
+use crate::utils;
 use crossterm::{cursor, event, terminal};
 use futures::{FutureExt, StreamExt};
 use ratatui::backend;
@@ -22,8 +22,10 @@ pub struct Tui {
 
 impl Tui {
   pub fn new() -> Result<Self, io::Error> {
-    let terminal =
-      unwrap_or_fail(ratatui::Terminal::new(backend::CrosstermBackend::new(io::stderr())), "Failed to create terminal");
+    let terminal = utils::unwrap_or_fail(
+      ratatui::Terminal::new(backend::CrosstermBackend::new(io::stderr())),
+      "Failed to create terminal",
+    );
     let task = tokio::spawn(async {});
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let mouse = false;
@@ -32,32 +34,38 @@ impl Tui {
   }
 
   pub fn enter(&mut self) -> Result<(), io::Error> {
-    unwrap_or_fail(terminal::enable_raw_mode(), "Failed to enable raw mode");
-    unwrap_or_fail(
+    utils::unwrap_or_fail(terminal::enable_raw_mode(), "Failed to enable raw mode");
+    utils::unwrap_or_fail(
       crossterm::execute!(io::stderr(), terminal::EnterAlternateScreen, cursor::Hide),
       "Failed to hide cursor",
     );
     if self.mouse {
-      unwrap_or_fail(crossterm::execute!(io::stderr(), event::EnableMouseCapture), "Failed to enable mouse capture");
+      utils::unwrap_or_fail(
+        crossterm::execute!(io::stderr(), event::EnableMouseCapture),
+        "Failed to enable mouse capture",
+      );
     }
     if self.paste {
-      unwrap_or_fail(crossterm::execute!(io::stderr(), event::EnableBracketedPaste), "Failed to enable paste");
+      utils::unwrap_or_fail(crossterm::execute!(io::stderr(), event::EnableBracketedPaste), "Failed to enable paste");
     }
     self.start();
     Ok(())
   }
 
   pub fn exit(&self) -> Result<(), io::Error> {
-    unwrap_or_fail(
+    utils::unwrap_or_fail(
       crossterm::execute!(io::stderr(), terminal::LeaveAlternateScreen, cursor::Show),
       "Failed to show cursor",
     );
-    unwrap_or_fail(terminal::disable_raw_mode(), "Failed to disable raw mode");
+    utils::unwrap_or_fail(terminal::disable_raw_mode(), "Failed to disable raw mode");
     if self.mouse {
-      unwrap_or_fail(crossterm::execute!(io::stderr(), event::DisableMouseCapture), "Failed to disable mouse capture");
+      utils::unwrap_or_fail(
+        crossterm::execute!(io::stderr(), event::DisableMouseCapture),
+        "Failed to disable mouse capture",
+      );
     }
     if self.paste {
-      unwrap_or_fail(crossterm::execute!(io::stderr(), event::DisableBracketedPaste), "Failed to disable paste");
+      utils::unwrap_or_fail(crossterm::execute!(io::stderr(), event::DisableBracketedPaste), "Failed to disable paste");
     }
     Ok(())
   }
@@ -65,7 +73,10 @@ impl Tui {
   pub fn suspend(&mut self) -> Result<(), io::Error> {
     self.exit()?;
     #[cfg(not(windows))]
-    unwrap_or_fail(signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP), "Failed to raise SIGTSTP");
+    utils::unwrap_or_fail(
+      signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP),
+      "Failed to raise SIGTSTP",
+    );
     Ok(())
   }
 
@@ -96,7 +107,7 @@ impl Tui {
     let _event_tx = self.event_tx.clone();
     self.task = tokio::spawn(async move {
       let mut reader = event::EventStream::new();
-      unwrap_or_fail(_event_tx.send(Event::Init), "Failed to send init event");
+      utils::unwrap_or_fail(_event_tx.send(Event::Init), "Failed to send init event");
       loop {
         let crossterm_event = reader.next().fuse();
 
@@ -107,8 +118,12 @@ impl Tui {
                           match event {
                               event::Event::Key(key) => {
                                   if key.kind == event::KeyEventKind::Press {
-                                      unwrap_or_fail(_event_tx.send(Event::Key(key)),
-                                                     format!("Failed to send key event: {:?}", key).as_str());
+                                      if key.code == event::KeyCode::Char('q') {
+                                          utils::unwrap_or_fail(_event_tx.send(Event::Quit), "Failed to send quit event");
+                                      } else {
+                                          utils::unwrap_or_fail(_event_tx.send(Event::Key(key)),
+                                                         format!("Failed to send key event: {:?}", key).as_str());
+                                      }
                                   }
                               },
                               _ => unimplemented!()

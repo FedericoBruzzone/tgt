@@ -1,5 +1,6 @@
 use std::io;
 
+pub mod action;
 pub mod app;
 pub mod tui;
 pub mod utils;
