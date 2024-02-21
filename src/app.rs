@@ -64,7 +64,7 @@ impl App {
 
   pub async fn run(&mut self) -> Result<(), AppError> {
     let (action_tx, mut action_rx) = mpsc::unbounded_channel::<Action>();
-    let mut tui = Tui::new()?.frame_rate(60.0).mouse(true).paste(true);
+    let mut tui = Tui::new()?.frame_rate(60.0).mouse(false).paste(true);
     tui.enter()?;
 
     for component in self.components.iter_mut() {

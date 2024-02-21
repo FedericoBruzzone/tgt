@@ -31,25 +31,26 @@ impl Component for Home {
   }
 
   fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
-    let size = 20;
+    let size = 15;
+    let size_prompt = 90;
 
     let main_layout = layout::Layout::new(
       layout::Direction::Vertical,
       [
         layout::Constraint::Length(1),
-        layout::Constraint::Min(0),
+        layout::Constraint::Min(10),
         layout::Constraint::Length(1),
       ],
     )
     .split(frame.size());
     frame.render_widget(
-      block::Block::new().borders(Borders::TOP).title("Title Bar"),
+      block::Block::new().borders(Borders::TOP).title("TG-TUI"),
       main_layout[0],
     );
     frame.render_widget(
       block::Block::new()
         .borders(Borders::BOTTOM)
-        .title(title::Title::from("Status Bar").position(title::Position::Bottom)),
+        .title(title::Title::from("Status").position(title::Position::Bottom)),
       main_layout[2],
     );
 
@@ -61,11 +62,19 @@ impl Component for Home {
       ])
       .split(main_layout[1]);
 
+    let sub_layout = layout::Layout::default()
+      .direction(layout::Direction::Vertical)
+      .constraints([
+        layout::Constraint::Percentage(size_prompt),
+        layout::Constraint::Percentage(100 - size_prompt),
+      ])
+      .split(layout[1]);
+
     frame.render_widget(
       block::Block::new()
         .border_set(border::PLAIN)
         .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-        .title("Left Block"),
+        .title("Chats"),
       layout[0],
     );
 
@@ -77,10 +86,78 @@ impl Component for Home {
     frame.render_widget(
       block::Block::new()
         .border_set(top_right_border_set)
-        .borders(Borders::ALL)
-        .title("Top Right Block"),
-      layout[1],
+        .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+        .title("Name"),
+      sub_layout[0],
+    );
+
+    let collapsed_top_and_left_border_set = border::Set {
+      top_left: line::NORMAL.vertical_right,
+      top_right: line::NORMAL.vertical_left,
+      bottom_left: line::NORMAL.horizontal_up,
+      ..border::PLAIN
+    };
+    frame.render_widget(
+      block::Block::new()
+        .border_set(collapsed_top_and_left_border_set)
+        .borders(Borders::ALL),
+      // .title("Bottom Right Block"),
+      sub_layout[1],
     );
     Ok(())
   }
+
+  // fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
+  //   let size = 20;
+  //
+  //   let main_layout = layout::Layout::new(
+  //     layout::Direction::Vertical,
+  //     [
+  //       layout::Constraint::Length(1),
+  //       layout::Constraint::Min(0),
+  //       layout::Constraint::Length(1),
+  //     ],
+  //   )
+  //   .split(frame.size());
+  //   frame.render_widget(
+  //     block::Block::new().borders(Borders::TOP).title("Title Bar"),
+  //     main_layout[0],
+  //   );
+  //   frame.render_widget(
+  //     block::Block::new()
+  //       .borders(Borders::BOTTOM)
+  //       .title(title::Title::from("Status Bar").position(title::Position::Bottom)),
+  //     main_layout[2],
+  //   );
+  //
+  //   let layout = layout::Layout::default()
+  //     .direction(layout::Direction::Horizontal)
+  //     .constraints([
+  //       layout::Constraint::Percentage(size),
+  //       layout::Constraint::Percentage(100 - size),
+  //     ])
+  //     .split(main_layout[1]);
+  //
+  //   frame.render_widget(
+  //     block::Block::new()
+  //       .border_set(border::PLAIN)
+  //       .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
+  //       .title("Left Block"),
+  //     layout[0],
+  //   );
+  //
+  //   let top_right_border_set = border::Set {
+  //     top_left: line::NORMAL.horizontal_down,
+  //     bottom_left: line::NORMAL.horizontal_up,
+  //     ..border::PLAIN
+  //   };
+  //   frame.render_widget(
+  //     block::Block::new()
+  //       .border_set(top_right_border_set)
+  //       .borders(Borders::ALL)
+  //       .title("Top Right Block"),
+  //     layout[1],
+  //   );
+  //   Ok(())
+  // }
 }

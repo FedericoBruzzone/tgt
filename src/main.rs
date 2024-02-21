@@ -1,5 +1,3 @@
-use std::io;
-
 use app::AppError;
 
 pub mod action;
