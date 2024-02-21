@@ -21,10 +21,7 @@ impl Home {
 }
 
 impl Component for Home {
-  fn register_action_handler(
-    &mut self,
-    tx: mpsc::UnboundedSender<Action>,
-  ) -> io::Result<()> {
+  fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
     self.command_tx = Some(tx);
     Ok(())
   }
@@ -33,11 +30,7 @@ impl Component for Home {
     Ok(None)
   }
 
-  fn draw(
-    &mut self,
-    frame: &mut ratatui::Frame<'_>,
-    area: layout::Rect,
-  ) -> io::Result<()> {
+  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
     let size = 20;
 
     let main_layout = layout::Layout::new(
@@ -54,9 +47,9 @@ impl Component for Home {
       main_layout[0],
     );
     frame.render_widget(
-      block::Block::new().borders(Borders::BOTTOM).title(
-        title::Title::from("Status Bar").position(title::Position::Bottom),
-      ),
+      block::Block::new()
+        .borders(Borders::BOTTOM)
+        .title(title::Title::from("Status Bar").position(title::Position::Bottom)),
       main_layout[2],
     );
 

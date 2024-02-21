@@ -20,10 +20,7 @@ pub trait Component {
   ///
   /// * `Result<()>` - An Ok result or an error.
   #[allow(unused_variables)]
-  fn register_action_handler(
-    &mut self,
-    tx: mpsc::UnboundedSender<Action>,
-  ) -> io::Result<()> {
+  fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
     Ok(())
   }
   /// Initialize the component with a specified area if necessary.
@@ -48,10 +45,7 @@ pub trait Component {
   /// # Returns
   ///
   /// * `Result<Option<Action>>` - An action to be processed or none.
-  fn handle_events(
-    &mut self,
-    event: Option<Event>,
-  ) -> io::Result<Option<Action>> {
+  fn handle_events(&mut self, event: Option<Event>) -> io::Result<Option<Action>> {
     let r = match event {
       Some(Event::Key(key_event)) => self.handle_key_events(key_event)?,
       // Some(Event::Mouse(mouse_event)) => {
@@ -71,10 +65,7 @@ pub trait Component {
   ///
   /// * `Result<Option<Action>>` - An action to be processed or none.
   #[allow(unused_variables)]
-  fn handle_key_events(
-    &mut self,
-    key: event::KeyEvent,
-  ) -> io::Result<Option<Action>> {
+  fn handle_key_events(&mut self, key: event::KeyEvent) -> io::Result<Option<Action>> {
     Ok(None)
   }
   /// Handle mouse events and produce actions if necessary.
@@ -87,10 +78,7 @@ pub trait Component {
   ///
   /// * `Result<Option<Action>>` - An action to be processed or none.
   #[allow(unused_variables)]
-  fn handle_mouse_events(
-    &mut self,
-    mouse: event::MouseEvent,
-  ) -> io::Result<Option<Action>> {
+  fn handle_mouse_events(&mut self, mouse: event::MouseEvent) -> io::Result<Option<Action>> {
     Ok(None)
   }
   /// Update the state of the component based on a received action. (REQUIRED)
@@ -116,9 +104,5 @@ pub trait Component {
   /// # Returns
   ///
   /// * `Result<()>` - An Ok result or an error.
-  fn draw(
-    &mut self,
-    f: &mut ratatui::Frame<'_>,
-    area: layout::Rect,
-  ) -> io::Result<()>;
+  fn draw(&mut self, f: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()>;
 }

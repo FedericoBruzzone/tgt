@@ -1,23 +1,35 @@
-use crate::utils;
-use crossterm::{cursor, event, terminal};
+use crossterm::{
+  cursor,
+  event::{
+    DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
+    EventStream, KeyCode, KeyEvent, KeyEventKind,
+  },
+  terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use futures::{FutureExt, StreamExt};
-use ratatui::backend;
-use std::{io, time};
-use tokio::{sync::mpsc, task};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::{
+  io::{self, Stderr},
+  time,
+};
+use tokio::{
+  sync::mpsc::{self, error::SendError, UnboundedReceiver, UnboundedSender},
+  task::JoinHandle,
+};
 
 #[derive(Clone)]
 pub enum Event {
   Init,
   Quit,
   Render,
-  Key(event::KeyEvent),
+  Key(KeyEvent),
 }
 
 pub struct Tui {
-  pub terminal: ratatui::Terminal<backend::CrosstermBackend<std::io::Stderr>>,
-  pub task: task::JoinHandle<()>,
-  pub event_rx: mpsc::UnboundedReceiver<Event>,
-  pub event_tx: mpsc::UnboundedSender<Event>,
+  pub terminal: Terminal<CrosstermBackend<Stderr>>,
+  pub task: JoinHandle<Result<(), SendError<Event>>>,
+  pub event_rx: UnboundedReceiver<Event>,
+  pub event_tx: UnboundedSender<Event>,
   pub frame_rate: f64,
   pub mouse: bool,
   pub paste: bool,
@@ -25,11 +37,8 @@ pub struct Tui {
 
 impl Tui {
   pub fn new() -> Result<Self, io::Error> {
-    let terminal = utils::unwrap_or_fail(
-      ratatui::Terminal::new(backend::CrosstermBackend::new(io::stderr())),
-      "Failed to create terminal",
-    );
-    let task = tokio::spawn(async {});
+    let terminal = ratatui::Terminal::new(CrosstermBackend::new(io::stderr()))?;
+    let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let frame_rate = 60.0;
     let mouse = false;
@@ -46,58 +55,26 @@ impl Tui {
   }
 
   pub fn enter(&mut self) -> Result<(), io::Error> {
-    utils::unwrap_or_fail(
-      terminal::enable_raw_mode(),
-      "Failed to enable raw mode",
-    );
-    utils::unwrap_or_fail(
-      crossterm::execute!(
-        io::stderr(),
-        terminal::EnterAlternateScreen,
-        cursor::Hide
-      ),
-      "Failed to hide cursor",
-    );
+    terminal::enable_raw_mode()?;
+    crossterm::execute!(io::stderr(), EnterAlternateScreen, cursor::Hide)?;
     if self.mouse {
-      utils::unwrap_or_fail(
-        crossterm::execute!(io::stderr(), event::EnableMouseCapture),
-        "Failed to enable mouse capture",
-      );
+      crossterm::execute!(io::stderr(), EnableMouseCapture)?;
     }
     if self.paste {
-      utils::unwrap_or_fail(
-        crossterm::execute!(io::stderr(), event::EnableBracketedPaste),
-        "Failed to enable paste",
-      );
+      crossterm::execute!(io::stderr(), EnableBracketedPaste)?;
     }
     self.start();
     Ok(())
   }
 
   pub fn exit(&self) -> Result<(), io::Error> {
-    utils::unwrap_or_fail(
-      crossterm::execute!(
-        io::stderr(),
-        terminal::LeaveAlternateScreen,
-        cursor::Show
-      ),
-      "Failed to show cursor",
-    );
-    utils::unwrap_or_fail(
-      terminal::disable_raw_mode(),
-      "Failed to disable raw mode",
-    );
+    terminal::disable_raw_mode()?;
+    crossterm::execute!(io::stderr(), LeaveAlternateScreen, cursor::Show)?;
     if self.mouse {
-      utils::unwrap_or_fail(
-        crossterm::execute!(io::stderr(), event::DisableMouseCapture),
-        "Failed to disable mouse capture",
-      );
+      crossterm::execute!(io::stderr(), DisableMouseCapture)?;
     }
     if self.paste {
-      utils::unwrap_or_fail(
-        crossterm::execute!(io::stderr(), event::DisableBracketedPaste),
-        "Failed to disable paste",
-      );
+      crossterm::execute!(io::stderr(), DisableBracketedPaste)?;
     }
     Ok(())
   }
@@ -105,10 +82,7 @@ impl Tui {
   pub fn suspend(&mut self) -> Result<(), io::Error> {
     self.exit()?;
     #[cfg(not(windows))]
-    utils::unwrap_or_fail(
-      signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP),
-      "Failed to raise SIGTSTP",
-    );
+    signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
     Ok(())
   }
 
@@ -145,13 +119,10 @@ impl Tui {
     let render_delay = time::Duration::from_secs_f64(1.0 / self.frame_rate);
 
     self.task = tokio::spawn(async move {
-      let mut reader = event::EventStream::new();
+      let mut reader = EventStream::new();
       let mut render_interval = tokio::time::interval(render_delay);
 
-      utils::unwrap_or_fail(
-        _event_tx.send(Event::Init),
-        "Failed to send init event",
-      );
+      _event_tx.send(Event::Init)?;
       loop {
         let crossterm_event = reader.next().fuse();
         let render_tick = render_interval.tick();
@@ -161,19 +132,12 @@ impl Tui {
             match maybe_event {
               Some(Ok(event)) => {
                 match event {
-                  event::Event::Key(key) => {
-                    if key.kind == event::KeyEventKind::Press {
-                      if key.code == event::KeyCode::Char('q') {
-                        utils::unwrap_or_fail(
-                          _event_tx.send(Event::Quit),
-                          "Failed to send quit event"
-                        );
+                  CrosstermEvent::Key(key) => {
+                    if key.kind == KeyEventKind::Press {
+                      if key.code == KeyCode::Char('q') {
+                        _event_tx.send(Event::Quit)?;
                       } else {
-                        utils::unwrap_or_fail(
-                          _event_tx.send(Event::Key(key)),
-                          format!("Failed to send key event: {:?}", key)
-                            .as_str()
-                        );
+                        _event_tx.send(Event::Key(key))?;
                       }
                     }
                   },
@@ -184,10 +148,7 @@ impl Tui {
             }
           },
           _ = render_tick => {
-            utils::unwrap_or_fail(
-              _event_tx.send(Event::Render),
-              "Failed to send render event"
-            );
+            _event_tx.send(Event::Render)?;
           }
         }
       }
