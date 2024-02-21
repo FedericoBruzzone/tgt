@@ -6,4 +6,5 @@ pub enum Action {
   Quit,
   Render,
   Key(event::KeyEvent),
+  Resize(u16, u16),
 }

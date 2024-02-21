@@ -3,6 +3,7 @@ use crate::{
   components::{home::Home, Component},
   tui::{Event, Tui},
 };
+use ratatui::layout::Rect;
 use std::io;
 use tokio::sync::mpsc::{self, error::SendError};
 
@@ -78,6 +79,7 @@ impl App {
           Event::Quit => action_tx.send(Action::Quit)?,
           Event::Key(key) => action_tx.send(Action::Key(key))?,
           Event::Render => action_tx.send(Action::Render)?,
+          Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
           _ => {}
         }
         for component in self.components.iter_mut() {
@@ -90,6 +92,14 @@ impl App {
       while let Ok(action) = action_rx.try_recv() {
         match action {
           Action::Render => {
+            tui.terminal.draw(|f| {
+              for component in self.components.iter_mut() {
+                component.draw(f, f.size()).unwrap(); // TODO: handle with AppError
+              }
+            })?;
+          }
+          Action::Resize(width, height) => {
+            tui.terminal.resize(Rect::new(0, 0, width, height))?;
             tui.terminal.draw(|f| {
               for component in self.components.iter_mut() {
                 component.draw(f, f.size()).unwrap(); // TODO: handle with AppError

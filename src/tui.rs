@@ -23,6 +23,7 @@ pub enum Event {
   Quit,
   Render,
   Key(KeyEvent),
+  Resize(u16, u16),
 }
 
 pub struct Tui {
@@ -140,6 +141,9 @@ impl Tui {
                         _event_tx.send(Event::Key(key))?;
                       }
                     }
+                  },
+                  CrosstermEvent::Resize(width, height) => {
+                    _event_tx.send(Event::Resize(width, height))?;
                   },
                   _ => unimplemented!()
                 }
