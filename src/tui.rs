@@ -2,7 +2,7 @@ use crossterm::{
   cursor,
   event::{
     DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
-    EventStream, KeyCode, KeyEvent, KeyEventKind,
+    EventStream, KeyCode, KeyEvent, KeyEventKind, MouseEvent,
   },
   terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -23,6 +23,7 @@ pub enum Event {
   Quit,
   Render,
   Key(KeyEvent),
+  Mouse(MouseEvent),
   Resize(u16, u16),
 }
 
@@ -141,6 +142,9 @@ impl Tui {
                         _event_tx.send(Event::Key(key))?;
                       }
                     }
+                  },
+                  CrosstermEvent::Mouse(mouse) => {
+                    _event_tx.send(Event::Mouse(mouse))?;
                   },
                   CrosstermEvent::Resize(width, height) => {
                     _event_tx.send(Event::Resize(width, height))?;

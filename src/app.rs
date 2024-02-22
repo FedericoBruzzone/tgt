@@ -64,8 +64,8 @@ impl App {
   }
 
   pub async fn run(&mut self) -> Result<(), AppError> {
-    let (action_tx, mut action_rx) = mpsc::unbounded_channel::<Action>();
-    let mut tui = Tui::new()?.frame_rate(60.0).mouse(false).paste(true);
+    let (mut action_tx, mut action_rx) = mpsc::unbounded_channel::<Action>();
+    let mut tui = Tui::new()?.frame_rate(60.0).mouse(true).paste(true);
     tui.enter()?;
 
     for component in self.components.iter_mut() {
@@ -74,20 +74,11 @@ impl App {
     }
 
     loop {
-      if let Some(event) = tui.next().await {
-        match event {
-          Event::Quit => action_tx.send(Action::Quit)?,
-          Event::Key(key) => action_tx.send(Action::Key(key))?,
-          Event::Render => action_tx.send(Action::Render)?,
-          Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
-          _ => {}
-        }
-        for component in self.components.iter_mut() {
-          if let Some(action) = component.handle_events(Some(event.clone()))? {
-            action_tx.send(action)?;
-          }
-        }
+      if self.quit {
+        // TODO: tui.stop()?
+        break;
       }
+      self.handle_tui_events(&mut tui, &mut action_tx).await?;
 
       while let Ok(action) = action_rx.try_recv() {
         match action {
@@ -109,6 +100,7 @@ impl App {
           Action::Quit => {
             self.quit = true;
           }
+          Action::Mouse(_mouse) => {} // TODO: handle mouse events
           _ => {}
         }
 
@@ -117,10 +109,6 @@ impl App {
             action_tx.send(action)?;
           }
         }
-      }
-      if self.quit {
-        // TODO: tui.stop()?
-        break;
       }
     }
 
@@ -137,80 +125,30 @@ impl App {
     Ok(())
   }
 
-  // fn handle_events_size() -> io::Result<i16> {
-  //   if event::poll(std::time::Duration::from_millis(50))? {
-  //     if let event::Event::Key(key) = event::read()? {
-  //       if key.kind == event::KeyEventKind::Press {
-  //         match key.code {
-  //           event::KeyCode::Char('1') => return Ok(1),
-  //           event::KeyCode::Char('2') => return Ok(-1),
-  //           _ => {}
-  //         }
-  //       }
-  //     }
-  //   }
-  //   Ok(0)
-  // }
-  //
-  // fn handle_events_quit() -> io::Result<bool> {
-  //   if event::poll(time::Duration::from_millis(50))? {
-  //     if let event::Event::Key(key) = event::read()? {
-  //       if key.kind == event::KeyEventKind::Press && key.code == event::KeyCode::Char('q') {
-  //         return Ok(true);
-  //       }
-  //     }
-  //   }
-  //   Ok(false)
-  // }
-  //
-  // fn ui(size: u16, frame: &mut ratatui::Frame) {
-  //   let main_layout = layout::Layout::new(
-  //     layout::Direction::Vertical,
-  //     [
-  //       layout::Constraint::Length(1),
-  //       layout::Constraint::Min(0),
-  //       layout::Constraint::Length(1),
-  //     ],
-  //   )
-  //   .split(frame.size());
-  //   frame.render_widget(
-  //     block::Block::new().borders(widgets::Borders::TOP).title("Title Bar"),
-  //     main_layout[0],
-  //   );
-  //   frame.render_widget(
-  //     block::Block::new()
-  //       .borders(widgets::Borders::BOTTOM)
-  //       .title(title::Title::from("Status Bar").position(title::Position::Bottom)),
-  //     main_layout[2],
-  //   );
-  //
-  //   let layout = layout::Layout::default()
-  //     .direction(layout::Direction::Horizontal)
-  //     .constraints([
-  //       layout::Constraint::Percentage(size),
-  //       layout::Constraint::Percentage(100 - size),
-  //     ])
-  //     .split(main_layout[1]);
-  //
-  //   frame.render_widget(
-  //     block::Block::new()
-  //       .border_set(border::PLAIN)
-  //       .borders(widgets::Borders::TOP | widgets::Borders::LEFT | widgets::Borders::BOTTOM)
-  //       .title("Left Block"),
-  //     layout[0],
-  //   );
-  //
-  //   let top_right_border_set = border::Set {
-  //     top_left: line::NORMAL.horizontal_down,
-  //     bottom_left: line::NORMAL.horizontal_up,
-  //     ..border::PLAIN
-  //   };
-  //   frame.render_widget(
-  //     block::Block::new()
-  //       .border_set(top_right_border_set)
-  //       .borders(widgets::Borders::ALL)
-  //       .title("Top Right Block"),
-  //     layout[1],
-  //   );
-  // }
+  // ==============================
+  // Private functions
+  // ==============================
+
+  async fn handle_tui_events(
+    &mut self,
+    tui: &mut Tui,
+    action_tx: &mut mpsc::UnboundedSender<Action>,
+  ) -> Result<(), AppError> {
+    if let Some(event) = tui.next().await {
+      match event {
+        Event::Quit => action_tx.send(Action::Quit)?,
+        Event::Key(key) => action_tx.send(Action::Key(key))?,
+        Event::Render => action_tx.send(Action::Render)?,
+        Event::Mouse(mouse) => action_tx.send(Action::Mouse(mouse))?,
+        Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
+        _ => {}
+      }
+      for component in self.components.iter_mut() {
+        if let Some(action) = component.handle_events(Some(event.clone()))? {
+          action_tx.send(action)?;
+        }
+      }
+    }
+    Ok(())
+  }
 }
