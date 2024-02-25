@@ -46,9 +46,7 @@ pub struct App {
 
 impl App {
   pub fn new() -> Result<Self, io::Error> {
-    let home = Home::new();
-
-    let components: Vec<Box<dyn Component>> = vec![Box::new(home)];
+    let components: Vec<Box<dyn Component>> = vec![Box::new(Home::new())];
     let frame_rate = 60.0;
     let quit = false;
     Ok(Self {
