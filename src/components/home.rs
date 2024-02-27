@@ -1,7 +1,6 @@
-use std::io;
-
 use super::Component;
 use crate::action::Action;
+use crate::components::{chats::Chats, status_bar::StatusBar, title_bar::TitleBar};
 use ratatui::{
   layout::{self, Alignment},
   symbols::{border, line},
@@ -10,16 +9,23 @@ use ratatui::{
     Borders,
   },
 };
+use std::io;
 use tokio::sync::mpsc;
 
 pub struct Home {
   command_tx: Option<mpsc::UnboundedSender<Action>>,
+  components: Vec<Box<dyn Component>>,
 }
 
 impl Home {
   pub fn new() -> Self {
     let command_tx = None;
-    Home { command_tx }
+    let components: Vec<Box<dyn Component>> = vec![
+      TitleBar::new().name("TG-TUI".to_string()).new_boxed(),
+      Chats::new().name("Chats".to_string()).new_boxed(),
+      StatusBar::new().name("Status Bar".to_string()).new_boxed(),
+    ];
+    Home { command_tx, components }
   }
 }
 
@@ -29,16 +35,12 @@ impl Component for Home {
     Ok(())
   }
 
-  fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
-    Ok(None)
-  }
-
   fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
     let small_area = area.width < 50;
     let size_chats = if small_area { 0 } else { 20 };
     let size_prompt = 3;
 
-    let main_layout = layout::Layout::new(
+    let home_layout = layout::Layout::new(
       layout::Direction::Vertical,
       [
         layout::Constraint::Length(1),
@@ -48,25 +50,8 @@ impl Component for Home {
     )
     .split(area);
 
-    frame.render_widget(
-      block::Block::new().borders(Borders::TOP).title(
-        Title::from("TG-TUI")
-          .position(Position::Top)
-          .alignment(Alignment::Center),
-      ),
-      main_layout[0],
-    );
-    frame.render_widget(
-      block::Block::new()
-        .borders(Borders::BOTTOM)
-        .title(title::Title::from("Status").position(title::Position::Bottom))
-        .title(
-          title::Title::from(area.width.to_string() + "x" + area.height.to_string().as_str())
-            .position(title::Position::Bottom)
-            .alignment(layout::Alignment::Center),
-        ),
-      main_layout[2],
-    );
+    self.components[0].draw(frame, home_layout[0])?;
+    self.components[1].draw(frame, home_layout[2])?;
 
     let layout = layout::Layout::default()
       .direction(layout::Direction::Horizontal)
@@ -74,7 +59,7 @@ impl Component for Home {
         layout::Constraint::Percentage(size_chats),
         layout::Constraint::Percentage(100 - size_chats),
       ])
-      .split(main_layout[1]);
+      .split(home_layout[1]);
 
     let sub_layout = layout::Layout::default()
       .direction(layout::Direction::Vertical)
