@@ -11,7 +11,7 @@ use ratatui::{
 use std::io;
 use tokio::sync::mpsc;
 
-pub const CHATS: &str = "chats_window";
+pub const CHAT_LIST: &str = "chat_list_window";
 
 pub struct ChatsWindow {
   name: String,

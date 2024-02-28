@@ -3,6 +3,7 @@ use crate::components::{
   core_window::{CoreWindow, CORE_WINDOW},
   status_bar::{StatusBar, STATUS_BAR},
   title_bar::{TitleBar, TITLE_BAR},
+  SMALL_AREA_HIGH,
 };
 use crate::traits::component::Component;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -53,7 +54,7 @@ impl Component for MainWindow {
       Direction::Vertical,
       [
         Constraint::Length(1),
-        Constraint::Min(20),
+        Constraint::Min(SMALL_AREA_HIGH),
         Constraint::Length(1),
       ],
     )
