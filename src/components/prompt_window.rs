@@ -1,27 +1,26 @@
 use crate::action::Action;
 use crate::traits::component::Component;
 use ratatui::{
-  layout::{self, Alignment},
-  widgets::{
-    block::{self, Position, Title},
-    Borders,
-  },
+  layout,
+  symbols::{border, line},
+  widgets::{block::{Block, Title}, Borders},
 };
-use std::io;
+use std::{collections::HashMap, io};
 use tokio::sync::mpsc;
 
-pub const TITLE_BAR: &str = "title_bar";
+pub const PROMPT: &str = "prompt_window";
 
-pub struct TitleBar {
+pub struct PromptWindow {
   name: String,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
 }
 
-impl TitleBar {
+impl PromptWindow{
   pub fn new() -> Self {
-    let command_tx = None;
     let name = "".to_string();
-    TitleBar { command_tx, name }
+    let command_tx = None;
+
+    ChatsWindow  { name, command_tx }
   }
 
   pub fn name(mut self, name: &str) -> Self {
@@ -30,19 +29,18 @@ impl TitleBar {
   }
 }
 
-impl Component for TitleBar {
+impl Component for PromptWindow {
   fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
-    self.command_tx = Some(tx);
+    self.command_tx = Some(tx.clone());
     Ok(())
   }
 
   fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
     frame.render_widget(
-      block::Block::new().borders(Borders::TOP).title(
-        Title::from(self.name.as_str())
-          .position(Position::Top)
-          .alignment(Alignment::Center),
-      ),
+      Block::new()
+        .border_set(border::PLAIN)
+        .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
+        .title(Title::from(self.name.as_str())),
       area,
     );
 

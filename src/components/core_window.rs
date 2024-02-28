@@ -1,37 +1,53 @@
-use super::Component;
 use crate::action::Action;
-use crate::components::{chats::Chats, status_bar::StatusBar, title_bar::TitleBar};
+use crate::components::chats_window::{ChatsWindow, CHATS};
+use crate::traits::component::Component;
 use ratatui::{
-  layout::{self, Alignment},
+  layout,
   symbols::{border, line},
-  widgets::{
-    block::{self, title, Position, Title},
-    Borders,
-  },
+  widgets::{block, Borders},
 };
-use std::io;
+use std::{collections::HashMap, io};
 use tokio::sync::mpsc;
 
-pub struct Home {
+pub const CORE_WINDOW: &str = "core_window";
+
+pub struct CoreWindow {
+  name: String,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
-  components: Vec<Box<dyn Component>>,
+  components: HashMap<String, Box<dyn Component>>,
 }
 
-impl Home {
+impl CoreWindow {
   pub fn new() -> Self {
+    let components_iter: Vec<(&str, Box<dyn Component>)> =
+      vec![(CHATS, ChatsWindow::new().name("Chats").new_boxed())];
+
+    let name = "".to_string();
     let command_tx = None;
-    let components: Vec<Box<dyn Component>> = vec![
-      TitleBar::new().name("TG-TUI".to_string()).new_boxed(),
-      Chats::new().name("Chats".to_string()).new_boxed(),
-      StatusBar::new().name("Status Bar".to_string()).new_boxed(),
-    ];
-    Home { command_tx, components }
+    let components: HashMap<String, Box<dyn Component>> = components_iter
+      .into_iter()
+      .map(|(name, component)| (name.to_string(), component))
+      .collect();
+
+    CoreWindow {
+      name,
+      command_tx,
+      components,
+    }
+  }
+
+  pub fn name(mut self, name: &str) -> Self {
+    self.name = name.to_string();
+    self
   }
 }
 
-impl Component for Home {
+impl Component for CoreWindow {
   fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
-    self.command_tx = Some(tx);
+    self.command_tx = Some(tx.clone());
+    for (_, component) in self.components.iter_mut() {
+      component.register_action_handler(tx.clone())?;
+    }
     Ok(())
   }
 
@@ -40,39 +56,27 @@ impl Component for Home {
     let size_chats = if small_area { 0 } else { 20 };
     let size_prompt = 3;
 
-    let home_layout = layout::Layout::new(
-      layout::Direction::Vertical,
-      [
-        layout::Constraint::Length(1),
-        layout::Constraint::Min(20),
-        layout::Constraint::Length(1),
-      ],
-    )
-    .split(area);
-
-    self.components[0].draw(frame, home_layout[0])?;
-    self.components[1].draw(frame, home_layout[2])?;
-
-    let layout = layout::Layout::default()
+    let core_layout = layout::Layout::default()
       .direction(layout::Direction::Horizontal)
       .constraints([
         layout::Constraint::Percentage(size_chats),
         layout::Constraint::Percentage(100 - size_chats),
       ])
-      .split(home_layout[1]);
+      .split(area);
 
-    let sub_layout = layout::Layout::default()
+    self
+      .components
+      .get_mut(CHATS)
+      .unwrap_or_else(|| panic!("Failed to get component: {}", CHATS))
+      .draw(frame, core_layout[0])?;
+
+    let sub_core_layout = layout::Layout::default()
       .direction(layout::Direction::Vertical)
-      .constraints([layout::Constraint::Fill(1), layout::Constraint::Length(size_prompt)])
-      .split(layout[1]);
-
-    frame.render_widget(
-      block::Block::new()
-        .border_set(border::PLAIN)
-        .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-        .title("Chats"),
-      layout[0],
-    );
+      .constraints([
+        layout::Constraint::Fill(1),
+        layout::Constraint::Length(size_prompt),
+      ])
+      .split(core_layout[1]);
 
     let top_right_border_set = if small_area {
       border::PLAIN
@@ -88,7 +92,7 @@ impl Component for Home {
         .border_set(top_right_border_set)
         .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
         .title("Name"),
-      sub_layout[0],
+      sub_core_layout[0],
     );
 
     let collapsed_top_and_left_border_set = border::Set {
@@ -104,10 +108,11 @@ impl Component for Home {
     frame.render_widget(
       block::Block::new()
         .border_set(collapsed_top_and_left_border_set)
-        .borders(Borders::ALL),
-      // .title("Bottom Right Block"),
-      sub_layout[1],
+        .borders(Borders::ALL)
+        .title("Prompt Window"),
+      sub_core_layout[1],
     );
+
     Ok(())
   }
 }

@@ -1,6 +1,7 @@
 use crate::{
   action::Action,
-  components::{home::Home, Component},
+  components::main_window::MainWindow,
+  traits::component::Component,
   tui::{Event, Tui},
 };
 use ratatui::layout::Rect;
@@ -46,7 +47,7 @@ pub struct App {
 
 impl App {
   pub fn new() -> Result<Self, io::Error> {
-    let components: Vec<Box<dyn Component>> = vec![Box::new(Home::new())];
+    let components: Vec<Box<dyn Component>> = vec![Box::new(MainWindow::new())];
     let frame_rate = 60.0;
     let quit = false;
     Ok(Self {

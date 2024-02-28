@@ -3,6 +3,7 @@ use app::AppError;
 pub mod action;
 pub mod app;
 pub mod components;
+pub mod traits;
 pub mod tui;
 pub mod utils;
 

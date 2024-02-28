@@ -4,11 +4,6 @@ use ratatui::layout;
 use std::io;
 use tokio::sync::mpsc;
 
-pub mod chats;
-pub mod home;
-pub mod status_bar;
-pub mod title_bar;
-
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 /// Implementors of this trait can be registered with the main application loop and will be able to receive events,
 /// update state, and be rendered on the screen.
@@ -108,4 +103,16 @@ pub trait Component {
   ///
   /// * `Result<()>` - An Ok result or an error.
   fn draw(&mut self, f: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()>;
+
+  /// Create a new boxed instance of the component.
+  ///
+  /// # Returns
+  ///
+  /// * `Box<Self>` - A boxed instance of the component.
+  fn new_boxed(self) -> Box<Self>
+  where
+    Self: Sized,
+  {
+    Box::new(self)
+  }
 }
