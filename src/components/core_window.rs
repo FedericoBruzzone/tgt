@@ -1,6 +1,6 @@
 use crate::action::Action;
 use crate::components::{
-  chat_list_window::{ChatsWindow, CHAT_LIST},
+  chat_list_window::{ChatListWindow, CHAT_LIST},
   chat_window::{ChatWindow, CHAT},
   prompt_window::{PromptWindow, PROMPT},
   SMALL_AREA_WIDTH,
@@ -21,7 +21,7 @@ pub struct CoreWindow {
 impl CoreWindow {
   pub fn new() -> Self {
     let components_iter: Vec<(&str, Box<dyn Component>)> = vec![
-      (CHAT_LIST, ChatsWindow::new().name("Chats").new_boxed()),
+      (CHAT_LIST, ChatListWindow::new().name("Chats").new_boxed()),
       (CHAT, ChatWindow::new().name("Name").new_boxed()),
       (PROMPT, PromptWindow::new().name("Prompt").new_boxed()),
     ];

@@ -1,4 +1,5 @@
 use crate::action::Action;
+use crate::components::SMALL_AREA_WIDTH;
 use crate::traits::component::Component;
 use ratatui::{
   layout,
@@ -50,7 +51,7 @@ impl Component for PromptWindow {
     let collapsed_top_and_left_border_set = border::Set {
       top_left: line::NORMAL.vertical_right,
       top_right: line::NORMAL.vertical_left,
-      bottom_left: if area.width < self.small_area {
+      bottom_left: if area.width < SMALL_AREA_WIDTH {
         line::NORMAL.bottom_left
       } else {
         line::NORMAL.horizontal_up
