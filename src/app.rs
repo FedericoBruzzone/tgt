@@ -1,8 +1,8 @@
 use crate::{
   action::Action,
-  components::main_window::MainWindow,
+  components::tui::Tui,
   traits::component::Component,
-  tui::{Event, Tui},
+  tui_backend::{Event, TuiBackend},
 };
 use ratatui::layout::Rect;
 use std::io;
@@ -40,21 +40,17 @@ impl std::fmt::Display for AppError {
 // ===========================
 
 pub struct App {
-  components: Vec<Box<dyn Component>>,
+  tui: Tui,
   frame_rate: f64,
   quit: bool,
 }
 
 impl App {
   pub fn new() -> Result<Self, io::Error> {
-    let components: Vec<Box<dyn Component>> = vec![Box::new(MainWindow::new())];
+    let tui = Tui::new();
     let frame_rate = 60.0;
     let quit = false;
-    Ok(Self {
-      components,
-      frame_rate,
-      quit,
-    })
+    Ok(Self { tui, frame_rate, quit })
   }
 
   pub fn frame_rate(mut self, frame_rate: f64) -> Self {
@@ -64,13 +60,15 @@ impl App {
 
   pub async fn run(&mut self) -> Result<(), AppError> {
     let (mut action_tx, mut action_rx) = mpsc::unbounded_channel::<Action>();
-    let mut tui = Tui::new()?.frame_rate(60.0).mouse(true).paste(true);
+    let mut tui = TuiBackend::new()?.frame_rate(60.0).mouse(true).paste(true);
     tui.enter()?;
 
-    for component in self.components.iter_mut() {
-      component.register_action_handler(action_tx.clone())?;
-      component.init(tui.terminal.size()?)?;
-    }
+    // for component in self.tui.iter_mut() {
+    //   component.register_action_handler(action_tx.clone())?;
+    //   component.init(tui.terminal.size()?)?;
+    // }
+    self.tui.register_action_handler(action_tx.clone())?;
+    self.tui.init(tui.terminal.size()?)?;
 
     loop {
       if self.quit {
@@ -83,17 +81,13 @@ impl App {
         match action {
           Action::Render => {
             tui.terminal.draw(|f| {
-              for component in self.components.iter_mut() {
-                component.draw(f, f.size()).unwrap(); // TODO: handle with AppError
-              }
+              self.tui.draw(f, f.size()).unwrap(); // TODO: handle with AppError
             })?;
           }
           Action::Resize(width, height) => {
             tui.terminal.resize(Rect::new(0, 0, width, height))?;
             tui.terminal.draw(|f| {
-              for component in self.components.iter_mut() {
-                component.draw(f, f.size()).unwrap(); // TODO: handle with AppError
-              }
+              self.tui.draw(f, f.size()).unwrap(); // TODO: handle with AppError
             })?;
           }
           Action::Quit => {
@@ -103,10 +97,13 @@ impl App {
           _ => {}
         }
 
-        for component in self.components.iter_mut() {
-          if let Some(action) = component.update(action.clone())? {
-            action_tx.send(action)?;
-          }
+        // for component in self.tui.iter_mut() {
+        //   if let Some(action) = component.update(action.clone())? {
+        //     action_tx.send(action)?;
+        //   }
+        // }
+        if let Some(action) = self.tui.update(action.clone())? {
+          action_tx.send(action)?;
         }
       }
     }
@@ -130,7 +127,7 @@ impl App {
 
   async fn handle_tui_events(
     &mut self,
-    tui: &mut Tui,
+    tui: &mut TuiBackend,
     action_tx: &mut mpsc::UnboundedSender<Action>,
   ) -> Result<(), AppError> {
     if let Some(event) = tui.next().await {
@@ -142,10 +139,13 @@ impl App {
         Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
         _ => {}
       }
-      for component in self.components.iter_mut() {
-        if let Some(action) = component.handle_events(Some(event.clone()))? {
-          action_tx.send(action)?;
-        }
+      // for component in self.tui.iter_mut() {
+      //   if let Some(action) = component.handle_events(Some(event.clone()))? {
+      //     action_tx.send(action)?;
+      //   }
+      // }
+      if let Some(action) = self.tui.handle_events(Some(event.clone()))? {
+        action_tx.send(action)?;
       }
     }
     Ok(())

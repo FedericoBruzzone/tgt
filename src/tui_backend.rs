@@ -27,7 +27,7 @@ pub enum Event {
   Resize(u16, u16),
 }
 
-pub struct Tui {
+pub struct TuiBackend {
   pub terminal: Terminal<CrosstermBackend<Stderr>>,
   pub task: JoinHandle<Result<(), SendError<Event>>>,
   pub event_rx: UnboundedReceiver<Event>,
@@ -37,7 +37,7 @@ pub struct Tui {
   pub paste: bool,
 }
 
-impl Tui {
+impl TuiBackend {
   pub fn new() -> Result<Self, io::Error> {
     let terminal = ratatui::Terminal::new(CrosstermBackend::new(io::stderr()))?;
     let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });

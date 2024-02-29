@@ -4,7 +4,7 @@ pub mod action;
 pub mod app;
 pub mod components;
 pub mod traits;
-pub mod tui;
+pub mod tui_backend;
 pub mod utils;
 
 #[tokio::main]

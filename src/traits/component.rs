@@ -1,5 +1,5 @@
 use crate::traits::handle_small_area::HandleSmallArea;
-use crate::{action::Action, tui::Event};
+use crate::{action::Action, tui_backend::Event};
 use crossterm::event;
 use ratatui::layout;
 use std::io;

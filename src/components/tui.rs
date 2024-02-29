@@ -3,7 +3,7 @@ use crate::components::{
   core_window::{CoreWindow, CORE_WINDOW},
   status_bar::{StatusBar, STATUS_BAR},
   title_bar::{TitleBar, TITLE_BAR},
-  SMALL_AREA_HEIGHT,
+  SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
 };
 use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -11,14 +11,12 @@ use std::collections::HashMap;
 use std::io;
 use tokio::sync::mpsc;
 
-use super::SMALL_AREA_WIDTH;
-
-pub struct MainWindow {
+pub struct Tui {
   command_tx: Option<mpsc::UnboundedSender<Action>>,
   components: HashMap<String, Box<dyn Component>>,
 }
 
-impl MainWindow {
+impl Tui {
   pub fn new() -> Self {
     let components_iter: Vec<(&str, Box<dyn Component>)> = vec![
       (TITLE_BAR, TitleBar::new().name("TG-TUI").new_boxed()),
@@ -32,14 +30,14 @@ impl MainWindow {
       .map(|(name, component)| (name.to_string(), component))
       .collect();
 
-    MainWindow { command_tx, components }
+    Tui { command_tx, components }
   }
 }
 
-impl HandleSmallArea for MainWindow {}
+impl HandleSmallArea for Tui {}
 
 // TODO: MainWindow should not implement Component
-impl Component for MainWindow {
+impl Component for Tui {
   fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
     self.command_tx = Some(tx.clone());
     for (_, component) in self.components.iter_mut() {
@@ -50,20 +48,13 @@ impl Component for MainWindow {
 
   fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
     if area.width < SMALL_AREA_WIDTH {
-      // self.components.iter().for_each(|(_, component)| {
-      //     component.small_area(true);
-      // });
-      self
-        .components
-        .get_mut(CORE_WINDOW)
-        .unwrap_or_else(|| panic!("Failed to get component: {}", CORE_WINDOW))
-        .small_area(true);
+      self.components.iter_mut().for_each(|(_, component)| {
+        component.small_area(true);
+      });
     } else {
-      self
-        .components
-        .get_mut(CORE_WINDOW)
-        .unwrap_or_else(|| panic!("Failed to get component: {}", CORE_WINDOW))
-        .small_area(false);
+      self.components.iter_mut().for_each(|(_, component)| {
+        component.small_area(false);
+      });
     }
 
     let main_layout = Layout::new(
