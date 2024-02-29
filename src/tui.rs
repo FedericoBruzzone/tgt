@@ -1,8 +1,8 @@
 use crossterm::{
   cursor,
   event::{
-    DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
-    Event as CrosstermEvent, EventStream, KeyCode, KeyEvent, KeyEventKind, MouseEvent,
+    DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
+    EventStream, KeyCode, KeyEvent, KeyEventKind, MouseEvent,
   },
   terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -40,8 +40,7 @@ pub struct Tui {
 impl Tui {
   pub fn new() -> Result<Self, io::Error> {
     let terminal = ratatui::Terminal::new(CrosstermBackend::new(io::stderr()))?;
-    let task: JoinHandle<Result<(), SendError<Event>>> =
-      tokio::spawn(async { Err(SendError(Event::Init)) });
+    let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let frame_rate = 60.0;
     let mouse = false;

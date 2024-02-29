@@ -3,9 +3,8 @@ use crate::components::{
   chat_list_window::{ChatListWindow, CHAT_LIST},
   chat_window::{ChatWindow, CHAT},
   prompt_window::{PromptWindow, PROMPT},
-  SMALL_AREA_WIDTH,
 };
-use crate::traits::component::Component;
+use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
 use ratatui::layout;
 use std::{collections::HashMap, io};
 use tokio::sync::mpsc;
@@ -16,6 +15,7 @@ pub struct CoreWindow {
   name: String,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
   components: HashMap<String, Box<dyn Component>>,
+  small_area: bool,
 }
 
 impl CoreWindow {
@@ -32,17 +32,28 @@ impl CoreWindow {
       .into_iter()
       .map(|(name, component)| (name.to_string(), component))
       .collect();
+    let small_area = false;
 
     CoreWindow {
       name,
       command_tx,
       components,
+      small_area,
     }
   }
 
   pub fn name(mut self, name: &str) -> Self {
     self.name = name.to_string();
     self
+  }
+}
+
+impl HandleSmallArea for CoreWindow {
+  fn small_area(&mut self, small: bool) {
+    self.small_area = small;
+    for (_, component) in self.components.iter_mut() {
+      component.small_area(small);
+    }
   }
 }
 
@@ -56,7 +67,8 @@ impl Component for CoreWindow {
   }
 
   fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
-    let size_chats = if area.width < SMALL_AREA_WIDTH { 0 } else { 20 };
+    // let size_chats = if area.width < SMALL_AREA_WIDTH { 0 } else { 20 };
+    let size_chats = if self.small_area { 0 } else { 20 };
     let size_prompt = 3;
 
     let core_layout = layout::Layout::default()
@@ -75,10 +87,7 @@ impl Component for CoreWindow {
 
     let sub_core_layout = layout::Layout::default()
       .direction(layout::Direction::Vertical)
-      .constraints([
-        layout::Constraint::Fill(1),
-        layout::Constraint::Length(size_prompt),
-      ])
+      .constraints([layout::Constraint::Fill(1), layout::Constraint::Length(size_prompt)])
       .split(core_layout[1]);
 
     self

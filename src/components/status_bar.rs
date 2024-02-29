@@ -1,5 +1,5 @@
 use crate::action::Action;
-use crate::traits::component::Component;
+use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
 use ratatui::{
   layout,
   widgets::{
@@ -15,18 +15,30 @@ pub const STATUS_BAR: &str = "status_bar";
 pub struct StatusBar {
   name: String,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
+  small_area: bool,
 }
 
 impl StatusBar {
   pub fn new() -> Self {
     let command_tx = None;
     let name = "".to_string();
-    StatusBar { command_tx, name }
+    let small_area = false;
+    StatusBar {
+      command_tx,
+      name,
+      small_area,
+    }
   }
 
   pub fn name(mut self, name: &str) -> Self {
     self.name = name.to_string();
     self
+  }
+}
+
+impl HandleSmallArea for StatusBar {
+  fn small_area(&mut self, small: bool) {
+    self.small_area = small;
   }
 }
 

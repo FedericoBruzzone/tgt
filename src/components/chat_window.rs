@@ -1,6 +1,5 @@
 use crate::action::Action;
-use crate::components::SMALL_AREA_WIDTH;
-use crate::traits::component::Component;
+use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
 use ratatui::{
   layout::Rect,
   symbols::{border, line},
@@ -14,18 +13,30 @@ pub const CHAT: &str = "chat_window";
 pub struct ChatWindow {
   name: String,
   command_tx: Option<UnboundedSender<Action>>,
+  small_area: bool,
 }
 
 impl ChatWindow {
   pub fn new() -> Self {
     let command_tx = None;
     let name = "".to_string();
-    ChatWindow { command_tx, name }
+    let small_area = false;
+    ChatWindow {
+      command_tx,
+      name,
+      small_area,
+    }
   }
 
   pub fn name(mut self, name: &str) -> Self {
     self.name = name.to_string();
     self
+  }
+}
+
+impl HandleSmallArea for ChatWindow {
+  fn small_area(&mut self, small: bool) {
+    self.small_area = small;
   }
 }
 
@@ -36,7 +47,7 @@ impl Component for ChatWindow {
   }
 
   fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
-    let border = if area.width < SMALL_AREA_WIDTH {
+    let border = if self.small_area {
       border::PLAIN
     } else {
       border::Set {

@@ -1,6 +1,5 @@
 use crate::action::Action;
-use crate::components::SMALL_AREA_WIDTH;
-use crate::traits::component::Component;
+use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
 use ratatui::{
   layout,
   symbols::{border, line},
@@ -13,15 +12,15 @@ pub const PROMPT: &str = "prompt_window";
 
 pub struct PromptWindow {
   name: String,
-  small_area: u16,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
+  small_area: bool,
 }
 
 impl PromptWindow {
   pub fn new() -> Self {
     let name = "".to_string();
     let command_tx = None;
-    let small_area = 50;
+    let small_area = false;
 
     PromptWindow {
       name,
@@ -34,10 +33,11 @@ impl PromptWindow {
     self.name = name.to_string();
     self
   }
+}
 
-  pub fn small_area(mut self, small_area: u16) -> Self {
+impl HandleSmallArea for PromptWindow {
+  fn small_area(&mut self, small_area: bool) {
     self.small_area = small_area;
-    self
   }
 }
 
@@ -51,7 +51,7 @@ impl Component for PromptWindow {
     let collapsed_top_and_left_border_set = border::Set {
       top_left: line::NORMAL.vertical_right,
       top_right: line::NORMAL.vertical_left,
-      bottom_left: if area.width < SMALL_AREA_WIDTH {
+      bottom_left: if self.small_area {
         line::NORMAL.bottom_left
       } else {
         line::NORMAL.horizontal_up

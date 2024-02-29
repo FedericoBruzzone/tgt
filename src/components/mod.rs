@@ -1,5 +1,5 @@
-pub const SMALL_AREA_HIGH: u16 = 20;
-pub const SMALL_AREA_WIDTH: u16 = 75;
+pub const SMALL_AREA_WIDTH: u16 = 100;
+pub const SMALL_AREA_HEIGHT: u16 = 50;
 
 pub mod chat_list_window;
 pub mod chat_window;
