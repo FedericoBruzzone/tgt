@@ -151,6 +151,8 @@ impl TuiBackend {
                   CrosstermEvent::Resize(width, height) => {
                     _event_tx.send(Event::Resize(width, height))?;
                   },
+                  CrosstermEvent::FocusLost => {}
+                  CrosstermEvent::FocusGained => {}
                   _ => unimplemented!()
                 }
               },
