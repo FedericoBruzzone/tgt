@@ -1,44 +1,45 @@
-use crate::action::Action;
-use crate::components::{
-  chat_list_window::{ChatListWindow, CHAT_LIST},
-  chat_window::{ChatWindow, CHAT},
-  prompt_window::{PromptWindow, PROMPT},
+use {
+  crate::{
+    action::Action,
+    components::{
+      chat_list_window::ChatListWindow, chat_window::ChatWindow, prompt_window::PromptWindow, ComponentName,
+    },
+    traits::{component::Component, handle_small_area::HandleSmallArea},
+  },
+  ratatui::layout,
+  std::{collections::HashMap, io},
+  tokio::sync::mpsc,
 };
-use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
-use ratatui::layout;
-use std::{collections::HashMap, io};
-use tokio::sync::mpsc;
-
-pub const CORE_WINDOW: &str = "core_window";
 
 pub struct CoreWindow {
   name: String,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
-  components: HashMap<String, Box<dyn Component>>,
+  components: HashMap<ComponentName, Box<dyn Component>>,
   small_area: bool,
+  #[allow(dead_code)]
+  focused: ComponentName,
 }
 
 impl CoreWindow {
   pub fn new() -> Self {
-    let components_iter: Vec<(&str, Box<dyn Component>)> = vec![
-      (CHAT_LIST, ChatListWindow::new().name("Chats").new_boxed()),
-      (CHAT, ChatWindow::new().name("Name").new_boxed()),
-      (PROMPT, PromptWindow::new().name("Prompt").new_boxed()),
+    let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
+      (ComponentName::ChatList, ChatListWindow::new().name("Chats").new_boxed()),
+      (ComponentName::Chat, ChatWindow::new().name("Name").new_boxed()),
+      (ComponentName::Prompt, PromptWindow::new().name("Prompt").new_boxed()),
     ];
 
     let name = "".to_string();
     let command_tx = None;
-    let components: HashMap<String, Box<dyn Component>> = components_iter
-      .into_iter()
-      .map(|(name, component)| (name.to_string(), component))
-      .collect();
+    let components: HashMap<ComponentName, Box<dyn Component>> = components_iter.into_iter().collect();
     let small_area = false;
+    let focused = ComponentName::ChatList;
 
     CoreWindow {
       name,
       command_tx,
       components,
       small_area,
+      focused,
     }
   }
 
@@ -81,8 +82,8 @@ impl Component for CoreWindow {
 
     self
       .components
-      .get_mut(CHAT_LIST)
-      .unwrap_or_else(|| panic!("Failed to get component: {}", CHAT_LIST))
+      .get_mut(&ComponentName::ChatList)
+      .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
       .draw(frame, core_layout[0])?;
 
     let sub_core_layout = layout::Layout::default()
@@ -92,14 +93,14 @@ impl Component for CoreWindow {
 
     self
       .components
-      .get_mut(CHAT)
-      .unwrap_or_else(|| panic!("Failed to get component: {}", CHAT))
+      .get_mut(&ComponentName::Chat)
+      .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
       .draw(frame, sub_core_layout[0])?;
 
     self
       .components
-      .get_mut(PROMPT)
-      .unwrap_or_else(|| panic!("Failed to get component: {}", PROMPT))
+      .get_mut(&ComponentName::Prompt)
+      .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
       .draw(frame, sub_core_layout[1])?;
 
     Ok(())

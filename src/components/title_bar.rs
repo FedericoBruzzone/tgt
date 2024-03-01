@@ -1,14 +1,18 @@
-use crate::action::Action;
-use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
-use ratatui::{
-  layout::{self, Alignment},
-  widgets::{
-    block::{self, Position, Title},
-    Borders,
+use {
+  crate::{
+    action::Action,
+    traits::{component::Component, handle_small_area::HandleSmallArea},
   },
+  ratatui::{
+    layout::{self, Alignment},
+    widgets::{
+      block::{self, Position, Title},
+      Borders,
+    },
+  },
+  std::io,
+  tokio::sync::mpsc,
 };
-use std::io;
-use tokio::sync::mpsc;
 
 pub const TITLE_BAR: &str = "title_bar";
 

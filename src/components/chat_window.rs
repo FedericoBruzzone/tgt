@@ -1,12 +1,16 @@
-use crate::action::Action;
-use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
-use ratatui::{
-  layout::Rect,
-  symbols::{border, line},
-  widgets::{block, Borders},
+use {
+  crate::{
+    action::Action,
+    traits::{component::Component, handle_small_area::HandleSmallArea},
+  },
+  ratatui::{
+    layout::Rect,
+    symbols::{border, line},
+    widgets::{block, Borders},
+  },
+  std::io,
+  tokio::sync::mpsc::UnboundedSender,
 };
-use std::io;
-use tokio::sync::mpsc::UnboundedSender;
 
 pub const CHAT: &str = "chat_window";
 

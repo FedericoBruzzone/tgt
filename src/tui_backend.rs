@@ -1,20 +1,22 @@
-use crossterm::{
-  cursor,
-  event::{
-    DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
-    EventStream, KeyCode, KeyEvent, KeyEventKind, MouseEvent,
+use {
+  crossterm::{
+    cursor,
+    event::{
+      DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
+      EventStream, KeyCode, KeyEvent, KeyEventKind, MouseEvent,
+    },
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
   },
-  terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use futures::{FutureExt, StreamExt};
-use ratatui::{backend::CrosstermBackend, Terminal};
-use std::{
-  io::{self, Stderr},
-  time,
-};
-use tokio::{
-  sync::mpsc::{self, error::SendError, UnboundedReceiver, UnboundedSender},
-  task::JoinHandle,
+  futures::{FutureExt, StreamExt},
+  ratatui::{backend::CrosstermBackend, Terminal},
+  std::{
+    io::{self, Stderr},
+    time,
+  },
+  tokio::{
+    sync::mpsc::{self, error::SendError, UnboundedReceiver, UnboundedSender},
+    task::JoinHandle,
+  },
 };
 
 #[derive(Clone)]

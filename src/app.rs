@@ -1,12 +1,13 @@
-use crate::{
-  action::Action,
-  components::tui::Tui,
-  traits::component::Component,
-  tui_backend::{Event, TuiBackend},
+use {
+  crate::{
+    action::Action,
+    tui::Tui,
+    tui_backend::{Event, TuiBackend},
+  },
+  ratatui::layout::Rect,
+  std::io,
+  tokio::sync::mpsc::{self, error::SendError},
 };
-use ratatui::layout::Rect;
-use std::io;
-use tokio::sync::mpsc::{self, error::SendError};
 
 // ========== Error ==========
 #[derive(Debug)]
@@ -41,6 +42,7 @@ impl std::fmt::Display for AppError {
 
 pub struct App {
   tui: Tui,
+  tui_backend: TuiBackend,
   frame_rate: f64,
   quit: bool,
 }
@@ -48,9 +50,15 @@ pub struct App {
 impl App {
   pub fn new() -> Result<Self, io::Error> {
     let tui = Tui::new();
+    let tui_backend = TuiBackend::new()?.frame_rate(60.0).mouse(true).paste(true);
     let frame_rate = 60.0;
     let quit = false;
-    Ok(Self { tui, frame_rate, quit })
+    Ok(Self {
+      tui,
+      tui_backend,
+      frame_rate,
+      quit,
+    })
   }
 
   pub fn frame_rate(mut self, frame_rate: f64) -> Self {
@@ -60,33 +68,28 @@ impl App {
 
   pub async fn run(&mut self) -> Result<(), AppError> {
     let (mut action_tx, mut action_rx) = mpsc::unbounded_channel::<Action>();
-    let mut tui = TuiBackend::new()?.frame_rate(60.0).mouse(true).paste(true);
-    tui.enter()?;
+    self.tui_backend.enter()?;
 
-    // for component in self.tui.iter_mut() {
-    //   component.register_action_handler(action_tx.clone())?;
-    //   component.init(tui.terminal.size()?)?;
-    // }
+    // self.tui.init(self.tui_backend.terminal.size()?)?;
     self.tui.register_action_handler(action_tx.clone())?;
-    self.tui.init(tui.terminal.size()?)?;
 
     loop {
       if self.quit {
         // TODO: tui.stop()?
         break;
       }
-      self.handle_tui_events(&mut tui, &mut action_tx).await?;
+      self.handle_tui_events(&mut action_tx).await?;
 
       while let Ok(action) = action_rx.try_recv() {
         match action {
           Action::Render => {
-            tui.terminal.draw(|f| {
+            self.tui_backend.terminal.draw(|f| {
               self.tui.draw(f, f.size()).unwrap(); // TODO: handle with AppError
             })?;
           }
           Action::Resize(width, height) => {
-            tui.terminal.resize(Rect::new(0, 0, width, height))?;
-            tui.terminal.draw(|f| {
+            self.tui_backend.terminal.resize(Rect::new(0, 0, width, height))?;
+            self.tui_backend.terminal.draw(|f| {
               self.tui.draw(f, f.size()).unwrap(); // TODO: handle with AppError
             })?;
           }
@@ -97,11 +100,6 @@ impl App {
           _ => {}
         }
 
-        // for component in self.tui.iter_mut() {
-        //   if let Some(action) = component.update(action.clone())? {
-        //     action_tx.send(action)?;
-        //   }
-        // }
         if let Some(action) = self.tui.update(action.clone())? {
           action_tx.send(action)?;
         }
@@ -116,7 +114,7 @@ impl App {
     //   should_quit = Self::handle_events_quit()?;
     // }
 
-    tui.exit()?;
+    self.tui_backend.exit()?;
 
     Ok(())
   }
@@ -125,12 +123,8 @@ impl App {
   // Private functions
   // ==============================
 
-  async fn handle_tui_events(
-    &mut self,
-    tui: &mut TuiBackend,
-    action_tx: &mut mpsc::UnboundedSender<Action>,
-  ) -> Result<(), AppError> {
-    if let Some(event) = tui.next().await {
+  async fn handle_tui_events(&mut self, action_tx: &mut mpsc::UnboundedSender<Action>) -> Result<(), AppError> {
+    if let Some(event) = self.tui_backend.next().await {
       match event {
         Event::Quit => action_tx.send(Action::Quit)?,
         Event::Key(key) => action_tx.send(Action::Key(key))?,
@@ -139,11 +133,6 @@ impl App {
         Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
         _ => {}
       }
-      // for component in self.tui.iter_mut() {
-      //   if let Some(action) = component.handle_events(Some(event.clone()))? {
-      //     action_tx.send(action)?;
-      //   }
-      // }
       if let Some(action) = self.tui.handle_events(Some(event.clone()))? {
         action_tx.send(action)?;
       }

@@ -1,5 +1,9 @@
+unstable_features = true
+
 tab_spaces = 2
 max_width = 120
+imports_granularity = "One"
+
 # use_small_heuristics = "Max"
 # match_block_trailing_comma = true
 # reorder_imports = true

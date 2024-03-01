@@ -1,9 +1,10 @@
-use crate::traits::handle_small_area::HandleSmallArea;
-use crate::{action::Action, tui_backend::Event};
-use crossterm::event;
-use ratatui::layout;
-use std::io;
-use tokio::sync::mpsc;
+use {
+  crate::{action::Action, traits::handle_small_area::HandleSmallArea, tui_backend::Event},
+  crossterm::event,
+  ratatui::layout,
+  std::io,
+  tokio::sync::mpsc,
+};
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 /// Implementors of this trait can be registered with the main application loop and will be able to receive events,
@@ -104,7 +105,6 @@ pub trait Component: HandleSmallArea {
   ///
   /// * `Result<()>` - An Ok result or an error.
   fn draw(&mut self, f: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()>;
-
   /// Create a new boxed instance of the component.
   ///
   /// # Returns

@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# [toolchain]
+# channel = "nightly-2020-07-10"
+# components = [ "rustfmt", "rustc-dev" ]
+# targets = [ "wasm32-unknown-unknown", "thumbv2-none-eabi" ]
+# profile = "minimal"
 
 [dependencies]
 crossterm = {version = "0.27.0", features = ["event-stream"]}
@@ -11,3 +16,4 @@ futures = "0.3.30"
 ratatui = "0.26.1"
 signal-hook = "0.3.17"
 tokio = {version = "1.36.0", features = ["full"]}
+

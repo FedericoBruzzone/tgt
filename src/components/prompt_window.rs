@@ -1,12 +1,16 @@
-use crate::action::Action;
-use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
-use ratatui::{
-  layout,
-  symbols::{border, line},
-  widgets::{block::Block, Borders},
+use {
+  crate::{
+    action::Action,
+    traits::{component::Component, handle_small_area::HandleSmallArea},
+  },
+  ratatui::{
+    layout,
+    symbols::{border, line},
+    widgets::{block::Block, Borders},
+  },
+  std::io,
+  tokio::sync::mpsc,
 };
-use std::io;
-use tokio::sync::mpsc;
 
 pub const PROMPT: &str = "prompt_window";
 

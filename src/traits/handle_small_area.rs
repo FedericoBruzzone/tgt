@@ -7,7 +7,6 @@ pub trait HandleSmallArea {
   /// # Arguments
   ///
   /// * `small` - A boolean indicating if the area is too small.
-  ///
   #[allow(unused_variables)]
   fn small_area(&mut self, small: bool) {}
 }

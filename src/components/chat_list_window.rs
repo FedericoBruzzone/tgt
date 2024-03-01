@@ -1,16 +1,20 @@
-use crate::action::Action;
-use crate::traits::{component::Component, handle_small_area::HandleSmallArea};
-use ratatui::{
-  layout,
-  style::{Color, Modifier, Style},
-  symbols::border,
-  widgets::{
-    block::{Block, Title},
-    Borders, List, ListDirection,
+use {
+  crate::{
+    action::Action,
+    traits::{component::Component, handle_small_area::HandleSmallArea},
   },
+  ratatui::{
+    layout,
+    style::{Color, Modifier, Style},
+    symbols::border,
+    widgets::{
+      block::{Block, Title},
+      Borders, List, ListDirection,
+    },
+  },
+  std::io,
+  tokio::sync::mpsc,
 };
-use std::io;
-use tokio::sync::mpsc;
 
 pub const CHAT_LIST: &str = "chat_list_window";
 
