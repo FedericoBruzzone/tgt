@@ -1,9 +1,9 @@
 use {
   crate::{
-    action::Action,
     components::{
       chat_list_window::ChatListWindow, chat_window::ChatWindow, prompt_window::PromptWindow, ComponentName,
     },
+    enums::action::Action,
     traits::{component::Component, handle_small_area::HandleSmallArea},
   },
   ratatui::layout,

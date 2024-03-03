@@ -1,5 +1,8 @@
 use {
-  crate::{action::Action, traits::handle_small_area::HandleSmallArea, tui_backend::Event},
+  crate::{
+    enums::{action::Action, event::Event},
+    traits::handle_small_area::HandleSmallArea,
+  },
   crossterm::event,
   ratatui::layout,
   std::io,

@@ -1,24 +1,32 @@
 use {
   crate::{
-    action::Action,
     components::{
       core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar, ComponentName, SMALL_AREA_HEIGHT,
       SMALL_AREA_WIDTH,
     },
+    enums::{action::Action, event::Event},
     traits::component::Component,
-    tui_backend::Event,
   },
   ratatui::layout::{Constraint, Direction, Layout, Rect},
   std::{collections::HashMap, io},
   tokio::sync::mpsc,
 };
 
+/// `Tui` is a struct that represents the main user interface for the application.
+/// It is responsible for managing the layout and rendering of all the components.
+/// It also handles the distribution of events and actions to the appropriate components.
 pub struct Tui {
-  command_tx: Option<mpsc::UnboundedSender<Action>>,
+  /// An optional unbounded sender that can send actions to be processed.
+  action_tx: Option<mpsc::UnboundedSender<Action>>,
+  /// A hashmap of components that make up the user interface.
   components: HashMap<ComponentName, Box<dyn Component>>,
 }
 
 impl Tui {
+  /// Create a new instance of the `Tui` struct.
+  ///
+  /// # Returns
+  /// * `Self` - The new instance of the `Tui` struct.
   pub fn new() -> Self {
     let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
       (ComponentName::TitleBar, TitleBar::new().name("TG-TUI").new_boxed()),
@@ -32,21 +40,37 @@ impl Tui {
       ),
     ];
 
-    let command_tx = None;
+    let action_tx = None;
     let components: HashMap<ComponentName, Box<dyn Component>> = components_iter.into_iter().collect();
 
-    Tui { command_tx, components }
+    Tui { action_tx, components }
   }
-
+  /// Register an action handler that can send actions for processing if necessary.
+  ///
+  /// # Arguments
+  ///
+  /// * `tx` - An unbounded sender that can send actions.
+  ///
+  /// # Returns
+  ///
+  /// * `Result<()>` - An Ok result or an error.
   pub fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
-    self.command_tx = Some(tx.clone());
+    self.action_tx = Some(tx.clone());
     self
       .components
       .iter_mut()
       .try_for_each(|(_, component)| component.register_action_handler(tx.clone()))?;
     Ok(())
   }
-
+  /// Handle incoming events and produce actions if necessary.
+  ///
+  /// # Arguments
+  ///
+  /// * `event` - An optional event to be processed.
+  ///
+  /// # Returns
+  ///
+  /// * `Result<Option<Action>>` - An action to be processed or none.
   pub fn handle_events(&mut self, event: Option<Event>) -> io::Result<Option<Action>> {
     // Handle focus
     self.components.iter_mut().try_fold(None, |acc, (_, component)| {
@@ -57,7 +81,15 @@ impl Tui {
       }
     })
   }
-
+  /// Update the state of the component based on a received action.
+  ///
+  /// # Arguments
+  ///
+  /// * `action` - An action that may modify the state of the component.
+  ///
+  /// # Returns
+  ///
+  /// * `Result<Option<Action>>` - An action to be processed or none.
   pub fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
     // Handle focus
     self
@@ -69,7 +101,14 @@ impl Tui {
         Err(e) => Err(e),
       })
   }
-
+  /// Render the user interface to the screen.
+  ///
+  /// # Arguments
+  /// * `frame` - A mutable reference to the frame to be rendered.
+  /// * `area` - A rectangular area to render the user interface within.
+  ///
+  /// # Returns
+  /// * `Result<()>` - An Ok result or an error.
   pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
     if area.width < SMALL_AREA_WIDTH {
       self.components.iter_mut().for_each(|(_, component)| {

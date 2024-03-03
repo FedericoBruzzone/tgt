@@ -1,6 +1,6 @@
 use {
   crate::{
-    action::Action,
+    enums::action::Action,
     traits::{component::Component, handle_small_area::HandleSmallArea},
   },
   ratatui::{

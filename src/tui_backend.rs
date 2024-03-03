@@ -1,9 +1,10 @@
 use {
+  crate::enums::event::Event,
   crossterm::{
     cursor,
     event::{
       DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
-      EventStream, KeyCode, KeyEvent, KeyEventKind, MouseEvent,
+      EventStream, KeyCode, KeyEventKind,
     },
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
   },
@@ -19,27 +20,30 @@ use {
   },
 };
 
-#[derive(Clone)]
-pub enum Event {
-  Init,
-  Quit,
-  Render,
-  Key(KeyEvent),
-  Mouse(MouseEvent),
-  Resize(u16, u16),
-}
-
+/// `TuiBackend` is a struct that represents the backend for the user interface.
+/// It is responsible for managing the terminal and buffering events for processing.
 pub struct TuiBackend {
+  /// A terminal instance that is used to render the user interface.
   pub terminal: Terminal<CrosstermBackend<Stderr>>,
+  /// A join handle that represents the task for processing events.
   pub task: JoinHandle<Result<(), SendError<Event>>>,
+  /// An unbounded receiver that can receive events for processing.
   pub event_rx: UnboundedReceiver<Event>,
+  /// An unbounded sender that can send events for processing.
   pub event_tx: UnboundedSender<Event>,
+  /// The frame rate at which the user interface should be rendered.
   pub frame_rate: f64,
+  /// A boolean flag that represents whether the mouse is enabled or not.
   pub mouse: bool,
+  /// A boolean flag that represents whether the paste mode is enabled or not.
   pub paste: bool,
 }
 
 impl TuiBackend {
+  /// Create a new instance of the `TuiBackend` struct.
+  ///
+  /// # Returns
+  /// * `Result<Self, io::Error>` - An Ok result containing the new instance of the `TuiBackend` struct or an error.
   pub fn new() -> Result<Self, io::Error> {
     let terminal = ratatui::Terminal::new(CrosstermBackend::new(io::stderr()))?;
     let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });
@@ -57,7 +61,11 @@ impl TuiBackend {
       paste,
     })
   }
-
+  /// Enter the user interface and start processing events.
+  /// This will enable the raw mode for the terminal and switch to the alternate screen.
+  ///
+  /// # Returns
+  /// * `Result<(), io::Error>` - An Ok result or an error.
   pub fn enter(&mut self) -> Result<(), io::Error> {
     terminal::enable_raw_mode()?;
     crossterm::execute!(io::stderr(), EnterAlternateScreen, cursor::Hide)?;
@@ -70,7 +78,11 @@ impl TuiBackend {
     self.start();
     Ok(())
   }
-
+  /// Exit the user interface and stop processing events.
+  /// This will disable the raw mode for the terminal and switch back to the main screen.
+  ///
+  /// # Returns
+  /// * `Result<(), io::Error>` - An Ok result or an error.
   pub fn exit(&self) -> Result<(), io::Error> {
     terminal::disable_raw_mode()?;
     crossterm::execute!(io::stderr(), LeaveAlternateScreen, cursor::Show)?;
@@ -82,34 +94,68 @@ impl TuiBackend {
     }
     Ok(())
   }
-
+  /// Suspend the user interface and stop processing events.
+  /// This will disable the raw mode for the terminal and switch back to the main screen.
+  ///
+  /// # Returns
+  /// * `Result<(), io::Error>` - An Ok result or an error.
   pub fn suspend(&mut self) -> Result<(), io::Error> {
     self.exit()?;
     #[cfg(not(windows))]
     signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
     Ok(())
   }
-
+  /// Resume the user interface and start processing events.
+  ///
+  /// # Returns
+  /// * `Result<(), io::Error>` - An Ok result or an error.
   pub fn resume(&mut self) -> Result<(), io::Error> {
     self.enter()?;
     Ok(())
   }
-
-  pub fn frame_rate(mut self, frame_rate: f64) -> Self {
+  /// Set the frame rate at which the user interface should be rendered.
+  /// The frame rate is specified in frames per second (FPS).
+  /// The default frame rate is 60 FPS.
+  ///
+  /// # Arguments
+  /// * `frame_rate` - The frame rate at which the user interface should be rendered.
+  ///
+  /// # Returns
+  /// * `Self` - The modified instance of the `TuiBackend` struct.
+  pub fn with_frame_rate(mut self, frame_rate: f64) -> Self {
     self.frame_rate = frame_rate;
     self
   }
-
-  pub fn mouse(mut self, mouse: bool) -> Self {
+  /// Enable or disable the mouse for the user interface.
+  /// By default, the mouse is disabled.
+  ///
+  /// # Arguments
+  /// * `mouse` - A boolean flag that represents whether the mouse is enabled or not.
+  ///
+  /// # Returns
+  /// * `Self` - The modified instance of the `TuiBackend` struct.
+  pub fn with_mouse(mut self, mouse: bool) -> Self {
     self.mouse = mouse;
     self
   }
-
-  pub fn paste(mut self, paste: bool) -> Self {
+  /// Enable or disable the paste mode for the user interface.
+  /// By default, the paste mode is disabled.
+  ///
+  /// # Arguments
+  /// * `paste` - A boolean flag that represents whether the paste mode is enabled or not.
+  ///
+  /// # Returns
+  /// * `Self` - The modified instance of the `TuiBackend` struct.
+  pub fn with_paste(mut self, paste: bool) -> Self {
     self.paste = paste;
     self
   }
-
+  /// Send an event asynchronously for processing.
+  /// This will pop from the event queue the first event that is ready and return it.
+  /// If no event is available, this will sleep until an event is available.
+  ///
+  /// # Returns
+  /// * `Option<Event>` - An optional event that is ready for processing.
   pub async fn next(&mut self) -> Option<Event> {
     self.event_rx.recv().await
   }
@@ -118,6 +164,9 @@ impl TuiBackend {
   // Private functions
   // ==============================
 
+  /// Start processing events asynchronously.
+  /// This will spawn a new task that will process events.
+  /// The task will listen for events from the terminal and send them to the event queue for processing.
   fn start(&mut self) {
     let _event_tx = self.event_tx.clone();
     let render_delay = time::Duration::from_secs_f64(1.0 / self.frame_rate);

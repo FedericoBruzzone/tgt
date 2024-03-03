@@ -1,44 +1,14 @@
 use {
   crate::{
-    action::Action,
+    app_error::AppError,
+    enums::{action::Action, event::Event},
     tui::Tui,
-    tui_backend::{Event, TuiBackend},
+    tui_backend::TuiBackend,
   },
   ratatui::layout::Rect,
   std::io,
-  tokio::sync::mpsc::{self, error::SendError},
+  tokio::sync::mpsc,
 };
-
-// ========== Error ==========
-#[derive(Debug)]
-pub enum AppError {
-  Io(io::Error),
-  Send(SendError<Action>),
-}
-
-impl From<io::Error> for AppError {
-  fn from(error: io::Error) -> Self {
-    Self::Io(error)
-  }
-}
-
-impl From<SendError<Action>> for AppError {
-  fn from(error: SendError<Action>) -> Self {
-    Self::Send(error)
-  }
-}
-
-impl std::fmt::Display for AppError {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self {
-      Self::Io(error) => write!(f, "IO error: {}", error),
-      Self::Send(error) => write!(f, "Send error: {}", error),
-    }
-  }
-}
-// impl std::error::Error for AppError {}
-
-// ===========================
 
 pub struct App {
   tui: Tui,
@@ -50,7 +20,10 @@ pub struct App {
 impl App {
   pub fn new() -> Result<Self, io::Error> {
     let tui = Tui::new();
-    let tui_backend = TuiBackend::new()?.frame_rate(60.0).mouse(true).paste(true);
+    let tui_backend = TuiBackend::new()?
+      .with_frame_rate(60.0)
+      .with_mouse(true)
+      .with_paste(true);
     let frame_rate = 60.0;
     let quit = false;
     Ok(Self {
@@ -78,7 +51,7 @@ impl App {
         // TODO: tui.stop()?
         break;
       }
-      self.handle_tui_events(&mut action_tx).await?;
+      self.handle_tui_backend_events(&mut action_tx).await?;
 
       while let Ok(action) = action_rx.try_recv() {
         match action {
@@ -123,7 +96,7 @@ impl App {
   // Private functions
   // ==============================
 
-  async fn handle_tui_events(&mut self, action_tx: &mut mpsc::UnboundedSender<Action>) -> Result<(), AppError> {
+  async fn handle_tui_backend_events(&mut self, action_tx: &mut mpsc::UnboundedSender<Action>) -> Result<(), AppError> {
     if let Some(event) = self.tui_backend.next().await {
       match event {
         Event::Quit => action_tx.send(Action::Quit)?,
@@ -131,7 +104,9 @@ impl App {
         Event::Render => action_tx.send(Action::Render)?,
         Event::Mouse(mouse) => action_tx.send(Action::Mouse(mouse))?,
         Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
-        _ => {}
+        _ =>
+          /* Event::Init */
+          {}
       }
       if let Some(action) = self.tui.handle_events(Some(event.clone()))? {
         action_tx.send(action)?;
