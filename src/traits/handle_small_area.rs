@@ -2,11 +2,12 @@
 /// Implementors of this trait can be notified when the area they are rendering in is too small to be useful.
 /// This can be useful for components that require a minimum amount of space to be useful.
 pub trait HandleSmallArea {
-  /// Handle a small area event.
+  /// This method is called when the area is too small to be useful.
+  /// This should set the state of the component to reflect the fact that the area is too small.
   ///
   /// # Arguments
   ///
-  /// * `small` - A boolean indicating if the area is too small.
+  /// * `small_area` - A boolean indicating if the area is too small.
   #[allow(unused_variables)]
-  fn small_area(&mut self, small: bool) {}
+  fn with_small_area(&mut self, small_area: bool) {}
 }

@@ -4,9 +4,9 @@ use {
     traits::{component::Component, handle_small_area::HandleSmallArea},
   },
   ratatui::{
-    layout::{self, Alignment},
+    layout::{Alignment, Rect},
     widgets::{
-      block::{self, Position, Title},
+      block::{Block, Position, Title},
       Borders,
     },
   },
@@ -16,9 +16,14 @@ use {
 
 pub const TITLE_BAR: &str = "title_bar";
 
+/// `TitleBar` is a struct that represents a title bar.
+/// It is responsible for managing the layout and rendering of the title bar.
 pub struct TitleBar {
+  /// The name of the `TitleBar`.
   name: String,
+  /// An unbounded sender that send action for processing.
   command_tx: Option<mpsc::UnboundedSender<Action>>,
+  /// A flag indicating whether the `TitleBar` should be displayed as a smaller version of itself.
   small_area: bool,
 }
 
@@ -33,15 +38,27 @@ impl TitleBar {
       small_area,
     }
   }
-
-  pub fn name(mut self, name: &str) -> Self {
-    self.name = name.to_string();
+  /// Set the name of the `TitleBar`.
+  ///
+  /// # Arguments
+  /// * `name` - The name of the `TitleBar`.
+  ///
+  /// # Returns
+  /// * `Self` - The modified instance of the `TitleBar`.
+  pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
+    self.name = name.as_ref().to_string();
     self
   }
 }
 
+/// Implement the `HandleSmallArea` trait for the `TitleBar` struct.
+/// This trait allows the `TitleBar` to display a smaller version of itself if necessary.
 impl HandleSmallArea for TitleBar {
-  fn small_area(&mut self, small: bool) {
+  /// Set the `small_area` flag for the `TitleBar`.
+  ///
+  /// # Arguments
+  /// * `small_area` - A boolean flag indicating whether the `TitleBar` should be displayed as a smaller version of itself.
+  fn with_small_area(&mut self, small: bool) {
     self.small_area = small;
   }
 }
@@ -52,9 +69,9 @@ impl Component for TitleBar {
     Ok(())
   }
 
-  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
+  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
     frame.render_widget(
-      block::Block::new().borders(Borders::TOP).title(
+      Block::new().borders(Borders::TOP).title(
         Title::from(self.name.as_str())
           .position(Position::Top)
           .alignment(Alignment::Center),

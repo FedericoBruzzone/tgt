@@ -4,26 +4,43 @@ use {
     enums::{action::Action, component_name::ComponentName},
     traits::{component::Component, handle_small_area::HandleSmallArea},
   },
-  ratatui::layout,
-  std::{collections::HashMap, io},
-  tokio::sync::mpsc,
+  ratatui::layout::{Constraint, Direction, Layout, Rect},
+  std::collections::HashMap,
+  tokio::sync::mpsc::UnboundedSender,
 };
 
+/// `CoreWindow` is a struct that represents the core window of the application.
+/// It is responsible for managing the layout and rendering of the core window.
 pub struct CoreWindow {
+  /// The name of the `CoreWindow`.
   name: String,
-  command_tx: Option<mpsc::UnboundedSender<Action>>,
+  /// An unbounded sender that send action for processing.
+  command_tx: Option<UnboundedSender<Action>>,
+  /// A map of components that are part of the `CoreWindow`.
   components: HashMap<ComponentName, Box<dyn Component>>,
+  /// A flag indicating whether the `CoreWindow` should be displayed as a smaller version of itself.
   small_area: bool,
   #[allow(dead_code)]
+  /// The name of the component that is currently focused.
   focused: ComponentName,
 }
 
 impl CoreWindow {
+  /// Create a new instance of the `CoreWindow` struct.
+  ///
+  /// # Returns
+  /// * `Self` - The new instance of the `CoreWindow` struct.
   pub fn new() -> Self {
     let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
-      (ComponentName::ChatList, ChatListWindow::new().name("Chats").new_boxed()),
-      (ComponentName::Chat, ChatWindow::new().name("Name").new_boxed()),
-      (ComponentName::Prompt, PromptWindow::new().name("Prompt").new_boxed()),
+      (
+        ComponentName::ChatList,
+        ChatListWindow::new().with_name("Chats").new_boxed(),
+      ),
+      (ComponentName::Chat, ChatWindow::new().with_name("Name").new_boxed()),
+      (
+        ComponentName::Prompt,
+        PromptWindow::new().with_name("Prompt").new_boxed(),
+      ),
     ];
 
     let name = "".to_string();
@@ -40,24 +57,36 @@ impl CoreWindow {
       focused,
     }
   }
-
-  pub fn name(mut self, name: &str) -> Self {
-    self.name = name.to_string();
+  /// Set the name of the `CoreWindow`.
+  ///
+  /// # Arguments
+  /// * `name` - The name of the `CoreWindow`.
+  ///
+  /// # Returns
+  /// * `Self` - The modified instance of the `CoreWindow`.
+  pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
+    self.name = name.as_ref().to_string();
     self
   }
 }
 
+/// Implement the `HandleSmallArea` trait for the `CoreWindow` struct.
+/// This trait allows the `CoreWindow` to display a smaller version of itself if necessary.
 impl HandleSmallArea for CoreWindow {
-  fn small_area(&mut self, small: bool) {
-    self.small_area = small;
+  /// Set the `small_area` flag for the `CoreWindow`.
+  ///
+  /// # Arguments
+  /// * `small_area` - A boolean flag indicating whether the `CoreWindow` should be displayed as a smaller version of itself.
+  fn with_small_area(&mut self, small_area: bool) {
+    self.small_area = small_area;
     for (_, component) in self.components.iter_mut() {
-      component.small_area(small);
+      component.with_small_area(small_area);
     }
   }
 }
 
 impl Component for CoreWindow {
-  fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
+  fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
     self.command_tx = Some(tx.clone());
     for (_, component) in self.components.iter_mut() {
       component.register_action_handler(tx.clone())?;
@@ -65,16 +94,16 @@ impl Component for CoreWindow {
     Ok(())
   }
 
-  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
+  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
     // let size_chats = if area.width < SMALL_AREA_WIDTH { 0 } else { 20 };
     let size_chats = if self.small_area { 0 } else { 20 };
     let size_prompt = 3;
 
-    let core_layout = layout::Layout::default()
-      .direction(layout::Direction::Horizontal)
+    let core_layout = Layout::default()
+      .direction(Direction::Horizontal)
       .constraints([
-        layout::Constraint::Percentage(size_chats),
-        layout::Constraint::Percentage(100 - size_chats),
+        Constraint::Percentage(size_chats),
+        Constraint::Percentage(100 - size_chats),
       ])
       .split(area);
 
@@ -84,9 +113,9 @@ impl Component for CoreWindow {
       .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
       .draw(frame, core_layout[0])?;
 
-    let sub_core_layout = layout::Layout::default()
-      .direction(layout::Direction::Vertical)
-      .constraints([layout::Constraint::Fill(1), layout::Constraint::Length(size_prompt)])
+    let sub_core_layout = Layout::default()
+      .direction(Direction::Vertical)
+      .constraints([Constraint::Fill(1), Constraint::Length(size_prompt)])
       .split(core_layout[1]);
 
     self

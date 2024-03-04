@@ -4,23 +4,34 @@ use {
     traits::{component::Component, handle_small_area::HandleSmallArea},
   },
   ratatui::{
-    layout,
-    symbols::{border, line},
+    layout::Rect,
+    symbols::{
+      border::{Set, PLAIN},
+      line::NORMAL,
+    },
     widgets::{block::Block, Borders},
   },
-  std::io,
-  tokio::sync::mpsc,
+  tokio::sync::mpsc::UnboundedSender,
 };
 
 pub const PROMPT: &str = "prompt_window";
 
+/// `PromptWindow` is a struct that represents a window for displaying a prompt.
+/// It is responsible for managing the layout and rendering of the prompt window.
 pub struct PromptWindow {
+  /// The name of the `PromptWindow`.
   name: String,
-  command_tx: Option<mpsc::UnboundedSender<Action>>,
+  /// An unbounded sender that send action for processing.
+  command_tx: Option<UnboundedSender<Action>>,
+  /// A flag indicating whether the `PromptWindow` should be displayed as a smaller version of itself.
   small_area: bool,
 }
 
 impl PromptWindow {
+  /// Create a new instance of the `PromptWindow` struct.
+  ///
+  /// # Returns
+  /// * `Self` - The new instance of the `PromptWindow` struct.
   pub fn new() -> Self {
     let name = "".to_string();
     let command_tx = None;
@@ -32,35 +43,47 @@ impl PromptWindow {
       small_area,
     }
   }
-
-  pub fn name(mut self, name: &str) -> Self {
-    self.name = name.to_string();
+  /// Set the name of the `PromptWindow`.
+  ///
+  /// # Arguments
+  /// * `name` - The name of the `PromptWindow`
+  ///
+  /// # Returns
+  /// * `Self` - The modified instance of the `PromptWindow`.
+  pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
+    self.name = name.as_ref().to_string();
     self
   }
 }
 
+/// Implement the `HandleSmallArea` trait for the `PromptWindow` struct.
+/// This trait allows the `PromptWindow` to display a smaller version of itself if necessary.
 impl HandleSmallArea for PromptWindow {
-  fn small_area(&mut self, small_area: bool) {
+  /// Set the `small_area` flag for the `PromptWindow`.
+  ///
+  /// # Arguments
+  /// * `small_area` - A boolean flag indicating whether the `PromptWindow` should be displayed as a smaller version of itself.
+  fn with_small_area(&mut self, small_area: bool) {
     self.small_area = small_area;
   }
 }
 
 impl Component for PromptWindow {
-  fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
+  fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
     self.command_tx = Some(tx.clone());
     Ok(())
   }
 
-  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()> {
-    let collapsed_top_and_left_border_set = border::Set {
-      top_left: line::NORMAL.vertical_right,
-      top_right: line::NORMAL.vertical_left,
+  fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    let collapsed_top_and_left_border_set = Set {
+      top_left: NORMAL.vertical_right,
+      top_right: NORMAL.vertical_left,
       bottom_left: if self.small_area {
-        line::NORMAL.bottom_left
+        NORMAL.bottom_left
       } else {
-        line::NORMAL.horizontal_up
+        NORMAL.horizontal_up
       },
-      ..border::PLAIN
+      ..PLAIN
     };
 
     frame.render_widget(

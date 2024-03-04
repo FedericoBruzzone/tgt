@@ -28,14 +28,14 @@ impl Tui {
   /// * `Self` - The new instance of the `Tui` struct.
   pub fn new() -> Self {
     let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
-      (ComponentName::TitleBar, TitleBar::new().name("TG-TUI").new_boxed()),
+      (ComponentName::TitleBar, TitleBar::new().with_name("TG-TUI").new_boxed()),
       (
         ComponentName::CoreWindow,
-        CoreWindow::new().name("CoreWindow").new_boxed(),
+        CoreWindow::new().with_name("CoreWindow").new_boxed(),
       ),
       (
         ComponentName::StatusBar,
-        StatusBar::new().name("Status Bar").new_boxed(),
+        StatusBar::new().with_name("Status Bar").new_boxed(),
       ),
     ];
 
@@ -111,11 +111,11 @@ impl Tui {
   pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
     if area.width < SMALL_AREA_WIDTH {
       self.components.iter_mut().for_each(|(_, component)| {
-        component.small_area(true);
+        component.with_small_area(true);
       });
     } else {
       self.components.iter_mut().for_each(|(_, component)| {
-        component.small_area(false);
+        component.with_small_area(false);
       });
     }
 

@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// `ComponentName` is an enum that represents the name of a component in the user interface.
 pub enum ComponentName {
   CoreWindow,
   ChatList,
@@ -11,6 +12,7 @@ pub enum ComponentName {
   StatusBar,
 }
 
+/// Implement the `Display` trait for the `ComponentName` enum.
 impl Display for ComponentName {
   fn fmt(&self, f: &mut Formatter) -> Result {
     // write!(f, "{:?}", self)
