@@ -20,6 +20,11 @@ cd ..
 ls -l td/tdlib
 ```
 
+Add to the `.bashrc`:
+```bash
+export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+```
+
 ### Windows
 
 - Note that Windows Subsystem for Linux (WSL) and Cygwin are not Windows environments, so you need to use instructions for Linux for them instead.
@@ -67,6 +72,11 @@ cd ..
 ls -l td/tdlib
 ```
 
+Add to the `.bashrc`:
+```bash
+export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+```
+
 ### Linux Other (using clang)
 
 - Install Git, clang >= 3.4, libc++, make, CMake >= 3.0.2, OpenSSL-dev, zlib-dev, gperf, PHP using your package manager.
@@ -82,4 +92,9 @@ cmake --build . --target install
 cd ..
 cd ..
 ls -l td/tdlib
+```
+
+Add to the `.bashrc`:
+```bash
+export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
 ```
