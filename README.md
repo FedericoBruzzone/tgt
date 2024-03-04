@@ -9,13 +9,13 @@
 
 ## Road Map
 
-You can find the roadmap of the project [here](https://github.com/FedericoBruzzone/tg-tui/issues/1) (in the pinned issues).
+You can find the road map of the project [here](https://github.com/FedericoBruzzone/tg-tui/issues/1) (in the pinned issues).
 
 ### Commands
 
-You can use `cargo`, `just` or `make` to run the project.
+You can use `cargo`, `just` or `make` as build tools. Here are the available commands:
 
-```shell
+```text
 cargo COMMAND
 just COMMAND
 make COMMAND
