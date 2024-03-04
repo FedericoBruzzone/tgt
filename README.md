@@ -35,7 +35,7 @@ Contributions to this project are welcome! If you have any suggestions, improvem
 
 ### License
 
-This repository is licensed under the [GNU General Public License (GPL)](https://www.gnu.org/licenses/gpl-3.0.html). Please review the license file provided in the repository for more information regarding the terms and conditions of the GPL license.
+This repository is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review the license file provided in the repository for more information regarding the terms and conditions of the license.
 
 ### Contact
 
