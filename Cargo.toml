@@ -1,5 +1,5 @@
 [package]
-name = "tg-tui"
+name = "tgt"
 version = "0.1.0"
 edition = "2021"
 

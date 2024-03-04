@@ -598,7 +598,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tg-tui"
+name = "tgt"
 version = "0.1.0"
 dependencies = [
  "crossterm",
