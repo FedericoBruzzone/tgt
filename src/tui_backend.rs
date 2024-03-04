@@ -6,16 +6,13 @@ use {
       DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
       EventStream, KeyCode, KeyEventKind,
     },
-    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
   },
   futures::{FutureExt, StreamExt},
   ratatui::{backend::CrosstermBackend, Terminal},
-  std::{
-    io::{self, Stderr},
-    time,
-  },
+  std::{io::Stderr, time::Duration},
   tokio::{
-    sync::mpsc::{self, error::SendError, UnboundedReceiver, UnboundedSender},
+    sync::mpsc::{error::SendError, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
   },
 };
@@ -44,10 +41,10 @@ impl TuiBackend {
   ///
   /// # Returns
   /// * `Result<Self, io::Error>` - An Ok result containing the new instance of the `TuiBackend` struct or an error.
-  pub fn new() -> Result<Self, io::Error> {
-    let terminal = ratatui::Terminal::new(CrosstermBackend::new(io::stderr()))?;
+  pub fn new() -> Result<Self, std::io::Error> {
+    let terminal = ratatui::Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
     let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });
-    let (event_tx, event_rx) = mpsc::unbounded_channel();
+    let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel();
     let frame_rate = 60.0;
     let mouse = false;
     let paste = false;
@@ -66,14 +63,14 @@ impl TuiBackend {
   ///
   /// # Returns
   /// * `Result<(), io::Error>` - An Ok result or an error.
-  pub fn enter(&mut self) -> Result<(), io::Error> {
-    terminal::enable_raw_mode()?;
-    crossterm::execute!(io::stderr(), EnterAlternateScreen, cursor::Hide)?;
+  pub fn enter(&mut self) -> Result<(), std::io::Error> {
+    crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(std::io::stderr(), EnterAlternateScreen, cursor::Hide)?;
     if self.mouse {
-      crossterm::execute!(io::stderr(), EnableMouseCapture)?;
+      crossterm::execute!(std::io::stderr(), EnableMouseCapture)?;
     }
     if self.paste {
-      crossterm::execute!(io::stderr(), EnableBracketedPaste)?;
+      crossterm::execute!(std::io::stderr(), EnableBracketedPaste)?;
     }
     self.start();
     Ok(())
@@ -83,14 +80,14 @@ impl TuiBackend {
   ///
   /// # Returns
   /// * `Result<(), io::Error>` - An Ok result or an error.
-  pub fn exit(&self) -> Result<(), io::Error> {
-    terminal::disable_raw_mode()?;
-    crossterm::execute!(io::stderr(), LeaveAlternateScreen, cursor::Show)?;
+  pub fn exit(&self) -> Result<(), std::io::Error> {
+    crossterm::terminal::disable_raw_mode()?;
+    crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
     if self.mouse {
-      crossterm::execute!(io::stderr(), DisableMouseCapture)?;
+      crossterm::execute!(std::io::stderr(), DisableMouseCapture)?;
     }
     if self.paste {
-      crossterm::execute!(io::stderr(), DisableBracketedPaste)?;
+      crossterm::execute!(std::io::stderr(), DisableBracketedPaste)?;
     }
     Ok(())
   }
@@ -99,7 +96,7 @@ impl TuiBackend {
   ///
   /// # Returns
   /// * `Result<(), io::Error>` - An Ok result or an error.
-  pub fn suspend(&mut self) -> Result<(), io::Error> {
+  pub fn suspend(&mut self) -> Result<(), std::io::Error> {
     self.exit()?;
     #[cfg(not(windows))]
     signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
@@ -109,7 +106,7 @@ impl TuiBackend {
   ///
   /// # Returns
   /// * `Result<(), io::Error>` - An Ok result or an error.
-  pub fn resume(&mut self) -> Result<(), io::Error> {
+  pub fn resume(&mut self) -> Result<(), std::io::Error> {
     self.enter()?;
     Ok(())
   }
@@ -127,6 +124,7 @@ impl TuiBackend {
     self
   }
   /// Enable or disable the mouse for the user interface.
+
   /// By default, the mouse is disabled.
   ///
   /// # Arguments
@@ -169,7 +167,7 @@ impl TuiBackend {
   /// The task will listen for events from the terminal and send them to the event queue for processing.
   fn start(&mut self) {
     let _event_tx = self.event_tx.clone();
-    let render_delay = time::Duration::from_secs_f64(1.0 / self.frame_rate);
+    let render_delay = Duration::from_secs_f64(1.0 / self.frame_rate);
 
     self.task = tokio::spawn(async move {
       let mut reader = EventStream::new();
@@ -200,8 +198,8 @@ impl TuiBackend {
                   CrosstermEvent::Resize(width, height) => {
                     _event_tx.send(Event::Resize(width, height))?;
                   },
-                  CrosstermEvent::FocusLost => {}
-                  CrosstermEvent::FocusGained => {}
+                  CrosstermEvent::FocusLost => {} // TODO: handle focus lost
+                  CrosstermEvent::FocusGained => {} // TODO: handle focus gained
                   _ => unimplemented!()
                 }
               },

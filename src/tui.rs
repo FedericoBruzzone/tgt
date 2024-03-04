@@ -1,15 +1,14 @@
 use {
   crate::{
     components::{
-      core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar, ComponentName, SMALL_AREA_HEIGHT,
-      SMALL_AREA_WIDTH,
+      core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar, SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
     },
-    enums::{action::Action, event::Event},
+    enums::{action::Action, component_name::ComponentName, event::Event},
     traits::component::Component,
   },
   ratatui::layout::{Constraint, Direction, Layout, Rect},
-  std::{collections::HashMap, io},
-  tokio::sync::mpsc,
+  std::collections::HashMap,
+  tokio::sync::mpsc::UnboundedSender,
 };
 
 /// `Tui` is a struct that represents the main user interface for the application.
@@ -17,7 +16,7 @@ use {
 /// It also handles the distribution of events and actions to the appropriate components.
 pub struct Tui {
   /// An optional unbounded sender that can send actions to be processed.
-  action_tx: Option<mpsc::UnboundedSender<Action>>,
+  action_tx: Option<UnboundedSender<Action>>,
   /// A hashmap of components that make up the user interface.
   components: HashMap<ComponentName, Box<dyn Component>>,
 }
@@ -54,7 +53,7 @@ impl Tui {
   /// # Returns
   ///
   /// * `Result<()>` - An Ok result or an error.
-  pub fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
+  pub fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
     self.action_tx = Some(tx.clone());
     self
       .components
@@ -71,7 +70,7 @@ impl Tui {
   /// # Returns
   ///
   /// * `Result<Option<Action>>` - An action to be processed or none.
-  pub fn handle_events(&mut self, event: Option<Event>) -> io::Result<Option<Action>> {
+  pub fn handle_events(&mut self, event: Option<Event>) -> std::io::Result<Option<Action>> {
     // Handle focus
     self.components.iter_mut().try_fold(None, |acc, (_, component)| {
       match component.handle_events(event.clone()) {
@@ -90,7 +89,7 @@ impl Tui {
   /// # Returns
   ///
   /// * `Result<Option<Action>>` - An action to be processed or none.
-  pub fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
+  pub fn update(&mut self, action: Action) -> std::io::Result<Option<Action>> {
     // Handle focus
     self
       .components
@@ -109,7 +108,7 @@ impl Tui {
   ///
   /// # Returns
   /// * `Result<()>` - An Ok result or an error.
-  pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
+  pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
     if area.width < SMALL_AREA_WIDTH {
       self.components.iter_mut().for_each(|(_, component)| {
         component.small_area(true);

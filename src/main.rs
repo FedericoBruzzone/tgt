@@ -17,7 +17,7 @@ use crate::app_error::AppError;
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn main() -> Result<(), AppError> {
-  let mut app = app::App::new()?.frame_rate(60.0);
+  let mut app = app::App::new()?; //.with_frame_rate(60.0);
   app.run().await?;
 
   Ok(())

@@ -18,11 +18,13 @@ use {
 
 pub const CHAT_LIST: &str = "chat_list_window";
 
+/// `ChatListWindow` is a struct that represents a window for displaying a list of chat items.
+/// It is responsible for managing the layout and rendering of the chat list.
 pub struct ChatListWindow {
   name: String,
   command_tx: Option<mpsc::UnboundedSender<Action>>,
   small_area: bool,
-  chat_list: Vec<String>, // TODO: Use generic of Vec of Contact type
+  chat_list: Vec<String>, // TODO: Use chat_item struct
 }
 
 impl ChatListWindow {

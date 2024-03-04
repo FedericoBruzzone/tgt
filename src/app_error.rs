@@ -1,4 +1,4 @@
-use {crate::enums::action::Action, std::io, tokio::sync::mpsc::error::SendError};
+use {crate::enums::action::Action, tokio::sync::mpsc::error::SendError};
 
 #[derive(Debug)]
 /// An error type for the application.
@@ -6,12 +6,12 @@ use {crate::enums::action::Action, std::io, tokio::sync::mpsc::error::SendError}
 /// It is used to wrap errors from the `std::io` module and the `tokio::sync::mpsc` module.
 /// This type is used as the error type for the `Result` type returned by the `main` function.
 pub enum AppError {
-  Io(io::Error),
+  Io(std::io::Error),
   Send(SendError<Action>),
 }
 /// Convert an `std::io::Error` into an `AppError`.
-impl From<io::Error> for AppError {
-  fn from(error: io::Error) -> Self {
+impl From<std::io::Error> for AppError {
+  fn from(error: std::io::Error) -> Self {
     Self::Io(error)
   }
 }
