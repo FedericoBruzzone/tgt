@@ -113,11 +113,6 @@ impl App {
 
     Ok(())
   }
-
-  // ==============================
-  // Private functions
-  // ==============================
-
   /// Handle incoming events from the TUI backend.
   /// This function will process events from the TUI backend and produce actions if necessary.
   ///

@@ -66,6 +66,7 @@ impl HandleSmallArea for StatusBar {
   }
 }
 
+/// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for StatusBar {
   fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
     self.command_tx = Some(tx);

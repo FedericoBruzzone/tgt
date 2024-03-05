@@ -80,6 +80,7 @@ impl HandleSmallArea for ChatListWindow {
   }
 }
 
+/// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatListWindow {
   fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
     self.command_tx = Some(tx.clone());

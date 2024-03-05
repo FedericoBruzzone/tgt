@@ -157,11 +157,6 @@ impl TuiBackend {
   pub async fn next(&mut self) -> Option<Event> {
     self.event_rx.recv().await
   }
-
-  // ==============================
-  // Private functions
-  // ==============================
-
   /// Start processing events asynchronously.
   /// This will spawn a new task that will process events.
   /// The task will listen for events from the terminal and send them to the event queue for processing.

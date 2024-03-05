@@ -8,10 +8,12 @@ pub mod components;
 pub mod enums;
 pub mod traits;
 
-use crate::app_error::AppError;
-use tdlib::{
+use {
+  crate::app_error::AppError,
+  tdlib::{
     enums::{AuthorizationState, Update, User},
     functions,
+  },
 };
 
 #[tokio::main]
