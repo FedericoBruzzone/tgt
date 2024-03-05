@@ -1,3 +1,4 @@
+# vim: set ft=make :
 export RUST_BACKTRACE := "1"
 
 _default:
