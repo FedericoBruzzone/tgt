@@ -3,8 +3,9 @@ export RUST_BACKTRACE := 1
 build:
 	cargo build
 
+# Example: make run ARGS="--bin <bin_name>"
 run:
-	cargo run
+	cargo run $(ARGS)
 
 fmt:
 	cargo +nightly fmt

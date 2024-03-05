@@ -2,6 +2,7 @@
 name = "tgt"
 version = "0.1.0"
 edition = "2021"
+default-run = "tgt"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 # [toolchain]
@@ -17,4 +18,7 @@ ratatui = "0.26.1"
 signal-hook = "0.3.17"
 tdlib = "0.10.0"
 tokio = {version = "1.36.0", features = ["full"]}
+
+[profile.dev]
+incremental = true
 

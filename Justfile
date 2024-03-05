@@ -1,5 +1,6 @@
 # vim: set ft=make :
 export RUST_BACKTRACE := "1"
+project_name := "tgt"
 
 _default:
   just --list --justfile {{justfile()}}
@@ -9,8 +10,8 @@ build:
   cargo build
 
 # Run the project using cargo
-run:
-  cargo run
+run BIN="" BIN_NAME="":
+  cargo run {{BIN}} {{BIN_NAME}}
 
 # Format the code using cargo nightly
 fmt:
