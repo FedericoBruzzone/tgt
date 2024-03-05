@@ -20,6 +20,11 @@ cd ..
 ls -l td/tdlib
 ```
 
+In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
+```bash
+cp td/tdlib ../
+```
+
 Add to the `.bashrc`:
 ```bash
 export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
@@ -72,6 +77,11 @@ cd ..
 ls -l td/tdlib
 ```
 
+In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
+```bash
+cp td/tdlib ../
+```
+
 Add to the `.bashrc`:
 ```bash
 export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
@@ -92,6 +102,11 @@ cmake --build . --target install
 cd ..
 cd ..
 ls -l td/tdlib
+```
+
+In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
+```bash
+cp td/tdlib ../
 ```
 
 Add to the `.bashrc`:

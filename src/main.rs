@@ -9,6 +9,10 @@ pub mod enums;
 pub mod traits;
 
 use crate::app_error::AppError;
+use tdlib::{
+    enums::{AuthorizationState, Update, User},
+    functions,
+};
 
 #[tokio::main]
 /// The main entry point for the application.
