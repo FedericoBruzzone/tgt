@@ -20,14 +20,34 @@ cd ..
 ls -l td/tdlib
 ```
 
+Step 1:
+
 In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
 ```bash
 cp td/tdlib ../
 ```
 
+Step 2:
+
 Add to the `.bashrc`:
 ```bash
-export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+# Note that this path is there you moved the tdlib directory in the step 1
+export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
+export DYLD_LIBRARY_PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$DYLD_LIBRARY_PATH
+
+# Not correct
+# export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+```
+
+Step 3 (not always necessary):
+
+**!The version of the library may change!**
+
+After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+```bash
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
 ```
 
 ### Windows
@@ -77,14 +97,34 @@ cd ..
 ls -l td/tdlib
 ```
 
+Step 1:
+
 In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
 ```bash
 cp td/tdlib ../
 ```
 
+Step 2:
+
 Add to the `.bashrc`:
 ```bash
-export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+# Note that this path is there you moved the tdlib directory in the step 1
+export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
+export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH # (Not always necessary)
+
+# Not correct
+# export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+```
+
+Step 3 (not always necessary):
+
+**!The version of the library may change!**
+
+After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+```bash
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
 ```
 
 ### Linux Other (using clang)
@@ -104,12 +144,33 @@ cd ..
 ls -l td/tdlib
 ```
 
+Step 1:
+
 In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
 ```bash
 cp td/tdlib ../
 ```
 
+Step 2:
+
 Add to the `.bashrc`:
 ```bash
-export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+# Note that this path is there you moved the tdlib directory in the step 1
+export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
+export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH # (Not always necessary)
+
+# Not correct
+# export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
 ```
+
+Step 3 (not always necessary):
+
+**!The version of the library may change!**
+
+After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+```bash
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
+```
+
