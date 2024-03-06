@@ -24,6 +24,12 @@ pub struct ChatWindow {
   small_area: bool,
 }
 
+impl Default for ChatWindow {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl ChatWindow {
   /// Create a new instance of the `ChatWindow` struct.
   ///

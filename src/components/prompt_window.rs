@@ -27,6 +27,12 @@ pub struct PromptWindow {
   small_area: bool,
 }
 
+impl Default for PromptWindow {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl PromptWindow {
   /// Create a new instance of the `PromptWindow` struct.
   ///

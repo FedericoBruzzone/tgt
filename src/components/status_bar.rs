@@ -26,6 +26,12 @@ pub struct StatusBar {
   small_area: bool,
 }
 
+impl Default for StatusBar {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl StatusBar {
   /// Create a new instance of the `StatusBar` struct.
   ///

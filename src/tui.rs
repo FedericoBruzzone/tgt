@@ -21,6 +21,12 @@ pub struct Tui {
   components: HashMap<ComponentName, Box<dyn Component>>,
 }
 
+impl Default for Tui {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Tui {
   /// Create a new instance of the `Tui` struct.
   ///

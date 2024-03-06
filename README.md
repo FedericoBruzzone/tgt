@@ -12,10 +12,10 @@ You can find the road map of the project [here](https://github.com/FedericoBruzz
 
 ### Commands
 
-You can use `cargo`, `just` or `make` as build tools. Here are the available commands:
+You can use `just`, `make` or `cargo`,  as build tools. If you want to use `cargo`, please make sure to read the `Justfile` or the `Makefile` to understand the flags used for each command.
+Here are the available commands:
 
 ```text
-cargo COMMAND
 just COMMAND
 make COMMAND
 
@@ -31,6 +31,7 @@ COMMANDS:
 ### Contributing
 
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
+The CONFIGURATION.md file contains the configuration of the project, in order to build the tdlib library and the project itself.
 
 ### License
 

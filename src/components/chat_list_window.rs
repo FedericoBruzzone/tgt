@@ -30,6 +30,12 @@ pub struct ChatListWindow {
   chat_list: Vec<String>, // TODO: Use chat_item struct
 }
 
+impl Default for ChatListWindow {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl ChatListWindow {
   /// Create a new instance of the `ChatListWindow` struct.
   ///

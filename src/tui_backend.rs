@@ -42,7 +42,7 @@ impl TuiBackend {
   /// # Returns
   /// * `Result<Self, io::Error>` - An Ok result containing the new instance of the `TuiBackend` struct or an error.
   pub fn new() -> Result<Self, std::io::Error> {
-    let terminal = ratatui::Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
+    let terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
     let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });
     let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel();
     let frame_rate = 60.0;
@@ -212,13 +212,14 @@ impl TuiBackend {
 
 // #[cfg(test)]
 // mod tests {
-//   use super::*;
+//   use {super::*, tokio::time::timeout};
+//
 //   #[tokio::test]
 //   async fn test_default_new() {
 //     let mut backend = TuiBackend::new().unwrap();
 //     let backend_terminal_size = backend.terminal.size().unwrap();
-//     let backend_task = backend.task.await.unwrap();
-
+//     let backend_task = timeout(Duration::from_secs(5), backend.task).await.unwrap();
+//
 //     assert_eq!(backend_terminal_size.x, 0);
 //     assert_eq!(backend_terminal_size.y, 0);
 //     assert!(matches!(backend_task, Err(_)));
@@ -228,14 +229,14 @@ impl TuiBackend {
 //     assert_eq!(backend.mouse, false);
 //     assert_eq!(backend.paste, false);
 //   }
-
+//
 //   #[tokio::test]
 //   async fn test_with_frame_rate() {
 //     let frame_rate = 30.0;
 //     let mut backend = TuiBackend::new().unwrap().with_frame_rate(frame_rate);
 //     let backend_terminal_size = backend.terminal.size().unwrap();
-//     let backend_task = backend.task.await.unwrap();
-
+//     let backend_task = timeout(Duration::from_secs(5), backend.task).await.unwrap();
+//
 //     assert_eq!(backend_terminal_size.x, 0);
 //     assert_eq!(backend_terminal_size.y, 0);
 //     assert!(matches!(backend_task, Err(_)));

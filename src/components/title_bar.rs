@@ -27,6 +27,12 @@ pub struct TitleBar {
   small_area: bool,
 }
 
+impl Default for TitleBar {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl TitleBar {
   pub fn new() -> Self {
     let command_tx = None;

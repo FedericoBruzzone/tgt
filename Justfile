@@ -15,11 +15,12 @@ run BIN="" BIN_NAME="":
 
 # Format the code using cargo nightly
 fmt:
+  cargo +nightly fmt
   cargo +nightly fmt -- --check
 
 # Run tests using cargo
 test:
-  cargo test -- --test-threads=1
+  cargo test -- --nocapture --test-threads=1
 
 # Clean the project using cargo
 clean:

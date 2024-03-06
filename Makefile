@@ -8,10 +8,11 @@ run:
 	cargo run $(ARGS)
 
 fmt:
+	cargo +nightly fmt
 	cargo +nightly fmt -- --check
 
 test:
-	cargo test -- --test-threads=1
+	cargo test -- --nocapture --test-threads=1
 
 clean:
 	cargo clean

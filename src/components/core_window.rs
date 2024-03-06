@@ -25,6 +25,12 @@ pub struct CoreWindow {
   focused: ComponentName,
 }
 
+impl Default for CoreWindow {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl CoreWindow {
   /// Create a new instance of the `CoreWindow` struct.
   ///
