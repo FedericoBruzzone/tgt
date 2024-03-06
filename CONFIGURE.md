@@ -1,5 +1,9 @@
 # Configure the project
 
+The steps to build TDLib can be found [here](https://tdlib.github.io/td/build.html?language=Rust), for other info check the official repository of [TDLib](https://github.com/tdlib/td).
+
+About the `api_id` you can get one form [https://my.telegram.org](https://my.telegram.org), for other info check the official [documentation](https://core.telegram.org/api/obtaining_api_id).
+
 ## Build TDLib
 
 ### MacOS (Intel)
@@ -23,6 +27,7 @@ ls -l td/tdlib
 Step 1:
 
 In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
+
 ```bash
 cp td/tdlib ../
 ```
@@ -30,6 +35,7 @@ cp td/tdlib ../
 Step 2:
 
 Add to the `.bashrc`:
+
 ```bash
 # Note that this path is there you moved the tdlib directory in the step 1
 export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
@@ -42,6 +48,7 @@ export DYLD_LIBRARY_PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$DYLD_LIBRARY_PATH
 Step 3:
 
 Add to the `.bashrc`:
+
 ```bash
 # Warning: The API_HASH and API_ID are takern from the Telegram API
 export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
@@ -53,6 +60,7 @@ Step 4 (not always necessary):
 **!The version of the library may change!**
 
 After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+
 ```bash
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
@@ -65,10 +73,11 @@ cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
 - Download and install Microsoft Visual Studio. Enable C++ support while installing.
 - Download and install CMake; choose "Add CMake to the system PATH" option while installing.
 - Download and install Git.
-- Download and unpack PHP. Add the path to php.exe to the PATH environment variable.
+- Download and install pkg-config.
 - Close and re-open PowerShell if the PATH environment variable was changed.
 
 Run these commands in PowerShell to build TDLib and to install it to td/tdlib:
+
 ```powershell
 git clone https://github.com/tdlib/td.git
 cd td
@@ -76,19 +85,27 @@ git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 git checkout cd5e746ec203c8c3c61647e0886a8df8c1e78e41
 ./bootstrap-vcpkg.bat
-./vcpkg.exe install gperf:x86-windows openssl:x86-windows zlib:x86-windows
+./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
 cd ..
-Remove-Item build -Force -Recurse -ErrorAction SilentlyContinue
+rm -rf build
 mkdir build
 cd build
-cmake -A Win32 -DCMAKE_INSTALL_PREFIX:PATH=../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
 cmake --build . --target install --config Release
 cd ..
 cd ..
-dir td/tdlib
+ls -l td/tdlib
 ```
 
-Step 3:
+Step 1:
+
+```powershell
+$env:PATH = $env:PATH + ";/WHERE_IS_TDLIB/tdlib/bin"
+$env:PKG_CONFIG_PATH="/WHERE_IS_TDLIB/tdlib/lib/pkgconfig"
+```
+
+Step 2:
+
 ```powershell
 # Warning: The API_HASH and API_ID are takern from the Telegram API
 $env:API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
@@ -116,6 +133,7 @@ ls -l td/tdlib
 Step 1:
 
 In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
+
 ```bash
 cp td/tdlib ../
 ```
@@ -123,6 +141,7 @@ cp td/tdlib ../
 Step 2:
 
 Add to the `.bashrc`:
+
 ```bash
 # Note that this path is there you moved the tdlib directory in the step 1
 export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
@@ -135,6 +154,7 @@ export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH # (Not always necessary)
 Step 3:
 
 Add to the `.bashrc`:
+
 ```bash
 # Warning: The API_HASH and API_ID are takern from the Telegram API
 export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
@@ -146,6 +166,7 @@ Step 4 (not always necessary):
 **!The version of the library may change!**
 
 After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+
 ```bash
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
@@ -172,6 +193,7 @@ ls -l td/tdlib
 Step 1:
 
 In order to use TDLib in your rust project, copy the td/tdlib directory to the parent folder:
+
 ```bash
 cp td/tdlib ../
 ```
@@ -179,6 +201,7 @@ cp td/tdlib ../
 Step 2:
 
 Add to the `.bashrc`:
+
 ```bash
 # Note that this path is there you moved the tdlib directory in the step 1
 export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
@@ -191,6 +214,7 @@ export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH # (Not always necessary)
 Step 3:
 
 Add to the `.bashrc`:
+
 ```bash
 # Warning: The API_HASH and API_ID are takern from the Telegram API
 export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
@@ -202,9 +226,9 @@ Step 4 (not always necessary):
 **!The version of the library may change!**
 
 After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+
 ```bash
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
 ```
-
