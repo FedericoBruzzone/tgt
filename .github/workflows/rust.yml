@@ -14,12 +14,75 @@ env:
 
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - name: Run cargo fmt
+        run: cargo +nightly fmt --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Restore cache TDLib
+        id: cache-tdlib-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: td/
+          key: ${{ runner.os }}-TDLib
+      - name: Build TDLib
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-14 libc++-dev libc++abi-dev
+          git clone https://github.com/tdlib/td.git
+          cd td
+          rm -rf build
+          mkdir build
+          cd build
+          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          cmake --build . --target install
+      - name: Save cache TDLib
+        uses: actions/cache/save@v4
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
+        with:
+          path: td/
+          key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
+      - name: Extract TDLib
+        run: cp -r ./td/tdlib ./
+      - name: Set environment variables
+        run: echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
+        # echo "$(pwd)/tdlib/lib" >> $GITHUB_PATH
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run clippy
+        run: cargo clippy
+
   build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Restore cache TDLib
         id: cache-tdlib-restore
         uses: actions/cache/restore@v4
@@ -63,8 +126,8 @@ jobs:
       - name: Build cargo
         run: cargo build --verbose
       - name: Run tests
-        run: cargo test --verbose -- --test-threads=1
-      - name: Check formatting
-        run: cargo fmt -- --check
-      - name: Run clippy
-        run: cargo clippy
+        run: cargo test --verbose
+      # - name: Check formatting
+      #   run: cargo +nightly fmt -- --check
+      # - name: Run clippy
+      #   run: cargo clippy
