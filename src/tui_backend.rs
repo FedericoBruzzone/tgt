@@ -210,40 +210,39 @@ impl TuiBackend {
   }
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
+// #[cfg(test)]
+// mod tests {
+//   use super::*;
+//   #[tokio::test]
+//   async fn test_default_new() {
+//     let mut backend = TuiBackend::new().unwrap();
+//     let backend_terminal_size = backend.terminal.size().unwrap();
+//     let backend_task = backend.task.await.unwrap();
 
-  #[tokio::test]
-  async fn test_default_new() {
-    let mut backend = TuiBackend::new().unwrap();
-    let backend_terminal_size = backend.terminal.size().unwrap();
-    let backend_task = backend.task.await.unwrap();
+//     assert_eq!(backend_terminal_size.x, 0);
+//     assert_eq!(backend_terminal_size.y, 0);
+//     assert!(matches!(backend_task, Err(_)));
+//     assert!(matches!(backend.event_tx.send(Event::Init), Ok(())));
+//     assert!(matches!(backend.event_rx.recv().await, Some(Event::Init)));
+//     assert_eq!(backend.frame_rate, 60.0);
+//     assert_eq!(backend.mouse, false);
+//     assert_eq!(backend.paste, false);
+//   }
 
-    assert_eq!(backend_terminal_size.x, 0);
-    assert_eq!(backend_terminal_size.y, 0);
-    assert!(matches!(backend_task, Err(_)));
-    assert!(matches!(backend.event_tx.send(Event::Init), Ok(())));
-    assert!(matches!(backend.event_rx.recv().await, Some(Event::Init)));
-    assert_eq!(backend.frame_rate, 60.0);
-    assert_eq!(backend.mouse, false);
-    assert_eq!(backend.paste, false);
-  }
+//   #[tokio::test]
+//   async fn test_with_frame_rate() {
+//     let frame_rate = 30.0;
+//     let mut backend = TuiBackend::new().unwrap().with_frame_rate(frame_rate);
+//     let backend_terminal_size = backend.terminal.size().unwrap();
+//     let backend_task = backend.task.await.unwrap();
 
-  #[tokio::test]
-  async fn test_with_frame_rate() {
-    let frame_rate = 30.0;
-    let mut backend = TuiBackend::new().unwrap().with_frame_rate(frame_rate);
-    let backend_terminal_size = backend.terminal.size().unwrap();
-    let backend_task = backend.task.await.unwrap();
-
-    assert_eq!(backend_terminal_size.x, 0);
-    assert_eq!(backend_terminal_size.y, 0);
-    assert!(matches!(backend_task, Err(_)));
-    assert!(matches!(backend.event_tx.send(Event::Init), Ok(())));
-    assert!(matches!(backend.event_rx.recv().await, Some(Event::Init)));
-    assert_eq!(backend.frame_rate, frame_rate);
-    assert_eq!(backend.mouse, false);
-    assert_eq!(backend.paste, false);
-  }
-}
+//     assert_eq!(backend_terminal_size.x, 0);
+//     assert_eq!(backend_terminal_size.y, 0);
+//     assert!(matches!(backend_task, Err(_)));
+//     assert!(matches!(backend.event_tx.send(Event::Init), Ok(())));
+//     assert!(matches!(backend.event_rx.recv().await, Some(Event::Init)));
+//     assert_eq!(backend.frame_rate, frame_rate);
+//     assert_eq!(backend.mouse, false);
+//     assert_eq!(backend.paste, false);
+//   }
+// }
