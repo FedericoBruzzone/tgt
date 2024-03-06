@@ -39,7 +39,16 @@ export DYLD_LIBRARY_PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$DYLD_LIBRARY_PATH
 # export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
 ```
 
-Step 3 (not always necessary):
+Step 3:
+
+Add to the `.bashrc`:
+```bash
+# Warning: The API_HASH and API_ID are takern from the Telegram API
+export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
+export API_ID="94575"
+```
+
+Step 4 (not always necessary):
 
 **!The version of the library may change!**
 
@@ -79,6 +88,13 @@ cd ..
 dir td/tdlib
 ```
 
+Step 3:
+```powershell
+# Warning: The API_HASH and API_ID are takern from the Telegram API
+$env:API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
+$env:API_ID="94575"
+```
+
 ### Linux Ubuntu22 (using clang)
 
 ```bash
@@ -116,7 +132,16 @@ export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH # (Not always necessary)
 # export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
 ```
 
-Step 3 (not always necessary):
+Step 3:
+
+Add to the `.bashrc`:
+```bash
+# Warning: The API_HASH and API_ID are takern from the Telegram API
+export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
+export API_ID="94575"
+```
+
+Step 4 (not always necessary):
 
 **!The version of the library may change!**
 
@@ -163,7 +188,16 @@ export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH # (Not always necessary)
 # export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
 ```
 
-Step 3 (not always necessary):
+Step 3:
+
+Add to the `.bashrc`:
+```bash
+# Warning: The API_HASH and API_ID are takern from the Telegram API
+export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
+export API_ID="94575"
+```
+
+Step 4 (not always necessary):
 
 **!The version of the library may change!**
 
