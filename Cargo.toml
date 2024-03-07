@@ -14,10 +14,14 @@ default-run = "tgt"
 [dependencies]
 crossterm = {version = "0.27.0", features = ["event-stream"]}
 futures = "0.3.30"
+lazy_static = "1.4.0"
 ratatui = "0.26.1"
 signal-hook = "0.3.17"
 tdlib = "0.10.0"
 tokio = {version = "1.36.0", features = ["full"]}
+tracing = "0.1.40"
+tracing-error = "0.2.0"
+tracing-subscriber = {version = "0.3.18", features = ["env-filter"]}
 
 [profile.dev]
 incremental = true

@@ -62,6 +62,7 @@ impl App {
   /// # Returns
   /// * `Result<(), AppError>` - An Ok result or an error.
   pub async fn run(&mut self) -> Result<(), AppError> {
+    tracing::info!("Starting app");
     let (mut action_tx, mut action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
     self.tui_backend.enter()?;
 

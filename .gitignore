@@ -1,3 +1,6 @@
 /target
 /get_me_db
-.vscode/*
+/.data
+/.log
+/.logs
+/.vscode
