@@ -13,10 +13,14 @@ build:
 run BIN="" BIN_NAME="":
   cargo run {{BIN}} {{BIN_NAME}}
 
-# Format the code using cargo nightly
+# Format the code
 fmt:
   cargo +nightly fmt
   cargo +nightly fmt -- --check
+
+# Run clippy using cargo
+clippy:
+  cargo clippy --all-targets --all-features -- -D warnings
 
 # Run tests using cargo
 test:
@@ -30,9 +34,10 @@ _help:
   @echo "Usage: just [recipe]"
   @echo ""
   @echo "Available recipes:"
-  @echo "  build # Build the project using cargo"
-  @echo "  run   # Run the project using cargo"
-  @echo "  fmt   # Format the code using cargo nightly"
-  @echo "  test  # Run tests using cargo"
-  @echo "  clean # Clean the project using cargo"
-  @echo "  help  # Display this help message"
+  @echo "  build  # Build the project using cargo"
+  @echo "  run    # Run the project using cargo"
+  @echo "  fmt    # Format the code using cargo"
+  @echo "  clippy # Run clippy using cargo"
+  @echo "  test   # Run tests using cargo"
+  @echo "  clean  # Clean the project using cargo"
+  @echo "  help   # Display this help message"

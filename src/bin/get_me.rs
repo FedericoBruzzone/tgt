@@ -1,3 +1,5 @@
+// Run it with `cargo run --bin get_me`
+
 use {
   std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -18,11 +20,8 @@ fn ask_user(string: &str) -> String {
 }
 
 async fn handle_update(update: Update, auth_tx: &Sender<AuthorizationState>) {
-  match update {
-    Update::AuthorizationState(update) => {
-      auth_tx.send(update.authorization_state).await.unwrap();
-    }
-    _ => (),
+  if let Update::AuthorizationState(update) = update {
+    auth_tx.send(update.authorization_state).await.unwrap();
   }
 }
 

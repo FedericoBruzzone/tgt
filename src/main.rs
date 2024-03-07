@@ -10,10 +10,10 @@ pub mod traits;
 
 use {
   crate::app_error::AppError,
-  tdlib::{
-    enums::{AuthorizationState, Update, User},
-    functions,
-  },
+  //   tdlib::{
+  //     enums::{AuthorizationState, Update, User},
+  //     functions,
+  //   },
 };
 
 #[tokio::main]
