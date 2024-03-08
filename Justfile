@@ -1,4 +1,5 @@
 # vim: set ft=make :
+set windows-powershell := true
 export RUST_BACKTRACE := "1"
 project_name := "tgt"
 
