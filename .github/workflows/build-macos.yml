@@ -1,0 +1,72 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  API_HASH: a3406de8d171bb422bb6ddf3bbd800e2
+  API_ID: 94575
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Restore cache TDLib
+        id: cache-tdlib-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: td/
+          key: ${{ runner.os }}-TDLib
+      - name: Build TDLib
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install gperf cmake openssl
+          git clone https://github.com/tdlib/td.git
+          cd td
+          rm -rf build
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl/ -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          cmake --build . --target install
+      - name: Save cache TDLib
+        uses: actions/cache/save@v4
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
+        with:
+          path: td/
+          key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
+      - name: Extract TDLib
+        run: cp -r ./td/tdlib ./
+      - name: Set environment variables
+        run: |
+          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy, rustfmt
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run cargo build
+        run: cargo build --verbose
+      - name: Run cargo test
+        run: cargo test --verbose -- --nocapture --test-threads=1
+      - name: Run cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Run cargo fmt
+        run: cargo +nightly fmt --all -- --check

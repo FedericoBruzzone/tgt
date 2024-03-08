@@ -1,7 +1,9 @@
 # tgt - Telegram Terminal User Interface
 
 [![GitHub License](https://img.shields.io/github/license/FedericoBruzzone/tgt)](https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE)
-[![GitHub CI](https://github.com/FedericoBruzzone/tgt/actions/workflows/rust.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions)
+[![GitHub CI Linux](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml)
+[![GitHub CI Windows](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml)
+[![GitHub CI macOS](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml)
 [![](https://tokei.rs/b1/github/FedericoBruzzone/tgt?type=Rust,Python)](https://github.com/FedericoBruzzone/tgt)
 
 `tgt` is a terminal user interface for Telegram, written in Rust.
