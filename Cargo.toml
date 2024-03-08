@@ -1,9 +1,16 @@
 [package]
 name = "tgt"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A simple TUI for Telegram"
 license = "Apache-2.0"
+documentation = "https://docs.rs/crate/tgt/0.1.0"
+homepage = "https://github.com/FedericoBruzzone/tgt"
+repository = "https://github.com/FedericoBruzzone/tgt"
+readme = "README.md"
+keywords = ["tgt", "tgtui", "telegram", "tui", "tdlib"]
+authors = ["Federico Bruzzone <federico.bruzzone.i@gmail.com>", "Andrea Longoni"]
+categories = []
 default-run = "tgt"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
