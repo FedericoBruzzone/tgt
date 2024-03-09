@@ -1,10 +1,30 @@
+<!-- ![logo](https://github.com/FedericoBruzzone/tgt/blob/main/imgs/logo.png) -->
+<img src="https://github.com/FedericoBruzzone/tgt/blob/main/imgs/logo.png" alt="logo">
+
 # tgt - Telegram Terminal User Interface
 
-[![GitHub License](https://img.shields.io/github/license/FedericoBruzzone/tgt)](https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE)
-[![GitHub CI Linux](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml)
-[![GitHub CI Windows](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml)
-[![GitHub CI macOS](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml/badge.svg)](https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml)
-[![](https://tokei.rs/b1/github/FedericoBruzzone/tgt?type=Rust,Python)](https://github.com/FedericoBruzzone/tgt)
+[crates-io]: https://crates.io/crates/tgt
+[crates-io-shield]: https://img.shields.io/crates/v/tgt
+[docs-rs]: https://docs.rs/tgt
+[docs-rs-shield]: https://docs.rs/tgt/badge.svg
+[github-ci-linux]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml
+[github-ci-linux-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml/badge.svg
+[github-ci-windows]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml
+[github-ci-windows-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml/badge.svg
+[github-ci-macos]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml
+[github-ci-macos-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml/badge.svg
+[github-license]: https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE
+[github-license-shield]: https://img.shields.io/github/license/FedericoBruzzone/tgt
+[total-lines]: https://github.com/FedericoBruzzone/tgt
+[total-lines-shield]: https://tokei.rs/b1/github/FedericoBruzzone/tgt?type=Rust,Python
+
+[![Crates.io][crates-io-shield]][crates-io]
+[![Docs.rs][docs-rs-shield]][docs-rs]
+[![GitHub CI Linux][github-ci-linux-shield]][github-ci-linux]
+[![GitHub CI Windows][github-ci-windows-shield]][github-ci-windows]
+[![GitHub CI macOS][github-ci-macos-shield]][github-ci-macos]
+[![GitHub License][github-license-shield]][github-license]
+[![][total-lines-shield]][total-lines]
 
 `tgt` is a terminal user interface for Telegram, written in Rust.
 
