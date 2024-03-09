@@ -1,12 +1,5 @@
-<!-- ![logo](https://github.com/FedericoBruzzone/tgt/blob/main/imgs/logo.png) -->
-<img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/logo.png" alt="logo">
-
-# tgt - Telegram Terminal User Interface
-
 [crates-io]: https://crates.io/crates/tgt
 [crates-io-shield]: https://img.shields.io/crates/v/tgt
-[docs-rs]: https://docs.rs/tgt
-[docs-rs-shield]: https://docs.rs/tgt/badge.svg
 [github-ci-linux]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml
 [github-ci-linux-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml/badge.svg
 [github-ci-windows]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml
@@ -17,14 +10,25 @@
 [github-license-shield]: https://img.shields.io/github/license/FedericoBruzzone/tgt
 [total-lines]: https://github.com/FedericoBruzzone/tgt
 [total-lines-shield]: https://tokei.rs/b1/github/FedericoBruzzone/tgt?type=Rust,Python
+[creates-io-downloads]: https://crates.io/crates/tgt
+[creates-io-downloads-shield]: https://img.shields.io/crates/d/tgt.svg
+
+<p align="center">
+    <img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/logo.png" alt="logo" />
+</p>
+<p align="center">
+    <b>A simple TUI for Telegram</b>
+</p>
 
 [![Crates.io][crates-io-shield]][crates-io]
-[![Docs.rs][docs-rs-shield]][docs-rs]
 [![GitHub CI Linux][github-ci-linux-shield]][github-ci-linux]
 [![GitHub CI Windows][github-ci-windows-shield]][github-ci-windows]
 [![GitHub CI macOS][github-ci-macos-shield]][github-ci-macos]
 [![GitHub License][github-license-shield]][github-license]
+[![Crates.io Downloads][creates-io-downloads-shield]][creates-io-downloads]
 [![][total-lines-shield]][total-lines]
+
+# tgt - Telegram Terminal User Interface
 
 `tgt` is a terminal user interface for Telegram, written in Rust.
 
@@ -65,8 +69,13 @@ This repository is licensed under the [Apache License 2.0](https://www.apache.or
 ## Contact
 
 - Email:
-  - [federico.bruzzone.i@gmail.com] or [federico.bruzzone@studenti.unimi.it]
+  - [federico.bruzzone.i@gmail.com]
+  - [federico.bruzzone@studenti.unimi.it]
   - [andrea.longoni3@studenti.unimi.it]
 - GitHub:
   - [FedericoBruzzone](https://github.com/FedericoBruzzone)
   - [Andreal2000](https://github.com/Andreal2000)
+
+<!-- [docs-rs]: https://docs.rs/tgt -->
+<!-- [docs-rs-shield]: https://docs.rs/tgt/badge.svg -->
+<!-- [![Docs.rs][docs-rs-shield]][docs-rs] -->
