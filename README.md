@@ -1,5 +1,5 @@
 <!-- ![logo](https://github.com/FedericoBruzzone/tgt/blob/main/imgs/logo.png) -->
-<img src="https://github.com/FedericoBruzzone/tgt/blob/main/imgs/logo.png" alt="logo">
+<img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/logo.png" alt="logo">
 
 # tgt - Telegram Terminal User Interface
 
