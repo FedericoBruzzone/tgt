@@ -13,6 +13,8 @@
 [creates-io-downloads]: https://crates.io/crates/tgt
 [creates-io-downloads-shield]: https://img.shields.io/crates/d/tgt.svg
 
+> :warning: **WARNING**: This project is still in development and is not ready for use. :warning:
+
 <p align="center">
     <img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/logo.png" alt="logo" />
 </p>
@@ -28,7 +30,7 @@
 [![Crates.io Downloads][creates-io-downloads-shield]][creates-io-downloads]
 [![][total-lines-shield]][total-lines]
 
-# tgt - Telegram Terminal User Interface
+## About
 
 `tgt` is a terminal user interface for Telegram, written in Rust.
 
@@ -37,15 +39,16 @@
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
 For more information, do not hesitate to contact us (see the [Contact](#contact) section).
 
-The [CONFIGURE.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONFIGURE.md) file contains the steps to configure the project in your local environment, starting from the compilation of `tdlib` to the configuration of the environment variables.
+The [CONFIGURE_TDLIB.md](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/CONFIGURE_TDLIB.md) file contains the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
 
 ### Road Map
 
 You can find the road map of the project [here](https://github.com/FedericoBruzzone/tg-tui/issues/1) (in the pinned issues).
 
-## Useful commands
+## Building
 
-You can use `just`, `make` or `cargo`,  as build tools. If you want to use `cargo`, please make sure to read the `Justfile` or the `Makefile` to understand the flags used for each command.
+You can use `just`, `make` or `cargo`,  as build tools.
+If you want to use `cargo`, please make sure to read the `Justfile` or the `Makefile` to understand the flags used for each command.
 Here are the available commands:
 
 ```text

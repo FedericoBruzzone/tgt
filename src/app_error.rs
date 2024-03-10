@@ -7,6 +7,7 @@ use {crate::enums::action::Action, tokio::sync::mpsc::error::SendError};
 /// This type is used as the error type for the `Result` type returned by the `main` function.
 pub enum AppError {
   Io(std::io::Error),
+  TomlDeError(toml::de::Error),
   Send(SendError<Action>),
 }
 /// Convert an `std::io::Error` into an `AppError`.
@@ -21,11 +22,18 @@ impl From<SendError<Action>> for AppError {
     Self::Send(error)
   }
 }
+/// Convert a `toml::de::Error` into an `AppError`.
+impl From<toml::de::Error> for AppError {
+  fn from(error: toml::de::Error) -> Self {
+    Self::TomlDeError(error)
+  }
+}
 /// Implement the `Display` trait for `AppError`.
 impl std::fmt::Display for AppError {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     match self {
       Self::Io(error) => write!(f, "IO error: {}", error),
+      Self::TomlDeError(error) => write!(f, "TOML deserialization error: {}", error),
       Self::Send(error) => write!(f, "Send error: {}", error),
     }
   }
@@ -35,6 +43,7 @@ impl std::error::Error for AppError {
   fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
     match self {
       Self::Io(error) => Some(error),
+      Self::TomlDeError(error) => Some(error),
       Self::Send(error) => Some(error),
     }
   }

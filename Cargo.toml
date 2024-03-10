@@ -21,16 +21,20 @@ default-run = "tgt"
 # profile = "minimal"
 
 [dependencies]
+config = "0.14.0"
 crossterm = {version = "0.27.0", features = ["event-stream"]}
 futures = "0.3.30"
 lazy_static = "1.4.0"
 ratatui = "0.26.1"
+serde = "1.0.197"
 signal-hook = "0.3.17"
 tdlib = "0.10.0"
 tokio = {version = "1.36.0", features = ["full"]}
+toml = "0.8.10"
 tracing = "0.1.40"
 tracing-error = "0.2.0"
 tracing-subscriber = {version = "0.3.18", features = ["env-filter"]}
+xdg = "2.5.2"
 
 [profile.dev]
 incremental = true
