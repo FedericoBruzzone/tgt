@@ -5,10 +5,10 @@ use crossterm::event::{KeyEvent, MouseEvent};
 /// intraction with the terminal (`tui_backend`).
 /// These events are used to drive the user interface and the application logic and should be handled entirely.
 pub enum Event {
-  Init,
-  Quit,
-  Render,
-  Key(KeyEvent),
-  Mouse(MouseEvent),
-  Resize(u16, u16),
+        Init,
+        Quit,
+        Render,
+        Key(KeyEvent),
+        Mouse(MouseEvent),
+        Resize(u16, u16),
 }
