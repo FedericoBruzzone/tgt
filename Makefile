@@ -3,6 +3,8 @@ export RUST_BACKTRACE := 1
 build:
 	cargo build
 
+all: fmt clippy test build
+
 # Example: make run ARGS="--bin <bin_name>"
 run:
 	cargo run $(ARGS)

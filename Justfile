@@ -6,6 +6,9 @@ project_name := "tgt"
 _default:
   just --list --justfile {{justfile()}}
 
+# All
+all: fmt clippy test build
+
 # Build the project using cargo
 build:
   cargo build

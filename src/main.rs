@@ -6,7 +6,7 @@ pub mod tui_backend;
 pub mod utils;
 
 pub mod components;
-pub mod config;
+pub mod configs;
 pub mod enums;
 pub mod traits;
 
@@ -18,6 +18,7 @@ use crate::app_error::AppError;
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn tokio_main() -> Result<(), AppError> {
+  // let tmp = LoggerConfig::get_config();
   logger::initialize_logging()?;
   let mut app = app::App::new()?; //.with_frame_rate(60.0);
   tracing::info!("Starting main");
