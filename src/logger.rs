@@ -1,6 +1,9 @@
 use {
-        lazy_static::lazy_static,
-        std::{fs::File, path::PathBuf},
+        crate::{app_error::AppError, configs::custom::logger_custom::LoggerConfig},
+        std::{
+                fs::{self, File},
+                path::PathBuf,
+        },
         tracing_error::ErrorLayer,
         tracing_subscriber::{
                 filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt, registry::Registry,
@@ -8,82 +11,97 @@ use {
         },
 };
 
-lazy_static! {
-        pub static ref LOG_FOLDER: Option<PathBuf> = Some(PathBuf::from(".data"));
-        pub static ref LOG_FILE: Option<String> = Some("tgt.log".to_string());
-        pub static ref LOG_LEVEL: String = "LOG_LEVEL".to_string();
+#[derive(Clone, Debug)]
+/// The logger.
+/// This struct is used to initialize the logger for the application.
+pub struct Logger {
+        /// The log folder.
+        log_folder: PathBuf,
+        /// The log file.
+        log_file: String,
+        /// The log level.
+        log_level: String,
 }
 
-/// Set the `RUST_LOG` environment variable to the value of the `LOG_LEVEL` environment variable if it is set.
-/// If the `LOG_LEVEL` environment variable is not set, then the `RUST_LOG` environment variable is set to the value of the `CARGO_CRATE_NAME` environment variable with a log level of `info`.
-fn set_rust_log_variable() {
-        std::env::set_var(
-                "RUST_LOG",
-                std::env::var("RUST_LOG")
-                        .or_else(|_| std::env::var(LOG_LEVEL.clone()))
-                        .unwrap_or_else(|_| format!("{}=info", env!("CARGO_CRATE_NAME"))),
-        );
-}
+impl Logger {
+        /// Create a new logger from the logger configuration.
+        ///
+        /// # Arguments
+        /// * `logger_config` - The logger configuration.
+        ///
+        /// # Returns
+        /// The new logger.
+        pub fn from_config(logger_config: LoggerConfig) -> Self {
+                logger_config.into()
+        }
 
-/// Get the log folder for the application.
-/// By default, the log folder is the `.data` directory in the current working directory.
-///
-/// # Returns
-/// * `PathBuf` - The path to the log folder.
-fn log_folder() -> PathBuf {
-        if let Some(folder) = LOG_FOLDER.clone() {
-                folder
-        } else {
-                PathBuf::from(".").join(".data")
+        /// Initialize the logger.
+        /// This function initializes the logger for the application.
+        /// The logger is initialized with the following layers:
+        /// - a file subscriber
+        /// - an error layer
+        /// The file subscriber is initialized with the following settings:
+        /// - file: true
+        /// - line_number: true
+        /// - target: true
+        /// - ansi: false
+        /// - writer: the log file
+        /// - filter: the `RUST_LOG` environment variable
+        /// The error layer is initialized with the default settings.
+        ///
+        /// # Returns
+        /// * `Result<&Self, AppError>` - The result of the operation.
+        pub fn init(&self) {
+                self.set_rust_log_variable();
+                let file = self.create_log_file().unwrap();
+
+                let file_subscriber = tracing_subscriber::fmt::layer()
+                        .with_file(true)
+                        .with_line_number(true)
+                        .with_target(true)
+                        .with_ansi(false)
+                        .with_writer(file)
+                        // Parsing an EnvFilter from the default environment variable (RUST_LOG)
+                        .with_filter(EnvFilter::from_default_env()); //tracing_subscriber::filter::LevelFilter::TRACE
+
+                Registry::default()
+                        .with(file_subscriber)
+                        .with(ErrorLayer::default())
+                        .init();
+        }
+
+        /// Create the log file for the application.
+        /// By default, the log file is `tgt.log` in the `.data` directory of the current working directory.
+        ///
+        /// # Returns
+        /// * `Result<(), AppError>` - The result of the operation.
+        fn create_log_file(&self) -> Result<File, AppError> {
+                let folder = self.log_folder.clone();
+                fs::create_dir_all(folder.clone())?;
+                let file = File::create(folder.join(self.log_file.clone()))?;
+                Ok(file)
+        }
+        /// Set the `RUST_LOG` environment variable.
+        /// This function try to set the `RUST_LOG` environment variable to:
+        /// - the value of the `RUST_LOG` environment variable
+        /// - the value of `log_level` field of the `Logger` struct
+        /// or to `CARGO_CRATE_NAME=info` if the `RUST_LOG` environment variable is not set.
+        fn set_rust_log_variable(&self) {
+                std::env::set_var(
+                        "RUST_LOG",
+                        std::env::var("RUST_LOG")
+                                .or_else(|_| Ok(self.log_level.clone()))
+                                .unwrap_or_else(|_: String| format!("{}=info", env!("CARGO_CRATE_NAME"))),
+                );
         }
 }
-
-/// Get the log file for the application.
-/// By default, the log file is `tgt.log` in the log folder.
-///
-/// # Returns
-/// * `String` - The log file.
-fn log_file() -> String {
-        if let Some(file) = LOG_FILE.clone() {
-                file
-        } else {
-                "tgt.log".to_string()
+/// The conversion from the logger configuration to the logger.
+impl From<LoggerConfig> for Logger {
+        fn from(config: LoggerConfig) -> Self {
+                Self {
+                        log_folder: PathBuf::from(config.log_folder),
+                        log_file: config.log_file,
+                        log_level: config.log_level,
+                }
         }
-}
-
-/// Create the log file for the application.
-/// By default, the log file is `tgt.log` in the log folder.
-///
-/// # Returns
-/// * `std::io::Result<File>` - The log file.
-fn create_log_file() -> std::io::Result<File> {
-        let folder = log_folder();
-        std::fs::create_dir_all(folder.clone())?;
-        let log_path = folder.join(log_file());
-        File::create(log_path)
-}
-
-/// Initialize the logging system for the application.
-/// By default, the logging system will write log messages to a file in the `.data` directory of the current working directory.
-pub fn initialize_logging() -> std::io::Result<()> {
-        set_rust_log_variable();
-        let directory = log_folder();
-        std::fs::create_dir_all(directory.clone())?;
-        let log_file = create_log_file()?;
-
-        let file_subscriber = tracing_subscriber::fmt::layer()
-                .with_file(true)
-                .with_line_number(true)
-                .with_target(true)
-                .with_ansi(false)
-                .with_writer(log_file)
-                // Parsing an EnvFilter from the default environment variable (RUST_LOG)
-                .with_filter(EnvFilter::from_default_env()); //tracing_subscriber::filter::LevelFilter::TRACE
-
-        Registry::default()
-                .with(file_subscriber)
-                .with(ErrorLayer::default())
-                .init();
-
-        Ok(())
 }
