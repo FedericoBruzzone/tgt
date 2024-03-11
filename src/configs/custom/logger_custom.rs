@@ -2,8 +2,8 @@ use {
         crate::{
                 app_error::AppError,
                 configs::{
-                        config_dir_hierarchy::ConfigFile, config_type::ConfigType,
-                        custom::default_config_logger_file_path, project_dir, raw::logger_raw::LoggerRaw,
+                        config_file::ConfigFile, config_type::ConfigType, custom::default_config_logger_file_path,
+                        project_dir, raw::logger_raw::LoggerRaw,
                 },
         },
         config::{Config, File, FileFormat},
@@ -38,6 +38,28 @@ impl ConfigFile for LoggerConfig {
         fn get_type() -> ConfigType {
                 ConfigType::Logger
         }
+
+        fn override_fields() -> bool {
+                true
+        }
+
+        fn merge(&mut self, other: Option<Self::Raw>) -> Self {
+                match other {
+                        None => self.clone(),
+                        Some(other) => {
+                                if let Some(log_folder) = other.log_folder {
+                                        self.log_folder = log_folder;
+                                }
+                                if let Some(log_file) = other.log_file {
+                                        self.log_file = log_file;
+                                }
+                                if let Some(log_level) = other.log_level {
+                                        self.log_level = log_level;
+                                }
+                                self.clone()
+                        }
+                }
+        }
 }
 /// The default logger configuration.
 impl std::default::Default for LoggerConfig {
@@ -55,10 +77,7 @@ impl From<LoggerRaw> for LoggerConfig {
                                 .to_string_lossy()
                                 .to_string(),
                         log_file: raw.log_file.unwrap(),
-                        log_level: match raw.log_level {
-                                Some(level) => level,
-                                None => "cazzo".to_string(),
-                        },
+                        log_level: raw.log_level.unwrap(),
                 }
         }
 }

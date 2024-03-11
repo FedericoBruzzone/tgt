@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 
 use crate::{
         app_error::AppError,
-        configs::{config_dir_hierarchy::ConfigFile, custom::logger_custom::LoggerConfig},
+        configs::{config_file::ConfigFile, custom::logger_custom::LoggerConfig},
         logger::Logger,
 };
 
@@ -30,7 +30,9 @@ lazy_static! {
 async fn tokio_main() -> Result<(), AppError> {
         let logger = Logger::from_config(LOGGER_CONFIG.clone());
         logger.init();
-        println!("{:?}", logger);
+        tracing::info!("Logger initialized with config: {:#?}", logger);
+        println!("{:#?}", logger);
+
         let mut app = app::App::new()?; //.with_frame_rate(60.0);
         tracing::info!("Starting main");
         app.run().await?;

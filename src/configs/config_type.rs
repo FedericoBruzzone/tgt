@@ -10,11 +10,13 @@ use {
 /// * Keymap - The keymap configuration file.
 /// * Logger - The logger configuration file.
 /// * Theme - The theme configuration file.
+/// * Telegram - The Telegram configuration file.
 pub enum ConfigType {
         App,
         Keymap,
         Logger,
         Theme,
+        Telegram,
 }
 /// Implement the `ConfigType` enum.
 impl ConfigType {
@@ -32,6 +34,7 @@ impl ConfigType {
                         Self::Keymap => "keymap",
                         Self::Logger => "logger",
                         Self::Theme => "theme",
+                        Self::Telegram => "telegram",
                 }
         }
         /// Get the default file extension for the configuration file type.
@@ -45,6 +48,7 @@ impl ConfigType {
                         Self::Keymap => ".toml",
                         Self::Logger => ".toml",
                         Self::Theme => ".toml",
+                        Self::Telegram => ".toml",
                 }
         }
         /// Get the default file name for the configuration file type.
@@ -61,6 +65,7 @@ impl ConfigType {
                         Self::Keymap => formats,
                         Self::Logger => formats,
                         Self::Theme => formats,
+                        Self::Telegram => formats,
                 }
         }
         /// Get the supported file formats for the configuration file type.

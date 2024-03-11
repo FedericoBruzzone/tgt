@@ -3,7 +3,7 @@ use std::{env, io, path::PathBuf};
 pub mod custom;
 pub mod raw;
 
-pub mod config_dir_hierarchy;
+pub mod config_file;
 pub mod config_type;
 
 pub const TGT_PROGRAM_NAME: &str = "tgt";
