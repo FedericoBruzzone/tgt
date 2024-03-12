@@ -58,6 +58,10 @@ impl ConfigType {
         pub fn as_default_filename(&self) -> String {
                 format!("{}{}", self.as_str(), self.default_format())
         }
+        /// Get the supported file formats for the configuration file type.
+        ///
+        /// # Returns
+        /// * `&'static [FileFormat]` - The supported file formats.
         pub const fn supported_formats(&self) -> &'static [FileFormat] {
                 let formats = self.get_supported_formats();
                 match self {

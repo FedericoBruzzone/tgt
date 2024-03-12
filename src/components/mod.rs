@@ -3,6 +3,7 @@ pub const SMALL_AREA_HEIGHT: u16 = 30;
 
 pub mod chat_list_window;
 pub mod chat_window;
+pub mod component;
 pub mod core_window;
 pub mod prompt_window;
 pub mod status_bar;

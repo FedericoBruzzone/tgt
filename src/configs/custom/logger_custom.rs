@@ -2,11 +2,10 @@ use {
         crate::{
                 app_error::AppError,
                 configs::{
-                        config_file::ConfigFile, config_type::ConfigType, custom::default_config_logger_file_path,
-                        project_dir, raw::logger_raw::LoggerRaw,
+                        self, config_file::ConfigFile, config_type::ConfigType,
+                        custom::default_config_logger_file_path, project_dir, raw::logger_raw::LoggerRaw,
                 },
         },
-        config::{Config, File, FileFormat},
         std::path::Path,
 };
 
@@ -24,11 +23,7 @@ impl LoggerConfig {
         /// # Returns
         /// The default logger configuration.
         pub fn default_result() -> Result<Self, AppError> {
-                let builder: LoggerRaw = Config::builder()
-                        .add_source(File::from(Path::new(&default_config_logger_file_path()?)).format(FileFormat::Toml))
-                        .build()?
-                        .try_deserialize()?;
-                Ok(builder.into())
+                configs::deserialize_to_config_into::<LoggerRaw, Self>(Path::new(&default_config_logger_file_path()?))
         }
 }
 /// The implementation of the configuration file for the logger.
@@ -79,5 +74,37 @@ impl From<LoggerRaw> for LoggerConfig {
                         log_file: raw.log_file.unwrap(),
                         log_level: raw.log_level.unwrap(),
                 }
+        }
+}
+
+#[cfg(test)]
+mod tests {
+        use crate::configs::{custom::logger_custom::LoggerConfig, project_dir, raw::logger_raw::LoggerRaw};
+
+        #[test]
+        fn test_logger_config_default() {
+                let logger_config = LoggerConfig::default();
+                assert_eq!(
+                        logger_config.log_folder,
+                        project_dir().unwrap().join(".data").to_string_lossy().to_string()
+                );
+                assert_eq!(logger_config.log_file, "tgt.log");
+                assert_eq!(logger_config.log_level, "info");
+        }
+
+        #[test]
+        fn test_logger_config_from_raw() {
+                let logger_raw = LoggerRaw {
+                        log_folder: Some(".data_raw".to_string()),
+                        log_file: Some("tgt_raw.log".to_string()),
+                        log_level: Some("debug".to_string()),
+                };
+                let logger_config = LoggerConfig::from(logger_raw);
+                assert_eq!(
+                        logger_config.log_folder,
+                        project_dir().unwrap().join(".data_raw").to_string_lossy().to_string()
+                );
+                assert_eq!(logger_config.log_file, "tgt_raw.log");
+                assert_eq!(logger_config.log_level, "debug");
         }
 }

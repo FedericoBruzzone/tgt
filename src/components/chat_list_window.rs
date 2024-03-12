@@ -1,7 +1,7 @@
 use {
         crate::{
+                components::component::{Component, HandleSmallArea},
                 enums::action::Action,
-                traits::{component::Component, handle_small_area::HandleSmallArea},
         },
         ratatui::{
                 layout::Rect,

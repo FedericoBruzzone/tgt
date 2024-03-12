@@ -8,7 +8,6 @@ pub mod utils;
 pub mod components;
 pub mod configs;
 pub mod enums;
-pub mod traits;
 
 use lazy_static::lazy_static;
 

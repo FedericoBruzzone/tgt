@@ -1,8 +1,12 @@
 use {
         crate::{
-                components::{chat_list_window::ChatListWindow, chat_window::ChatWindow, prompt_window::PromptWindow},
+                components::{
+                        chat_list_window::ChatListWindow,
+                        chat_window::ChatWindow,
+                        component::{Component, HandleSmallArea},
+                        prompt_window::PromptWindow,
+                },
                 enums::{action::Action, component_name::ComponentName},
-                traits::{component::Component, handle_small_area::HandleSmallArea},
         },
         ratatui::layout::{Constraint, Direction, Layout, Rect},
         std::collections::HashMap,

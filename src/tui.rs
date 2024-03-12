@@ -1,11 +1,10 @@
 use {
         crate::{
                 components::{
-                        core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar, SMALL_AREA_HEIGHT,
-                        SMALL_AREA_WIDTH,
+                        component::Component, core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar,
+                        SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
                 },
                 enums::{action::Action, component_name::ComponentName, event::Event},
-                traits::component::Component,
         },
         ratatui::layout::{Constraint, Direction, Layout, Rect},
         std::collections::HashMap,
@@ -47,6 +46,7 @@ impl Tui {
                 ];
 
                 let action_tx = None;
+
                 let components: HashMap<ComponentName, Box<dyn Component>> = components_iter.into_iter().collect();
 
                 Tui { action_tx, components }

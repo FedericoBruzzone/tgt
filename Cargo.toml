@@ -1,6 +1,6 @@
 [package]
 name = "tgt"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "A simple TUI for Telegram"
 license = "Apache-2.0"
@@ -8,7 +8,7 @@ documentation = "https://docs.rs/crate/tgt/0.1.3"
 homepage = "https://github.com/FedericoBruzzone/tgt"
 repository = "https://github.com/FedericoBruzzone/tgt"
 readme = "README.md"
-keywords = ["tgt", "tgtui", "telegram", "tui", "tdlib"]
+keywords = ["tgt", "tgtui", "telegram", "tui", "tdlib"]  # "ratatui", "crossterm", "tokio", "async",  "chat", "messaging", "client"
 authors = ["Federico Bruzzone <federico.bruzzone.i@gmail.com>", "Andrea Longoni"]
 categories = []
 default-run = "tgt"
