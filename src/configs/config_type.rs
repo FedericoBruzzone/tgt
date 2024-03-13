@@ -22,7 +22,7 @@ pub enum ConfigType {
 impl ConfigType {
         /// Get the different types of configuration files that the application can use.
         pub const fn enumerate() -> &'static [Self] {
-                &[Self::App, Self::Keymap, Self::Logger, Self::Theme]
+                &[Self::App, Self::Keymap, Self::Logger, Self::Theme, Self::Telegram]
         }
         /// Get the file name without the file extension for the configuration file type.
         ///
