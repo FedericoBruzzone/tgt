@@ -3,8 +3,18 @@ name: Build Linux
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'cargo.lock'
+      - 'cargo.toml'
+      - 'rustfmt.toml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'cargo.lock'
+      - 'cargo.toml'
+      - 'rustfmt.toml'
 
 env:
   CARGO_TERM_COLOR: always
@@ -61,6 +71,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
       - name: Run cargo build
         run: cargo build --verbose
       - name: Run cargo test
