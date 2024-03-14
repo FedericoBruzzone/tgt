@@ -4,10 +4,10 @@ use crossterm::event::{KeyEvent, MouseEvent};
 /// and the components of the user interface.
 #[derive(Debug, Clone)]
 pub enum Action {
-        Init, // Unused
-        Quit,
-        Render,
-        Key(KeyEvent),
-        Mouse(MouseEvent),
-        Resize(u16, u16),
+    Init, // Unused
+    Quit,
+    Render,
+    Key(KeyEvent),
+    Mouse(MouseEvent),
+    Resize(u16, u16),
 }

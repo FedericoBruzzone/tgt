@@ -12,13 +12,13 @@ pub mod enums;
 use lazy_static::lazy_static;
 
 use crate::{
-        app_error::AppError,
-        configs::{config_file::ConfigFile, custom::logger_custom::LoggerConfig},
-        logger::Logger,
+    app_error::AppError,
+    configs::{config_file::ConfigFile, custom::logger_custom::LoggerConfig},
+    logger::Logger,
 };
 
 lazy_static! {
-        pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
+    pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
 }
 
 /// The main entry point for the application.
@@ -27,23 +27,23 @@ lazy_static! {
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn tokio_main() -> Result<(), AppError> {
-        let logger = Logger::from_config(LOGGER_CONFIG.clone());
-        logger.init();
-        tracing::info!("Logger initialized with config: {:#?}", logger);
-        println!("{:#?}", logger);
+    let logger = Logger::from_config(LOGGER_CONFIG.clone());
+    logger.init();
+    tracing::info!("Logger initialized with config: {:#?}", logger);
+    println!("{:#?}", logger);
 
-        let mut app = app::App::new()?; //.with_frame_rate(60.0);
-        tracing::info!("Starting main");
-        app.run().await?;
-        Ok(())
+    let mut app = app::App::new()?; //.with_frame_rate(60.0);
+    tracing::info!("Starting main");
+    app.run().await?;
+    Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-        if let Err(e) = tokio_main().await {
-                tracing::error!("Something went wrong: {}", e);
-                Err(e)
-        } else {
-                Ok(())
-        }
+    if let Err(e) = tokio_main().await {
+        tracing::error!("Something went wrong: {}", e);
+        Err(e)
+    } else {
+        Ok(())
+    }
 }

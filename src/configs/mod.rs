@@ -1,11 +1,11 @@
 use {
-        crate::app_error::AppError,
-        config::{Config, File, FileFormat},
-        serde::de::DeserializeOwned,
-        std::{
-                env, io,
-                path::{Path, PathBuf},
-        },
+    crate::app_error::AppError,
+    config::{Config, File, FileFormat},
+    serde::de::DeserializeOwned,
+    std::{
+        env, io,
+        path::{Path, PathBuf},
+    },
 };
 
 pub mod custom;
@@ -22,7 +22,7 @@ pub const TGT_CONFIG_HOME: &str = "TGT_CONFIG_HOME";
 /// # Returns
 /// The project directory.
 pub fn project_dir() -> io::Result<PathBuf> {
-        env::current_dir()
+    env::current_dir()
 }
 
 /// Get the default configuration directory.
@@ -30,7 +30,7 @@ pub fn project_dir() -> io::Result<PathBuf> {
 /// # Returns
 /// The default configuration directory.
 pub fn default_config_dir() -> io::Result<PathBuf> {
-        Ok(project_dir()?.join("config"))
+    Ok(project_dir()?.join("config"))
 }
 /// Deserialize a configuration file into a configuration struct.
 /// This function attempts to parse the specified file and returns the parsed configuration.
@@ -43,13 +43,13 @@ pub fn default_config_dir() -> io::Result<PathBuf> {
 /// The parsed configuration or an error if the file cannot be parsed.
 pub fn deserialize_to_config<R>(file_path: &Path) -> Result<R, AppError>
 where
-        R: DeserializeOwned,
+    R: DeserializeOwned,
 {
-        let builder: R = Config::builder()
-                .add_source(File::from(file_path).format(FileFormat::Toml))
-                .build()?
-                .try_deserialize::<R>()?;
-        Ok(builder)
+    let builder: R = Config::builder()
+        .add_source(File::from(file_path).format(FileFormat::Toml))
+        .build()?
+        .try_deserialize::<R>()?;
+    Ok(builder)
 }
 /// Deserialize a configuration file into a configuration struct and convert it into another configuration struct.
 /// This function attempts to parse the specified file and returns the parsed configuration.
@@ -62,7 +62,7 @@ where
 /// The parsed configuration or an error if the file cannot be parsed.
 pub fn deserialize_to_config_into<R, S>(file_path: &Path) -> Result<S, AppError>
 where
-        R: DeserializeOwned + Into<S>,
+    R: DeserializeOwned + Into<S>,
 {
-        deserialize_to_config::<R>(file_path).map(|s| s.into())
+    deserialize_to_config::<R>(file_path).map(|s| s.into())
 }
