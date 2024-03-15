@@ -20,7 +20,8 @@ pub struct ChatWindow {
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `ChatWindow` should be displayed as a smaller version of itself.
+    /// A flag indicating whether the `ChatWindow` should be displayed as a
+    /// smaller version of itself.
     small_area: bool,
 }
 
@@ -59,12 +60,14 @@ impl ChatWindow {
 }
 
 /// Implement the `HandleSmallArea` trait for the `ChatWindow` struct.
-/// This trait allows the `ChatWindow` to display a smaller version of itself if necessary.
+/// This trait allows the `ChatWindow` to display a smaller version of itself if
+/// necessary.
 impl HandleSmallArea for ChatWindow {
     /// Set the `small_area` flag for the `ChatWindow`.
     ///
     /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `ChatWindow` should be displayed as a smaller version of itself.
+    /// * `small_area` - A boolean flag indicating whether the `ChatWindow`
+    ///   should be displayed as a smaller version of itself.
     fn with_small_area(&mut self, small_area: bool) {
         self.small_area = small_area;
     }
@@ -72,12 +75,19 @@ impl HandleSmallArea for ChatWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatWindow {
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
+    fn register_action_handler(
+        &mut self,
+        tx: UnboundedSender<Action>,
+    ) -> std::io::Result<()> {
         self.command_tx = Some(tx);
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    fn draw(
+        &mut self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+    ) -> std::io::Result<()> {
         let border = if self.small_area {
             border::PLAIN
         } else {

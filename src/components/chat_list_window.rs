@@ -17,14 +17,16 @@ use {
 
 pub const CHAT_LIST: &str = "chat_list_window";
 
-/// `ChatListWindow` is a struct that represents a window for displaying a list of chat items.
-/// It is responsible for managing the layout and rendering of the chat list.
+/// `ChatListWindow` is a struct that represents a window for displaying a list
+/// of chat items. It is responsible for managing the layout and rendering of
+/// the chat list.
 pub struct ChatListWindow {
     /// The name of the `ChatListWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `ChatListWindow` should be displayed as a smaller version of itself.
+    /// A flag indicating whether the `ChatListWindow` should be displayed as a
+    /// smaller version of itself.
     small_area: bool,
     /// A list of chat items to be displayed in the `ChatListWindow`.
     chat_list: Vec<String>, // TODO: Use chat_item struct
@@ -75,12 +77,14 @@ impl ChatListWindow {
 }
 
 /// Implement the `HandleSmallArea` trait for the `ChatListWindow` struct.
-/// This trait allows the `ChatListWindow` to display a smaller version of itself if necessary.
+/// This trait allows the `ChatListWindow` to display a smaller version of
+/// itself if necessary.
 impl HandleSmallArea for ChatListWindow {
     /// Set the `small_area` flag for the `ChatListWindow`.
     ///
     /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `ChatListWindow` should be displayed as a smaller version of itself.
+    /// * `small_area` - A boolean flag indicating whether the `ChatListWindow`
+    ///   should be displayed as a smaller version of itself.
     fn with_small_area(&mut self, small_area: bool) {
         self.small_area = small_area;
     }
@@ -88,25 +92,37 @@ impl HandleSmallArea for ChatListWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatListWindow {
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
+    fn register_action_handler(
+        &mut self,
+        tx: UnboundedSender<Action>,
+    ) -> std::io::Result<()> {
         self.command_tx = Some(tx.clone());
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
-        let list = List::new(self.chat_list.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
-            .block(
-                Block::default()
-                    .title("List")
-                    .border_set(PLAIN)
-                    .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-                    .title(Title::from(self.name.as_str())),
-            )
-            .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>")
-            .repeat_highlight_symbol(true)
-            .direction(ListDirection::BottomToTop);
+    fn draw(
+        &mut self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+    ) -> std::io::Result<()> {
+        let list = List::new(
+            self.chat_list
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<&str>>(),
+        )
+        .block(
+            Block::default()
+                .title("List")
+                .border_set(PLAIN)
+                .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
+                .title(Title::from(self.name.as_str())),
+        )
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+        .highlight_symbol(">>")
+        .repeat_highlight_symbol(true)
+        .direction(ListDirection::BottomToTop);
         frame.render_widget(list, area);
         Ok(())
     }

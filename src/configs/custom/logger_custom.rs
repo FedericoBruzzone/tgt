@@ -1,7 +1,10 @@
 use {
     crate::{
         app_error::AppError,
-        configs::{self, config_file::ConfigFile, config_type::ConfigType, project_dir, raw::logger_raw::LoggerRaw},
+        configs::{
+            self, config_file::ConfigFile, config_type::ConfigType,
+            project_dir, raw::logger_raw::LoggerRaw,
+        },
     },
     std::path::Path,
 };
@@ -61,7 +64,8 @@ impl Default for LoggerConfig {
         Self::default_result().unwrap()
     }
 }
-/// The conversion from the raw logger configuration to the logger configuration.
+/// The conversion from the raw logger configuration to the logger
+/// configuration.
 impl From<LoggerRaw> for LoggerConfig {
     fn from(raw: LoggerRaw) -> Self {
         Self {
@@ -79,7 +83,8 @@ impl From<LoggerRaw> for LoggerConfig {
 #[cfg(test)]
 mod tests {
     use crate::configs::{
-        config_file::ConfigFile, custom::logger_custom::LoggerConfig, project_dir, raw::logger_raw::LoggerRaw,
+        config_file::ConfigFile, custom::logger_custom::LoggerConfig,
+        project_dir, raw::logger_raw::LoggerRaw,
     };
 
     #[test]
@@ -87,7 +92,11 @@ mod tests {
         let logger_config = LoggerConfig::default();
         assert_eq!(
             logger_config.log_folder,
-            project_dir().unwrap().join(".data").to_string_lossy().to_string()
+            project_dir()
+                .unwrap()
+                .join(".data")
+                .to_string_lossy()
+                .to_string()
         );
         assert_eq!(logger_config.log_file, "tgt.log");
         assert_eq!(logger_config.log_level, "info");
@@ -103,7 +112,11 @@ mod tests {
         let logger_config = LoggerConfig::from(logger_raw);
         assert_eq!(
             logger_config.log_folder,
-            project_dir().unwrap().join(".data_raw").to_string_lossy().to_string()
+            project_dir()
+                .unwrap()
+                .join(".data_raw")
+                .to_string_lossy()
+                .to_string()
         );
         assert_eq!(logger_config.log_file, "tgt_raw.log");
         assert_eq!(logger_config.log_level, "debug");
@@ -125,7 +138,11 @@ mod tests {
         logger_config = logger_config.merge(Some(logger_raw));
         assert_eq!(
             logger_config.log_folder,
-            project_dir().unwrap().join(".data_raw").to_string_lossy().to_string()
+            project_dir()
+                .unwrap()
+                .join(".data_raw")
+                .to_string_lossy()
+                .to_string()
         );
         assert_eq!(logger_config.log_file, "tgt_raw.log");
         assert_eq!(logger_config.log_level, "debug");

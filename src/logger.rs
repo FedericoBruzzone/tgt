@@ -1,13 +1,15 @@
 use {
-    crate::{app_error::AppError, configs::custom::logger_custom::LoggerConfig},
+    crate::{
+        app_error::AppError, configs::custom::logger_custom::LoggerConfig,
+    },
     std::{
         fs::{self, File},
         path::PathBuf,
     },
     tracing_error::ErrorLayer,
     tracing_subscriber::{
-        filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt, registry::Registry, util::SubscriberInitExt,
-        Layer,
+        filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt,
+        registry::Registry, util::SubscriberInitExt, Layer,
     },
 };
 
@@ -61,7 +63,8 @@ impl Logger {
             .with_target(true)
             .with_ansi(false)
             .with_writer(file)
-            // Parsing an EnvFilter from the default environment variable (RUST_LOG)
+            // Parsing an EnvFilter from the default environment variable
+            // (RUST_LOG)
             .with_filter(EnvFilter::from_default_env()); //tracing_subscriber::filter::LevelFilter::TRACE
 
         Registry::default()
@@ -71,7 +74,8 @@ impl Logger {
     }
 
     /// Create the log file for the application.
-    /// By default, the log file is `tgt.log` in the `.data` directory of the current working directory.
+    /// By default, the log file is `tgt.log` in the `.data` directory of the
+    /// current working directory.
     ///
     /// # Returns
     /// * `Result<(), AppError>` - The result of the operation.
@@ -85,13 +89,16 @@ impl Logger {
     /// This function try to set the `RUST_LOG` environment variable to:
     /// - the value of the `RUST_LOG` environment variable
     /// - the value of `log_level` field of the `Logger` struct
-    /// or to `CARGO_CRATE_NAME=info` if the `RUST_LOG` environment variable is not set.
+    /// or to `CARGO_CRATE_NAME=info` if the `RUST_LOG` environment variable is
+    /// not set.
     fn set_rust_log_variable(&self) {
         std::env::set_var(
             "RUST_LOG",
             std::env::var("RUST_LOG")
                 .or_else(|_| Ok(self.log_level.clone()))
-                .unwrap_or_else(|_: String| format!("{}=info", env!("CARGO_CRATE_NAME"))),
+                .unwrap_or_else(|_: String| {
+                    format!("{}=info", env!("CARGO_CRATE_NAME"))
+                }),
         );
     }
 }

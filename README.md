@@ -57,6 +57,7 @@ just COMMAND
 make COMMAND
 
 COMMAND:
+  all    # fmt, clippy, test, build
   build  # Build the project
   run    # Run the project
   fmt    # Format the code

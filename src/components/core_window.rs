@@ -22,7 +22,8 @@ pub struct CoreWindow {
     command_tx: Option<UnboundedSender<Action>>,
     /// A map of components that are part of the `CoreWindow`.
     components: HashMap<ComponentName, Box<dyn Component>>,
-    /// A flag indicating whether the `CoreWindow` should be displayed as a smaller version of itself.
+    /// A flag indicating whether the `CoreWindow` should be displayed as a
+    /// smaller version of itself.
     small_area: bool,
     #[allow(dead_code)]
     /// The name of the component that is currently focused.
@@ -46,7 +47,10 @@ impl CoreWindow {
                 ComponentName::ChatList,
                 ChatListWindow::new().with_name("Chats").new_boxed(),
             ),
-            (ComponentName::Chat, ChatWindow::new().with_name("Name").new_boxed()),
+            (
+                ComponentName::Chat,
+                ChatWindow::new().with_name("Name").new_boxed(),
+            ),
             (
                 ComponentName::Prompt,
                 PromptWindow::new().with_name("Prompt").new_boxed(),
@@ -55,7 +59,8 @@ impl CoreWindow {
 
         let name = "".to_string();
         let command_tx = None;
-        let components: HashMap<ComponentName, Box<dyn Component>> = components_iter.into_iter().collect();
+        let components: HashMap<ComponentName, Box<dyn Component>> =
+            components_iter.into_iter().collect();
         let small_area = false;
         let focused = ComponentName::ChatList;
 
@@ -81,12 +86,14 @@ impl CoreWindow {
 }
 
 /// Implement the `HandleSmallArea` trait for the `CoreWindow` struct.
-/// This trait allows the `CoreWindow` to display a smaller version of itself if necessary.
+/// This trait allows the `CoreWindow` to display a smaller version of itself if
+/// necessary.
 impl HandleSmallArea for CoreWindow {
     /// Set the `small_area` flag for the `CoreWindow`.
     ///
     /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `CoreWindow` should be displayed as a smaller version of itself.
+    /// * `small_area` - A boolean flag indicating whether the `CoreWindow`
+    ///   should be displayed as a smaller version of itself.
     fn with_small_area(&mut self, small_area: bool) {
         self.small_area = small_area;
         for (_, component) in self.components.iter_mut() {
@@ -97,7 +104,10 @@ impl HandleSmallArea for CoreWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for CoreWindow {
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
+    fn register_action_handler(
+        &mut self,
+        tx: UnboundedSender<Action>,
+    ) -> std::io::Result<()> {
         self.command_tx = Some(tx.clone());
         for (_, component) in self.components.iter_mut() {
             component.register_action_handler(tx.clone())?;
@@ -105,7 +115,11 @@ impl Component for CoreWindow {
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    fn draw(
+        &mut self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+    ) -> std::io::Result<()> {
         // let size_chats = if area.width < SMALL_AREA_WIDTH { 0 } else { 20 };
         let size_chats = if self.small_area { 0 } else { 20 };
         let size_prompt = 3;
@@ -120,7 +134,9 @@ impl Component for CoreWindow {
 
         self.components
             .get_mut(&ComponentName::ChatList)
-            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
+            .unwrap_or_else(|| {
+                panic!("Failed to get component: {}", ComponentName::ChatList)
+            })
             .draw(frame, core_layout[0])?;
 
         let sub_core_layout = Layout::default()
@@ -130,12 +146,16 @@ impl Component for CoreWindow {
 
         self.components
             .get_mut(&ComponentName::Chat)
-            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
+            .unwrap_or_else(|| {
+                panic!("Failed to get component: {}", ComponentName::Chat)
+            })
             .draw(frame, sub_core_layout[0])?;
 
         self.components
             .get_mut(&ComponentName::Prompt)
-            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
+            .unwrap_or_else(|| {
+                panic!("Failed to get component: {}", ComponentName::Prompt)
+            })
             .draw(frame, sub_core_layout[1])?;
 
         Ok(())

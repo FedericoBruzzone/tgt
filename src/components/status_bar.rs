@@ -22,7 +22,8 @@ pub struct StatusBar {
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `StatusBar` should be displayed as a smaller version of itself.
+    /// A flag indicating whether the `StatusBar` should be displayed as a
+    /// smaller version of itself.
     small_area: bool,
 }
 
@@ -61,12 +62,14 @@ impl StatusBar {
 }
 
 /// Implement the `HandleSmallArea` trait for the `StatusBar` struct.
-/// This trait allows the `StatusBar` to display a smaller version of itself if necessary.
+/// This trait allows the `StatusBar` to display a smaller version of itself if
+/// necessary.
 impl HandleSmallArea for StatusBar {
     /// Set the `small_area` flag for the `StatusBar`.
     ///
     /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `StatusBar` should be displayed as a smaller version of itself.
+    /// * `small_area` - A boolean flag indicating whether the `StatusBar`
+    ///   should be displayed as a smaller version of itself.
     fn with_small_area(&mut self, small_area: bool) {
         self.small_area = small_area;
     }
@@ -74,20 +77,33 @@ impl HandleSmallArea for StatusBar {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for StatusBar {
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
+    fn register_action_handler(
+        &mut self,
+        tx: UnboundedSender<Action>,
+    ) -> std::io::Result<()> {
         self.command_tx = Some(tx);
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    fn draw(
+        &mut self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+    ) -> std::io::Result<()> {
         frame.render_widget(
             Block::new()
                 .borders(Borders::BOTTOM)
-                .title(Title::from(self.name.as_str()).position(Position::Bottom))
                 .title(
-                    Title::from(area.width.to_string() + "x" + area.height.to_string().as_str())
-                        .position(Position::Bottom)
-                        .alignment(Alignment::Center),
+                    Title::from(self.name.as_str()).position(Position::Bottom),
+                )
+                .title(
+                    Title::from(
+                        area.width.to_string()
+                            + "x"
+                            + area.height.to_string().as_str(),
+                    )
+                    .position(Position::Bottom)
+                    .alignment(Alignment::Center),
                 ),
             area,
         );

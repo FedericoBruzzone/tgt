@@ -1,7 +1,8 @@
 unstable_features = true
 
 tab_spaces = 4
-max_width = 120
+max_width = 80
+wrap_comments = true
 imports_granularity = "One"
 
 # use_small_heuristics = "Max"

@@ -1,7 +1,12 @@
 [default]
+keymap = [
+  { keys = ["q"], command = "quit", description = "Quit the application"},
+  { keys = ["q", "q"], command = "quit", description = "Quit the application"},
+]
 
 [chats_list]
 
 [chat]
 
 [prompt]
+

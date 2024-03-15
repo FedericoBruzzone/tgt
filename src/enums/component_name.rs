@@ -1,7 +1,8 @@
 use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-/// `ComponentName` is an enum that represents the name of a component in the user interface.
+/// `ComponentName` is an enum that represents the name of a component in the
+/// user interface.
 pub enum ComponentName {
     CoreWindow,
     ChatList,

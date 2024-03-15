@@ -18,7 +18,8 @@ pub struct App {
     tui_backend: TuiBackend,
     /// The frame rate at which the user interface should be rendered.
     frame_rate: f64,
-    /// A boolean flag that represents whether the application should quit or not.
+    /// A boolean flag that represents whether the application should quit or
+    /// not.
     quit: bool,
 }
 
@@ -26,7 +27,8 @@ impl App {
     /// Create a new instance of the `App` struct.
     ///
     /// # Returns
-    /// * `Result<Self, io::Error>` - An Ok result containing the new instance of the `App` struct or an error.
+    /// * `Result<Self, io::Error>` - An Ok result containing the new instance
+    ///   of the `App` struct or an error.
     pub fn new() -> Result<Self, std::io::Error> {
         let tui = Tui::new();
         let frame_rate = 60.0;
@@ -47,7 +49,8 @@ impl App {
     /// The default frame rate is 60 FPS.
     ///
     /// # Arguments
-    /// * `frame_rate` - The frame rate at which the user interface should be rendered.
+    /// * `frame_rate` - The frame rate at which the user interface should be
+    ///   rendered.
     ///
     /// # Returns
     /// * `Self` - The modified instance of the `TuiBackend` struct.
@@ -57,13 +60,15 @@ impl App {
         self
     }
     /// Run the main event loop for the application.
-    /// This function will process events and actions for the user interface and the backend.
+    /// This function will process events and actions for the user interface and
+    /// the backend.
     ///
     /// # Returns
     /// * `Result<(), AppError>` - An Ok result or an error.
     pub async fn run(&mut self) -> Result<(), AppError> {
         tracing::info!("Starting app");
-        let (mut action_tx, mut action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
+        let (mut action_tx, mut action_rx) =
+            tokio::sync::mpsc::unbounded_channel::<Action>();
         self.tui_backend.enter()?;
 
         // self.tui.init(self.tui_backend.terminal.size()?)?;
@@ -85,7 +90,9 @@ impl App {
                         })?;
                     }
                     Action::Resize(width, height) => {
-                        self.tui_backend.terminal.resize(Rect::new(0, 0, width, height))?;
+                        self.tui_backend
+                            .terminal
+                            .resize(Rect::new(0, 0, width, height))?;
                         self.tui_backend.terminal.draw(|f| {
                             self.tui.draw(f, f.size()).unwrap();
                             // TODO: handle with AppError
@@ -117,21 +124,27 @@ impl App {
         Ok(())
     }
     /// Handle incoming events from the TUI backend.
-    /// This function will process events from the TUI backend and produce actions if necessary.
+    /// This function will process events from the TUI backend and produce
+    /// actions if necessary.
     ///
     /// # Arguments
     /// * `action_tx` - A mutable reference to the action sender.
     ///
     /// # Returns
     /// * `Result<(), AppError>` - An Ok result or an error.
-    async fn handle_tui_backend_events(&mut self, action_tx: &mut UnboundedSender<Action>) -> Result<(), AppError> {
+    async fn handle_tui_backend_events(
+        &mut self,
+        action_tx: &mut UnboundedSender<Action>,
+    ) -> Result<(), AppError> {
         if let Some(event) = self.tui_backend.next().await {
             match event {
                 Event::Quit => action_tx.send(Action::Quit)?,
                 Event::Key(key) => action_tx.send(Action::Key(key))?,
                 Event::Render => action_tx.send(Action::Render)?,
                 Event::Mouse(mouse) => action_tx.send(Action::Mouse(mouse))?,
-                Event::Resize(width, height) => action_tx.send(Action::Resize(width, height))?,
+                Event::Resize(width, height) => {
+                    action_tx.send(Action::Resize(width, height))?
+                }
                 _ =>
                     /* Event::Init */
                     {}

@@ -3,8 +3,9 @@ use {
     crossterm::{
         cursor,
         event::{
-            DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
-            Event as CrosstermEvent, EventStream, KeyCode, KeyEventKind,
+            DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
+            EnableMouseCapture, Event as CrosstermEvent, EventStream, KeyCode,
+            KeyEventKind,
         },
         terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -18,7 +19,8 @@ use {
 };
 
 /// `TuiBackend` is a struct that represents the backend for the user interface.
-/// It is responsible for managing the terminal and buffering events for processing.
+/// It is responsible for managing the terminal and buffering events for
+/// processing.
 pub struct TuiBackend {
     /// A terminal instance that is used to render the user interface.
     pub terminal: Terminal<CrosstermBackend<Stderr>>,
@@ -32,7 +34,8 @@ pub struct TuiBackend {
     pub frame_rate: f64,
     /// A boolean flag that represents whether the mouse is enabled or not.
     pub mouse: bool,
-    /// A boolean flag that represents whether the paste mode is enabled or not.
+    /// A boolean flag that represents whether the paste mode is enabled or
+    /// not.
     pub paste: bool,
 }
 
@@ -40,10 +43,12 @@ impl TuiBackend {
     /// Create a new instance of the `TuiBackend` struct.
     ///
     /// # Returns
-    /// * `Result<Self, io::Error>` - An Ok result containing the new instance of the `TuiBackend` struct or an error.
+    /// * `Result<Self, io::Error>` - An Ok result containing the new instance
+    ///   of the `TuiBackend` struct or an error.
     pub fn new() -> Result<Self, std::io::Error> {
         let terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
-        let task: JoinHandle<Result<(), SendError<Event>>> = tokio::spawn(async { Err(SendError(Event::Init)) });
+        let task: JoinHandle<Result<(), SendError<Event>>> =
+            tokio::spawn(async { Err(SendError(Event::Init)) });
         let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel();
         let frame_rate = 60.0;
         let mouse = false;
@@ -59,13 +64,18 @@ impl TuiBackend {
         })
     }
     /// Enter the user interface and start processing events.
-    /// This will enable the raw mode for the terminal and switch to the alternate screen.
+    /// This will enable the raw mode for the terminal and switch to the
+    /// alternate screen.
     ///
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn enter(&mut self) -> Result<(), std::io::Error> {
         crossterm::terminal::enable_raw_mode()?;
-        crossterm::execute!(std::io::stderr(), EnterAlternateScreen, cursor::Hide)?;
+        crossterm::execute!(
+            std::io::stderr(),
+            EnterAlternateScreen,
+            cursor::Hide
+        )?;
         if self.mouse {
             crossterm::execute!(std::io::stderr(), EnableMouseCapture)?;
         }
@@ -76,13 +86,18 @@ impl TuiBackend {
         Ok(())
     }
     /// Exit the user interface and stop processing events.
-    /// This will disable the raw mode for the terminal and switch back to the main screen.
+    /// This will disable the raw mode for the terminal and switch back to the
+    /// main screen.
     ///
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn exit(&self) -> Result<(), std::io::Error> {
         crossterm::terminal::disable_raw_mode()?;
-        crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
+        crossterm::execute!(
+            std::io::stderr(),
+            LeaveAlternateScreen,
+            cursor::Show
+        )?;
         if self.mouse {
             crossterm::execute!(std::io::stderr(), DisableMouseCapture)?;
         }
@@ -92,7 +107,8 @@ impl TuiBackend {
         Ok(())
     }
     /// Suspend the user interface and stop processing events.
-    /// This will disable the raw mode for the terminal and switch back to the main screen.
+    /// This will disable the raw mode for the terminal and switch back to the
+    /// main screen.
     ///
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
@@ -115,7 +131,8 @@ impl TuiBackend {
     /// The default frame rate is 60 FPS.
     ///
     /// # Arguments
-    /// * `frame_rate` - The frame rate at which the user interface should be rendered.
+    /// * `frame_rate` - The frame rate at which the user interface should be
+    ///   rendered.
     ///
     /// # Returns
     /// * `Self` - The modified instance of the `TuiBackend` struct.
@@ -128,7 +145,8 @@ impl TuiBackend {
     /// By default, the mouse is disabled.
     ///
     /// # Arguments
-    /// * `mouse` - A boolean flag that represents whether the mouse is enabled or not.
+    /// * `mouse` - A boolean flag that represents whether the mouse is enabled
+    ///   or not.
     ///
     /// # Returns
     /// * `Self` - The modified instance of the `TuiBackend` struct.
@@ -140,7 +158,8 @@ impl TuiBackend {
     /// By default, the paste mode is disabled.
     ///
     /// # Arguments
-    /// * `paste` - A boolean flag that represents whether the paste mode is enabled or not.
+    /// * `paste` - A boolean flag that represents whether the paste mode is
+    ///   enabled or not.
     ///
     /// # Returns
     /// * `Self` - The modified instance of the `TuiBackend` struct.
@@ -149,8 +168,9 @@ impl TuiBackend {
         self
     }
     /// Send an event asynchronously for processing.
-    /// This will pop from the event queue the first event that is ready and return it.
-    /// If no event is available, this will sleep until an event is available.
+    /// This will pop from the event queue the first event that is ready and
+    /// return it. If no event is available, this will sleep until an event
+    /// is available.
     ///
     /// # Returns
     /// * `Option<Event>` - An optional event that is ready for processing.
@@ -159,7 +179,8 @@ impl TuiBackend {
     }
     /// Start processing events asynchronously.
     /// This will spawn a new task that will process events.
-    /// The task will listen for events from the terminal and send them to the event queue for processing.
+    /// The task will listen for events from the terminal and send them to the
+    /// event queue for processing.
     fn start(&mut self) {
         let _event_tx = self.event_tx.clone();
         let render_delay = Duration::from_secs_f64(1.0 / self.frame_rate);
@@ -218,7 +239,8 @@ impl TuiBackend {
 //   async fn test_default_new() {
 //     let mut backend = TuiBackend::new().unwrap();
 //     let backend_terminal_size = backend.terminal.size().unwrap();
-//     let backend_task = timeout(Duration::from_secs(5), backend.task).await.unwrap();
+//     let backend_task = timeout(Duration::from_secs(5),
+// backend.task).await.unwrap();
 //
 //     assert_eq!(backend_terminal_size.x, 0);
 //     assert_eq!(backend_terminal_size.y, 0);
@@ -235,7 +257,8 @@ impl TuiBackend {
 //     let frame_rate = 30.0;
 //     let mut backend = TuiBackend::new().unwrap().with_frame_rate(frame_rate);
 //     let backend_terminal_size = backend.terminal.size().unwrap();
-//     let backend_task = timeout(Duration::from_secs(5), backend.task).await.unwrap();
+//     let backend_task = timeout(Duration::from_secs(5),
+// backend.task).await.unwrap();
 //
 //     assert_eq!(backend_terminal_size.x, 0);
 //     assert_eq!(backend_terminal_size.y, 0);

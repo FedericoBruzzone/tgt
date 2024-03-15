@@ -6,11 +6,13 @@ use {
     tokio::sync::mpsc,
 };
 
-/// `Component` is a trait that represents a visual and interactive element of the user interface.
-/// Implementors of this trait can be registered with the main application loop and will be able to receive events,
-/// update state, and be rendered on the screen.
+/// `Component` is a trait that represents a visual and interactive element of
+/// the user interface. Implementors of this trait can be registered with the
+/// main application loop and will be able to receive events, update state, and
+/// be rendered on the screen.
 pub trait Component: HandleSmallArea {
-    /// Register an action handler that can send actions for processing if necessary.
+    /// Register an action handler that can send actions for processing if
+    /// necessary.
     ///
     /// # Arguments
     ///
@@ -20,7 +22,10 @@ pub trait Component: HandleSmallArea {
     ///
     /// * `Result<()>` - An Ok result or an error.
     #[allow(unused_variables)]
-    fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
+    fn register_action_handler(
+        &mut self,
+        tx: mpsc::UnboundedSender<Action>,
+    ) -> io::Result<()> {
         Ok(())
     }
     /// Initialize the component with a specified area if necessary.
@@ -45,7 +50,10 @@ pub trait Component: HandleSmallArea {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_events(&mut self, event: Option<Event>) -> io::Result<Option<Action>> {
+    fn handle_events(
+        &mut self,
+        event: Option<Event>,
+    ) -> io::Result<Option<Action>> {
         let r = match event {
             Some(Event::Key(key_event)) => self.handle_key_events(key_event)?,
             // Some(Event::Mouse(mouse_event)) => {
@@ -65,7 +73,10 @@ pub trait Component: HandleSmallArea {
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
     #[allow(unused_variables)]
-    fn handle_key_events(&mut self, key: event::KeyEvent) -> io::Result<Option<Action>> {
+    fn handle_key_events(
+        &mut self,
+        key: event::KeyEvent,
+    ) -> io::Result<Option<Action>> {
         Ok(None)
     }
     /// Handle mouse events and produce actions if necessary.
@@ -78,7 +89,10 @@ pub trait Component: HandleSmallArea {
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
     #[allow(unused_variables)]
-    fn handle_mouse_events(&mut self, mouse: event::MouseEvent) -> io::Result<Option<Action>> {
+    fn handle_mouse_events(
+        &mut self,
+        mouse: event::MouseEvent,
+    ) -> io::Result<Option<Action>> {
         Ok(None)
     }
     /// Update the state of the component based on a received action. (REQUIRED)
@@ -104,7 +118,11 @@ pub trait Component: HandleSmallArea {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn draw(&mut self, f: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()>;
+    fn draw(
+        &mut self,
+        f: &mut ratatui::Frame<'_>,
+        area: layout::Rect,
+    ) -> io::Result<()>;
     /// Create a new boxed instance of the component.
     ///
     /// # Returns
@@ -118,12 +136,14 @@ pub trait Component: HandleSmallArea {
     }
 }
 
-/// `HandleSmallArea` is a trait that represents a component that can handle small area events.
-/// Implementors of this trait can be notified when the area they are rendering in is too small to be useful.
-/// This can be useful for components that require a minimum amount of space to be useful.
+/// `HandleSmallArea` is a trait that represents a component that can handle
+/// small area events. Implementors of this trait can be notified when the area
+/// they are rendering in is too small to be useful. This can be useful for
+/// components that require a minimum amount of space to be useful.
 pub trait HandleSmallArea {
     /// This method is called when the area is too small to be useful.
-    /// This should set the state of the component to reflect the fact that the area is too small.
+    /// This should set the state of the component to reflect the fact that the
+    /// area is too small.
     ///
     /// # Arguments
     ///

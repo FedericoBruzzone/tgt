@@ -1,4 +1,6 @@
-use {super::config_type::ConfigType, crate::configs::default_config_dir, std::io};
+use {
+    super::config_type::ConfigType, crate::configs::default_config_dir, std::io,
+};
 
 pub mod keymap_custom;
 pub mod logger_custom;
@@ -36,7 +38,9 @@ pub fn default_config_keymap_file_path() -> io::Result<String> {
 }
 
 // #[cfg(not(target_os = "windows"))]
-// pub const DEFAULT_CONFIG_LOGGER_FILE_PATH: &str = include_str!("../../../config/logger.toml");
+// pub const DEFAULT_CONFIG_LOGGER_FILE_PATH: &str =
+// include_str!("../../../config/logger.toml");
 //
 // #[cfg(target_os = "windows")]
-// pub const DEFAULT_CONFIG_LOGGER_FILE_PATH: &str = include_str!("..\\..\\..\\config\\icons.toml");
+// pub const DEFAULT_CONFIG_LOGGER_FILE_PATH: &str =
+// include_str!("..\\..\\..\\config\\icons.toml");

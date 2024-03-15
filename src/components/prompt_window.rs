@@ -17,13 +17,15 @@ use {
 pub const PROMPT: &str = "prompt_window";
 
 /// `PromptWindow` is a struct that represents a window for displaying a prompt.
-/// It is responsible for managing the layout and rendering of the prompt window.
+/// It is responsible for managing the layout and rendering of the prompt
+/// window.
 pub struct PromptWindow {
     /// The name of the `PromptWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `PromptWindow` should be displayed as a smaller version of itself.
+    /// A flag indicating whether the `PromptWindow` should be displayed as a
+    /// smaller version of itself.
     small_area: bool,
 }
 
@@ -63,12 +65,14 @@ impl PromptWindow {
 }
 
 /// Implement the `HandleSmallArea` trait for the `PromptWindow` struct.
-/// This trait allows the `PromptWindow` to display a smaller version of itself if necessary.
+/// This trait allows the `PromptWindow` to display a smaller version of itself
+/// if necessary.
 impl HandleSmallArea for PromptWindow {
     /// Set the `small_area` flag for the `PromptWindow`.
     ///
     /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `PromptWindow` should be displayed as a smaller version of itself.
+    /// * `small_area` - A boolean flag indicating whether the `PromptWindow`
+    ///   should be displayed as a smaller version of itself.
     fn with_small_area(&mut self, small_area: bool) {
         self.small_area = small_area;
     }
@@ -76,12 +80,19 @@ impl HandleSmallArea for PromptWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for PromptWindow {
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
+    fn register_action_handler(
+        &mut self,
+        tx: UnboundedSender<Action>,
+    ) -> std::io::Result<()> {
         self.command_tx = Some(tx.clone());
         Ok(())
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    fn draw(
+        &mut self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+    ) -> std::io::Result<()> {
         let collapsed_top_and_left_border_set = Set {
             top_left: NORMAL.vertical_right,
             top_right: NORMAL.vertical_left,

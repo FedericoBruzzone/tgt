@@ -33,8 +33,8 @@ pub fn default_config_dir() -> io::Result<PathBuf> {
     Ok(project_dir()?.join("config"))
 }
 /// Deserialize a configuration file into a configuration struct.
-/// This function attempts to parse the specified file and returns the parsed configuration.
-/// If the file cannot be parsed, an error is returned.
+/// This function attempts to parse the specified file and returns the parsed
+/// configuration. If the file cannot be parsed, an error is returned.
 ///
 /// # Arguments
 /// * `file_path` - The path to the file to parse.
@@ -51,9 +51,10 @@ where
         .try_deserialize::<R>()?;
     Ok(builder)
 }
-/// Deserialize a configuration file into a configuration struct and convert it into another configuration struct.
-/// This function attempts to parse the specified file and returns the parsed configuration.
-/// If the file cannot be parsed, an error is returned.
+/// Deserialize a configuration file into a configuration struct and convert it
+/// into another configuration struct. This function attempts to parse the
+/// specified file and returns the parsed configuration. If the file cannot be
+/// parsed, an error is returned.
 ///
 /// # Arguments
 /// * `file_path` - The path to the file to parse.

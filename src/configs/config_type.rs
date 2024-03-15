@@ -4,8 +4,9 @@ use {
 };
 
 #[derive(Copy, Clone, Debug)]
-/// `ConfigType` is an enum that represents the different types of configuration files that the application can use.
-/// The different types of configuration files are:
+/// `ConfigType` is an enum that represents the different types of configuration
+/// files that the application can use. The different types of configuration
+/// files are:
 /// * App - The application configuration file.
 /// * Keymap - The keymap configuration file.
 /// * Logger - The logger configuration file.
@@ -20,11 +21,19 @@ pub enum ConfigType {
 }
 /// Implement the `ConfigType` enum.
 impl ConfigType {
-    /// Get the different types of configuration files that the application can use.
+    /// Get the different types of configuration files that the application can
+    /// use.
     pub const fn enumerate() -> &'static [Self] {
-        &[Self::App, Self::Keymap, Self::Logger, Self::Theme, Self::Telegram]
+        &[
+            Self::App,
+            Self::Keymap,
+            Self::Logger,
+            Self::Theme,
+            Self::Telegram,
+        ]
     }
-    /// Get the file name without the file extension for the configuration file type.
+    /// Get the file name without the file extension for the configuration file
+    /// type.
     ///
     /// # Returns
     /// * `&'static str` - The file name without the file extension.

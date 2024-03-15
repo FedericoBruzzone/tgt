@@ -13,12 +13,16 @@ use lazy_static::lazy_static;
 
 use crate::{
     app_error::AppError,
-    configs::{config_file::ConfigFile, custom::logger_custom::LoggerConfig},
+    configs::{
+        config_file::ConfigFile,
+        custom::{keymap_custom::KeymapConfig, logger_custom::LoggerConfig},
+    },
     logger::Logger,
 };
 
 lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
+    pub static ref KEYMAP_CONFIG: KeymapConfig = KeymapConfig::get_config();
 }
 
 /// The main entry point for the application.
@@ -31,6 +35,10 @@ async fn tokio_main() -> Result<(), AppError> {
     logger.init();
     tracing::info!("Logger initialized with config: {:#?}", logger);
     println!("{:#?}", logger);
+
+    let keymap_config = KEYMAP_CONFIG.clone();
+    tracing::info!("Keymap config: {:#?}", keymap_config);
+    println!("{:#?}", keymap_config);
 
     let mut app = app::App::new()?; //.with_frame_rate(60.0);
     tracing::info!("Starting main");
