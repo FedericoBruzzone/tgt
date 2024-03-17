@@ -4,16 +4,26 @@
 // java example -> https://github.com/tdlib/td/blob/master/example/java/org/drinkless/tdlib/example/Example.java
 
 use {
-    std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
+    std::{
+        collections::{BTreeSet, HashMap},
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
     },
     tdlib::{
         enums::{self, AuthorizationState, LogStream, Update},
         functions,
-        types::{InputMessageText, LogStreamFile},
+        types::{
+            BasicGroup, BasicGroupFullInfo, Chat, FormattedText,
+            InputMessageText, LogStreamFile, SecretChat, Supergroup,
+            SupergroupFullInfo, User, UserFullInfo,
+        },
     },
-    tokio::sync::mpsc::{self, Receiver, Sender},
+    tokio::{
+        sync::mpsc::{self, Receiver, Sender},
+        task::JoinHandle,
+    },
 };
 
 fn ask_user(string: &str) -> String {
@@ -61,7 +71,7 @@ async fn get_command(client_id: i32) -> bool {
             // let args: Vec<&str> = commands[1].split(' ').collect();
             let text = enums::InputMessageContent::InputMessageText(
                 InputMessageText {
-                    text: tdlib::types::FormattedText {
+                    text: FormattedText {
                         text: commands[2].into(),
                         entities: Vec::new(),
                     },
@@ -111,39 +121,78 @@ async fn handle_update(update: Update, auth_tx: &Sender<AuthorizationState>) {
         Update::User(x) => {
             eprintln!("[HANDLE UPDATE]: {:?} {:?}", x.user.usernames, x.user.id)
         }
-        // Update::UserStatus(_) => eprintln!("[HANDLE UPDATE]: UserStatus"),
-        // Update::BasicGroup(_) => eprintln!("[HANDLE UPDATE]: BasicGroup"),
-        // Update::Supergroup(_) => eprintln!("[HANDLE UPDATE]: Supergroup"),
-        // Update::SecretChat(_) => eprintln!("[HANDLE UPDATE]: SecretChat"),
-        // Update::NewChat(x) => eprintln!("[HANDLE UPDATE]: {x:?}"),
-        // Update::ChatTitle(_) => eprintln!("[HANDLE UPDATE]: ChatTitle"),
-        // Update::ChatPhoto(_) => eprintln!("[HANDLE UPDATE]: ChatPhoto"),
-        // Update::ChatLastMessage(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatLastMessage"), Update::ChatPosition(_) =>
-        // eprintln!("[HANDLE UPDATE]: ChatPosition"),
-        // Update::ChatReadInbox(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatReadInbox"), Update::ChatReadOutbox(_) =>
-        // eprintln!("[HANDLE UPDATE]: ChatReadOutbox"),
-        // Update::ChatUnreadMentionCount(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatUnreadMentionCount"), Update::MessageMentionRead(_) =>
-        // eprintln!("[HANDLE UPDATE]: MessageMentionRead"),
-        // Update::ChatReplyMarkup(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatReplyMarkup"), Update::ChatDraftMessage(_) =>
-        // eprintln!("[HANDLE UPDATE]: ChatDraftMessage"),
-        // Update::ChatPermissions(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatPermissions"), Update::ChatNotificationSettings(_) =>
-        // eprintln!("[HANDLE UPDATE]: ChatNotificationSettings"),
-        // Update::ChatDefaultDisableNotification(_) => eprintln!("[HANDLE
-        // UPDATE]: ChatDefaultDisableNotification"),
-        // Update::ChatIsMarkedAsUnread(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatIsMarkedAsUnread"), Update::ChatBlockList(_) =>
-        // eprintln!("[HANDLE UPDATE]: ChatBlockList"),
-        // Update::ChatHasScheduledMessages(_) => eprintln!("[HANDLE UPDATE]:
-        // ChatHasScheduledMessages"), Update::UserFullInfo(_) =>
-        // eprintln!("[HANDLE UPDATE]: UserFullInfo"),
-        // Update::BasicGroupFullInfo(_) => eprintln!("[HANDLE UPDATE]:
-        // BasicGroupFullInfo"), Update::SupergroupFullInfo(_) =>
-        // eprintln!("[HANDLE UPDATE]: SupergroupFullInfo"),
+        // Update::UserStatus(_) => {
+        //     eprintln!("[HANDLE UPDATE]: UserStatus")
+        // }
+        // Update::BasicGroup(_) => {
+        //     eprintln!("[HANDLE UPDATE]: BasicGroup")
+        // }
+        // Update::Supergroup(_) => {
+        //     eprintln!("[HANDLE UPDATE]: Supergroup")
+        // }
+        // Update::SecretChat(_) => {
+        //     eprintln!("[HANDLE UPDATE]: SecretChat")
+        // }
+        // Update::NewChat(x) => {
+        //     eprintln!("[HANDLE UPDATE]: {x:?}")
+        // }
+        // Update::ChatTitle(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatTitle")
+        // }
+        // Update::ChatPhoto(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatPhoto")
+        // }
+        // Update::ChatLastMessage(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatLastMessage")
+        // }
+        // Update::ChatPosition(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatPosition")
+        // }
+        // Update::ChatReadInbox(_) => {
+        //     eprintln!("[HANDLE UPDATE]:ChatReadInbox")
+        // }
+        // Update::ChatReadOutbox(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatReadOutbox")
+        // }
+        // Update::ChatUnreadMentionCount(_) => {
+        //     eprintln!("[HANDLE UPDATE]:ChatUnreadMentionCount")
+        // }
+        // Update::MessageMentionRead(_) => {
+        //     eprintln!("[HANDLE UPDATE]: MessageMentionRead")
+        // }
+        // Update::ChatReplyMarkup(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatReplyMarkup")
+        // }
+        // Update::ChatDraftMessage(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatDraftMessage")
+        // }
+        // Update::ChatPermissions(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatPermissions")
+        // }
+        // Update::ChatNotificationSettings(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatNotificationSettings")
+        // }
+        // Update::ChatDefaultDisableNotification(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatDefaultDisableNotification")
+        // }
+        // Update::ChatIsMarkedAsUnread(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatIsMarkedAsUnread")
+        // }
+        // Update::ChatBlockList(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatBlockList")
+        // }
+        // Update::ChatHasScheduledMessages(_) => {
+        //     eprintln!("[HANDLE UPDATE]: ChatHasScheduledMessages")
+        // }
+        // Update::UserFullInfo(_) => {
+        //     eprintln!("[HANDLE UPDATE]: UserFullInfo")
+        // }
+        // Update::BasicGroupFullInfo(_) => {
+        //     eprintln!("[HANDLE UPDATE]: BasicGroupFullInfo")
+        // }
+        // Update::SupergroupFullInfo(_) => {
+        //     eprintln!("[HANDLE UPDATE]: SupergroupFullInfo")
+        // }
         // Too much prints
         // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
         _ => (),
@@ -267,6 +316,7 @@ async fn main() {
     // Spawn a task to receive updates/responses
     let handle = tokio::spawn(async move {
         while run_flag_clone.load(Ordering::Acquire) {
+            // TODO check that the client_ids are equal
             if let Some((update, _client_id)) = tdlib::receive() {
                 handle_update(update, &auth_tx).await;
             }
@@ -304,7 +354,7 @@ async fn main() {
     .await
     {
         Err(error) => {
-            eprintln!("[ERROR] \"functions::get_text_entitie\": {error:?}")
+            eprintln!("[ERROR] \"functions::get_text_entities\": {error:?}")
         }
         Ok(ok) => println!("[TEST]: {ok:?}"),
     }
@@ -331,4 +381,115 @@ async fn main() {
 
     // Wait for the previously spawned task to end the execution
     handle.await.unwrap();
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct OrderedChat {
+    pub position: i64,
+    pub chat_id: i64,
+}
+
+pub struct TgBackend {
+    // thread for receiving updates from tdlib
+    pub handle_updates: JoinHandle<()>,
+
+    // TODO need thread to receive action/events from app
+    pub client_id: i32,
+
+    pub authorization_state: Option<AuthorizationState>,
+    pub have_authorization: bool,
+    pub need_quit: bool,
+    pub can_quit: bool,
+
+    pub users: HashMap<i64, User>,
+    pub basic_groups: HashMap<i64, BasicGroup>,
+    pub supergroups: HashMap<i64, Supergroup>,
+    pub secret_chats: HashMap<i32, SecretChat>,
+
+    pub chats: HashMap<i64, Chat>,
+    pub main_chat_list: BTreeSet<OrderedChat>,
+    pub have_full_main_chat_list: bool,
+
+    pub users_full_info: HashMap<i64, UserFullInfo>,
+    pub basic_groups_full_info: HashMap<i64, BasicGroupFullInfo>,
+    pub supergroups_full_info: HashMap<i64, SupergroupFullInfo>,
+}
+
+impl TgBackend {
+    pub fn new() -> Result<Self, std::io::Error> {
+        let handle_updates = tokio::spawn(async {});
+
+        let client_id = tdlib::create_client();
+
+        let authorization_state = None;
+        // probably useless in real app
+        let have_authorization = false;
+        // probably useless in real app
+        let need_quit = false;
+        // probably useless in real app
+        let can_quit = false;
+
+        // maybe all datastructures needs to be thread safe
+        let users: HashMap<i64, User> = HashMap::new();
+        let basic_groups: HashMap<i64, BasicGroup> = HashMap::new();
+        let supergroups: HashMap<i64, Supergroup> = HashMap::new();
+        let secret_chats: HashMap<i32, SecretChat> = HashMap::new();
+
+        let chats: HashMap<i64, Chat> = HashMap::new();
+        let main_chat_list: BTreeSet<OrderedChat> = BTreeSet::new();
+        let have_full_main_chat_list = false;
+
+        let users_full_info: HashMap<i64, UserFullInfo> = HashMap::new();
+        let basic_groups_full_info: HashMap<i64, BasicGroupFullInfo> =
+            HashMap::new();
+        let supergroups_full_info: HashMap<i64, SupergroupFullInfo> =
+            HashMap::new();
+
+        Ok(Self {
+            handle_updates,
+            client_id,
+            authorization_state,
+            have_authorization,
+            need_quit,
+            can_quit,
+            users,
+            basic_groups,
+            supergroups,
+            secret_chats,
+            chats,
+            main_chat_list,
+            have_full_main_chat_list,
+            users_full_info,
+            basic_groups_full_info,
+            supergroups_full_info,
+        })
+    }
+
+    pub async fn set_logging(&self) {
+        // TODO read data from config file
+
+        // Set a fairly low verbosity level. We mainly do this because tdlib
+        // requires to perform a random request with the client to start
+        // receiving updates for it.
+        functions::set_log_verbosity_level(2, self.client_id)
+            .await
+            .unwrap();
+
+        // Create log file
+        let log_stream_file = LogStreamFile {
+            path: ".data/tdlib.log".into(),
+            max_file_size: 1 << 27,
+            redirect_stderr: false,
+        };
+
+        // Set log stream to file
+        if let Err(error) = functions::set_log_stream(
+            LogStream::File(log_stream_file),
+            self.client_id,
+        )
+        .await
+        {
+            eprintln!("[ERROR] \"Write access to the current directory is required\": {error:?}")
+        }
+    }
 }
