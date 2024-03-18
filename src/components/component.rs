@@ -1,5 +1,8 @@
 use {
-    crate::enums::{action::Action, event::Event},
+    crate::{
+        app_error::AppError,
+        enums::{action::Action, event::Event},
+    },
     crossterm::event,
     ratatui::layout,
     std::io,
@@ -53,12 +56,12 @@ pub trait Component: HandleSmallArea {
     fn handle_events(
         &mut self,
         event: Option<Event>,
-    ) -> io::Result<Option<Action>> {
+    ) -> Result<Option<Action>, AppError> {
         let r = match event {
             Some(Event::Key(key_event)) => self.handle_key_events(key_event)?,
-            // Some(Event::Mouse(mouse_event)) => {
-            //   self.handle_mouse_events(mouse_event)?
-            // }
+            Some(Event::Mouse(mouse_event)) => {
+                self.handle_mouse_events(mouse_event)?
+            }
             _ => None,
         };
         Ok(r)

@@ -4,12 +4,11 @@ use {
         cursor,
         event::{
             DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
-            EnableMouseCapture, Event as CrosstermEvent, EventStream, KeyCode,
-            KeyEventKind,
+            EnableMouseCapture, Event as CrosstermEvent, EventStream,
         },
         terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     },
-    futures::{FutureExt, StreamExt},
+    futures::{future::Fuse, stream::Next, FutureExt, StreamExt},
     ratatui::{backend::CrosstermBackend, Terminal},
     std::{io::Stderr, time::Duration},
     tokio::{
@@ -45,14 +44,16 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `TuiBackend` struct or an error.
-    pub fn new() -> Result<Self, std::io::Error> {
+    pub fn new(
+        frame_rate: f64,
+        mouse: bool,
+        paste: bool,
+    ) -> Result<Self, std::io::Error> {
         let terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
         let task: JoinHandle<Result<(), SendError<Event>>> =
             tokio::spawn(async { Err(SendError(Event::Init)) });
-        let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel();
-        let frame_rate = 60.0;
-        let mouse = false;
-        let paste = false;
+        let (event_tx, event_rx) =
+            tokio::sync::mpsc::unbounded_channel::<Event>();
         Ok(Self {
             terminal,
             task,
@@ -74,7 +75,7 @@ impl TuiBackend {
         crossterm::execute!(
             std::io::stderr(),
             EnterAlternateScreen,
-            cursor::Hide
+            // cursor::Hide
         )?;
         if self.mouse {
             crossterm::execute!(std::io::stderr(), EnableMouseCapture)?;
@@ -182,37 +183,39 @@ impl TuiBackend {
     /// The task will listen for events from the terminal and send them to the
     /// event queue for processing.
     fn start(&mut self) {
-        let _event_tx = self.event_tx.clone();
+        let event_tx = self.event_tx.clone();
         let render_delay = Duration::from_secs_f64(1.0 / self.frame_rate);
 
         self.task = tokio::spawn(async move {
             let mut reader = EventStream::new();
             let mut render_interval = tokio::time::interval(render_delay);
 
-            _event_tx.send(Event::Init)?;
+            event_tx.send(Event::Init)?;
             loop {
-                let crossterm_event = reader.next().fuse();
+                let crossterm_event: Fuse<Next<'_, EventStream>> =
+                    reader.next().fuse();
                 let render_tick = render_interval.tick();
 
                 tokio::select! {
                   maybe_event = crossterm_event => {
                     match maybe_event {
-                      Some(Ok(event)) => {
+                        Some(Ok(event)) => {
                         match event {
                           CrosstermEvent::Key(key) => {
-                            if key.kind == KeyEventKind::Press {
-                              if key.code == KeyCode::Char('q') {
-                                _event_tx.send(Event::Quit)?;
-                              } else {
-                                _event_tx.send(Event::Key(key))?;
-                              }
-                            }
+                            // if key.kind == KeyEventKind::Press {
+                            //   if key.code == KeyCode::Char('q') {
+                            //     _event_tx.send(Event::Quit)?;
+                            //   } else {
+                            //     _event_tx.send(Event::Key(key))?;
+                            //   }
+                            // }
+                            event_tx.send(Event::Key(key))?;
                           },
                           CrosstermEvent::Mouse(mouse) => {
-                            _event_tx.send(Event::Mouse(mouse))?;
+                            event_tx.send(Event::Mouse(mouse))?;
                           },
                           CrosstermEvent::Resize(width, height) => {
-                            _event_tx.send(Event::Resize(width, height))?;
+                            event_tx.send(Event::Resize(width, height))?;
                           },
                           CrosstermEvent::FocusLost => {} // TODO: handle focus lost
                           CrosstermEvent::FocusGained => {} // TODO: handle focus gained
@@ -223,7 +226,7 @@ impl TuiBackend {
                     }
                   },
                   _ = render_tick => {
-                    _event_tx.send(Event::Render)?;
+                    event_tx.send(Event::Render)?;
                   }
                 }
             }

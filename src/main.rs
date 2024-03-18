@@ -1,4 +1,4 @@
-pub mod app;
+pub mod app_context;
 pub mod app_error;
 pub mod logger;
 pub mod tui;
@@ -8,16 +8,19 @@ pub mod utils;
 pub mod components;
 pub mod configs;
 pub mod enums;
+pub mod run;
 
 use lazy_static::lazy_static;
 
 use crate::{
+    app_context::AppContext,
     app_error::AppError,
     configs::{
         config_file::ConfigFile,
         custom::{keymap_custom::KeymapConfig, logger_custom::LoggerConfig},
     },
     logger::Logger,
+    tui_backend::TuiBackend,
 };
 
 lazy_static! {
@@ -40,9 +43,17 @@ async fn tokio_main() -> Result<(), AppError> {
     tracing::info!("Keymap config: {:#?}", keymap_config);
     println!("{:#?}", keymap_config);
 
-    let mut app = app::App::new()?; //.with_frame_rate(60.0);
+    let mut app_context = AppContext::new(keymap_config)?
+        .with_mouse(true)
+        .with_paste(true);
+    let mut tui_backend = TuiBackend::new(
+        app_context.frame_rate,
+        app_context.mouse,
+        app_context.paste,
+    )?;
+
     tracing::info!("Starting main");
-    app.run().await?;
+    run::run_app(&mut app_context, &mut tui_backend).await?;
     Ok(())
 }
 

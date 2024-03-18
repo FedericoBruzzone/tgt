@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crossterm::event::{KeyEvent, MouseEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 
 use crate::app_error::AppError;
 
@@ -25,7 +25,14 @@ impl FromStr for Event {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "q" => Ok(Event::Quit),
+            "q" => Ok(Event::Key(KeyEvent::new(
+                KeyCode::Char('q'),
+                KeyModifiers::NONE,
+            ))),
+            "w" => Ok(Event::Key(KeyEvent::new(
+                KeyCode::Char('w'),
+                KeyModifiers::NONE,
+            ))),
             _ => Err(AppError::InvalidEvent(s.to_string())),
         }
     }

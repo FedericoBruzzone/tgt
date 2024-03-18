@@ -27,7 +27,7 @@ pub struct CoreWindow {
     small_area: bool,
     #[allow(dead_code)]
     /// The name of the component that is currently focused.
-    focused: ComponentName,
+    focused: Option<ComponentName>,
 }
 
 impl Default for CoreWindow {
@@ -62,7 +62,7 @@ impl CoreWindow {
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
         let small_area = false;
-        let focused = ComponentName::ChatList;
+        let focused = None;
 
         CoreWindow {
             name,

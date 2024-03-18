@@ -60,7 +60,6 @@ impl KeymapConfig {
         ConfigType::Keymap.as_default_filename()
         );
     }
-
     /// Convert a vector of keymap entries to a hashmap of event and action
     /// binding.
     /// When the keymap entries are read from the default configuration file,
@@ -141,6 +140,9 @@ impl KeymapConfig {
     /// It is used to insert a keymap entry into the keymap hashmap. It is
     /// recursive and it is used to insert a keymap entry with multiple events.
     /// It returns an error if the key is already bound to a command.
+    /// Note that can not exist two keymap entries that start with the same
+    /// key (event), for example "q" and ["q", "q"]. If the keymap entry
+    /// already exists, it returns an error.
     ///
     /// # Arguments
     /// * `keymap` - A mutable reference to the keymap hashmap.
@@ -293,7 +295,7 @@ mod tests {
     #[test]
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
-        assert_eq!(keymap_config.default.len(), 1);
+        assert_eq!(keymap_config.default.len(), 2);
         assert_eq!(keymap_config.chats_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);

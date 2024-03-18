@@ -1,10 +1,12 @@
 use {
     crate::{
+        app_error::AppError,
         components::{
             component::Component, core_window::CoreWindow,
             status_bar::StatusBar, title_bar::TitleBar, SMALL_AREA_HEIGHT,
             SMALL_AREA_WIDTH,
         },
+        configs::custom::keymap_custom::{ActionBinding, KeymapConfig},
         enums::{action::Action, component_name::ComponentName, event::Event},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
@@ -21,14 +23,21 @@ pub struct Tui {
     action_tx: Option<UnboundedSender<Action>>,
     /// A hashmap of components that make up the user interface.
     components: HashMap<ComponentName, Box<dyn Component>>,
+    /// The keymap configuration.
+    keymap_config: Option<KeymapConfig>,
+    #[allow(dead_code)]
+    /// The name of the component that currently has focus. It is an optional
+    /// value because no component may have focus. The focus is a component
+    /// inside the `CoreWindow`.
+    focused: Option<ComponentName>,
 }
-
+/// Implement the `Default` trait for the `Tui` struct.
 impl Default for Tui {
     fn default() -> Self {
         Self::new()
     }
 }
-
+/// Implement the `Tui` struct.
 impl Tui {
     /// Create a new instance of the `Tui` struct.
     ///
@@ -51,15 +60,31 @@ impl Tui {
         ];
 
         let action_tx = None;
-
+        let focused = None;
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
+        let keymap_config = None;
 
         Tui {
             action_tx,
             components,
+            keymap_config,
+            focused,
         }
     }
+    /// Set the keymap configuration for the user interface.
+    /// The keymap configuration is used to map events to actions.
+    ///
+    /// # Arguments
+    /// * `keymap_config` - The keymap configuration for the user interface.
+    ///
+    /// # Returns
+    /// * `Self` - The modified instance of the `Tui` struct.
+    pub fn with_keymap_config(mut self, keymap_config: KeymapConfig) -> Self {
+        self.keymap_config = Some(keymap_config);
+        self
+    }
+
     /// Register an action handler that can send actions for processing if
     /// necessary.
     ///
@@ -92,7 +117,23 @@ impl Tui {
     pub fn handle_events(
         &mut self,
         event: Option<Event>,
-    ) -> std::io::Result<Option<Action>> {
+    ) -> Result<Option<Action>, AppError> {
+        // [TODO]: It should be done inside of a "Context"
+        if let Some(action) = self
+            .keymap_config
+            .as_ref()
+            .unwrap()
+            .default
+            .get(event.as_ref().unwrap())
+        {
+            match action {
+                ActionBinding::Single { action, .. } => {
+                    return Ok(Some(action.clone()));
+                }
+                ActionBinding::Multiple(_map_event_action) => {}
+            }
+        }
+
         // Handle focus
         self.components
             .iter_mut()
