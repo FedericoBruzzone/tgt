@@ -20,6 +20,9 @@ log_level = "info"
 
 # Example of a custom logger configuration
 
+This is an example of a custom logger configuration. This configuration will be merged with the default configuration.
+It means that the default logger configuration will be overwritten by the custom logger configuration.
+
 ```toml
 log_level = "debug"
 ```

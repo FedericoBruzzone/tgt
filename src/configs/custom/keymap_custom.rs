@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
-        assert_eq!(keymap_config.default.len(), 2);
+        assert_eq!(keymap_config.default.len(), 3);
         assert_eq!(keymap_config.chats_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);

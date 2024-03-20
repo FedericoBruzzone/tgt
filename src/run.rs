@@ -87,7 +87,7 @@ async fn handle_tui_backend_events(
                             tui_backend,
                             map_event_action.clone(),
                         )
-                        .await
+                        .await;
                     }
                 }
             }

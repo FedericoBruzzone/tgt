@@ -1,3 +1,8 @@
+# keymap.toml
+
+# Default keymap configuration
+
+```toml
 # The default key bindings are usable in any app component.
 [default]
 keymap = [
@@ -20,4 +25,16 @@ keymap = [
 # The prompt key bindings are only usable in the prompt component.
 # When the prompt is focused, the prompt key bindings will be active.
 [prompt]
+```
 
+# Example of a custom logger configuration
+
+This is an example of a custom keymap configuration. This configuration will be merged with the default configuration.
+It means that the default key bindings will be overwritten by the custom key bindings.
+
+```toml
+[default]
+keymap = [
+  { keys = ["q"], command = "render", description = "Force a render"},
+]
+```
