@@ -202,7 +202,7 @@ impl TuiBackend {
                         Some(Ok(event)) => {
                         match event {
                           CrosstermEvent::Key(key) => {
-                            event_tx.send(Event::Key(key))?;
+                            event_tx.send(Event::Key(key.code, key.modifiers))?;
                           },
                           CrosstermEvent::Mouse(mouse) => {
                             event_tx.send(Event::Mouse(mouse))?;

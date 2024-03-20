@@ -58,7 +58,9 @@ pub trait Component: HandleSmallArea {
         event: Option<Event>,
     ) -> Result<Option<Action>, AppError> {
         let r = match event {
-            Some(Event::Key(key_event)) => self.handle_key_events(key_event)?,
+            Some(Event::Key(key, modifiers)) => {
+                self.handle_key_events(Event::Key(key, modifiers))?
+            }
             Some(Event::Mouse(mouse_event)) => {
                 self.handle_mouse_events(mouse_event)?
             }
@@ -76,10 +78,7 @@ pub trait Component: HandleSmallArea {
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
     #[allow(unused_variables)]
-    fn handle_key_events(
-        &mut self,
-        key: event::KeyEvent,
-    ) -> io::Result<Option<Action>> {
+    fn handle_key_events(&mut self, key: Event) -> io::Result<Option<Action>> {
         Ok(None)
     }
     /// Handle mouse events and produce actions if necessary.

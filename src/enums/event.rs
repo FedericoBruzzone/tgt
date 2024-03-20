@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
+use crossterm::event::{KeyCode, KeyModifiers, MouseEvent};
 
 use crate::app_error::AppError;
 
@@ -10,67 +10,61 @@ use crate::app_error::AppError;
 /// These events are used to drive the user interface and the application logic
 /// and should be handled entirely.
 pub enum Event {
+    /// Unknown event.
     Unknown,
+    /// Init event.
     Init,
+    /// Quit event.
     Quit,
     Render,
-    Key(KeyEvent),
+    /// Key event with a `KeyCode` and `KeyModifiers`.
+    Key(KeyCode, KeyModifiers),
+    /// Mouse event with a `MouseEvent` struct.
     Mouse(MouseEvent),
+    /// Resize event with width and height.
     Resize(u16, u16),
 }
-
+/// Implement the `Event` enum.
 impl Event {
     pub fn event_with_modifiers(
         s: &str,
         modifiers: KeyModifiers,
     ) -> Result<Event, AppError> {
         match s {
-            "backspace" => {
-                Ok(Event::Key(KeyEvent::new(KeyCode::Backspace, modifiers)))
-            }
-            "enter" => Ok(Event::Key(KeyEvent::new(KeyCode::Enter, modifiers))),
-            "left" => Ok(Event::Key(KeyEvent::new(KeyCode::Left, modifiers))),
-            "right" => Ok(Event::Key(KeyEvent::new(KeyCode::Right, modifiers))),
-            "up" => Ok(Event::Key(KeyEvent::new(KeyCode::Up, modifiers))),
-            "down" => Ok(Event::Key(KeyEvent::new(KeyCode::Down, modifiers))),
-            "home" => Ok(Event::Key(KeyEvent::new(KeyCode::Home, modifiers))),
-            "end" => Ok(Event::Key(KeyEvent::new(KeyCode::End, modifiers))),
-            "page_up" => {
-                Ok(Event::Key(KeyEvent::new(KeyCode::PageUp, modifiers)))
-            }
-            "page_down" => {
-                Ok(Event::Key(KeyEvent::new(KeyCode::PageDown, modifiers)))
-            }
-            "tab" => Ok(Event::Key(KeyEvent::new(KeyCode::Tab, modifiers))),
-            "back_tab" => {
-                Ok(Event::Key(KeyEvent::new(KeyCode::BackTab, modifiers)))
-            }
-            "delete" => {
-                Ok(Event::Key(KeyEvent::new(KeyCode::Delete, modifiers)))
-            }
-            "insert" => {
-                Ok(Event::Key(KeyEvent::new(KeyCode::Insert, modifiers)))
-            }
-            "null" => Ok(Event::Key(KeyEvent::new(KeyCode::Null, modifiers))),
-            "esc" => Ok(Event::Key(KeyEvent::new(KeyCode::Esc, modifiers))),
-            "f1" => Ok(Event::Key(KeyEvent::new(KeyCode::F(1), modifiers))),
-            "f2" => Ok(Event::Key(KeyEvent::new(KeyCode::F(2), modifiers))),
-            "f3" => Ok(Event::Key(KeyEvent::new(KeyCode::F(3), modifiers))),
-            "f4" => Ok(Event::Key(KeyEvent::new(KeyCode::F(4), modifiers))),
-            "f5" => Ok(Event::Key(KeyEvent::new(KeyCode::F(5), modifiers))),
-            "f6" => Ok(Event::Key(KeyEvent::new(KeyCode::F(6), modifiers))),
-            "f7" => Ok(Event::Key(KeyEvent::new(KeyCode::F(7), modifiers))),
-            "f8" => Ok(Event::Key(KeyEvent::new(KeyCode::F(8), modifiers))),
-            "f9" => Ok(Event::Key(KeyEvent::new(KeyCode::F(9), modifiers))),
-            "f10" => Ok(Event::Key(KeyEvent::new(KeyCode::F(10), modifiers))),
-            "f11" => Ok(Event::Key(KeyEvent::new(KeyCode::F(11), modifiers))),
-            "f12" => Ok(Event::Key(KeyEvent::new(KeyCode::F(12), modifiers))),
+            "backspace" => Ok(Event::Key(KeyCode::Backspace, modifiers)),
+            "enter" => Ok(Event::Key(KeyCode::Enter, modifiers)),
+            "left" => Ok(Event::Key(KeyCode::Left, modifiers)),
+            "right" => Ok(Event::Key(KeyCode::Right, modifiers)),
+            "up" => Ok(Event::Key(KeyCode::Up, modifiers)),
+            "down" => Ok(Event::Key(KeyCode::Down, modifiers)),
+            "home" => Ok(Event::Key(KeyCode::Home, modifiers)),
+            "end" => Ok(Event::Key(KeyCode::End, modifiers)),
+            "page_up" => Ok(Event::Key(KeyCode::PageUp, modifiers)),
+            "page_down" => Ok(Event::Key(KeyCode::PageDown, modifiers)),
+            "tab" => Ok(Event::Key(KeyCode::Tab, modifiers)),
+            "back_tab" => Ok(Event::Key(KeyCode::BackTab, modifiers)),
+            "delete" => Ok(Event::Key(KeyCode::Delete, modifiers)),
+            "insert" => Ok(Event::Key(KeyCode::Insert, modifiers)),
+            "null" => Ok(Event::Key(KeyCode::Null, modifiers)),
+            "esc" => Ok(Event::Key(KeyCode::Esc, modifiers)),
+            "f1" => Ok(Event::Key(KeyCode::F(1), modifiers)),
+            "f2" => Ok(Event::Key(KeyCode::F(2), modifiers)),
+            "f3" => Ok(Event::Key(KeyCode::F(3), modifiers)),
+            "f4" => Ok(Event::Key(KeyCode::F(4), modifiers)),
+            "f5" => Ok(Event::Key(KeyCode::F(5), modifiers)),
+            "f6" => Ok(Event::Key(KeyCode::F(6), modifiers)),
+            "f7" => Ok(Event::Key(KeyCode::F(7), modifiers)),
+            "f8" => Ok(Event::Key(KeyCode::F(8), modifiers)),
+            "f9" => Ok(Event::Key(KeyCode::F(9), modifiers)),
+            "f10" => Ok(Event::Key(KeyCode::F(10), modifiers)),
+            "f11" => Ok(Event::Key(KeyCode::F(11), modifiers)),
+            "f12" => Ok(Event::Key(KeyCode::F(12), modifiers)),
             e => {
                 if e.len() == 1 && e.chars().all(char::is_alphabetic) {
-                    Ok(Event::Key(KeyEvent::new(
+                    Ok(Event::Key(
                         KeyCode::Char(e.chars().next().unwrap()),
                         modifiers,
-                    )))
+                    ))
                 } else {
                     Err(AppError::InvalidEvent(e.to_string()))
                 }
@@ -85,18 +79,22 @@ impl FromStr for Event {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(event) = Self::event_with_modifiers(s, KeyModifiers::NONE) {
-            return Ok(event);
-        }
-
-        if s.starts_with("ctrl+") {
-            let key = s.trim_start_matches("ctrl+");
-            Self::event_with_modifiers(key, KeyModifiers::CONTROL)
+            Ok(event)
+        } else if s.starts_with("ctrl+") {
+            Self::event_with_modifiers(
+                s.trim_start_matches("ctrl+"),
+                KeyModifiers::CONTROL,
+            )
         } else if s.starts_with("alt+") {
-            let key = s.trim_start_matches("alt+");
-            Self::event_with_modifiers(key, KeyModifiers::ALT)
+            Self::event_with_modifiers(
+                s.trim_start_matches("alt+"),
+                KeyModifiers::ALT,
+            )
         } else if s.starts_with("shift+") {
-            let key = s.trim_start_matches("shift+");
-            Self::event_with_modifiers(key, KeyModifiers::SHIFT)
+            Self::event_with_modifiers(
+                s.trim_start_matches("shift+"),
+                KeyModifiers::SHIFT,
+            )
         } else {
             Err(AppError::InvalidEvent(s.to_string()))
         }

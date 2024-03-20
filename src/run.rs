@@ -71,11 +71,11 @@ async fn handle_tui_backend_events(
             Event::Mouse(mouse) => {
                 app_context.action_tx_ref().send(Action::Mouse(mouse))?
             }
-            Event::Key(key) => {
+            Event::Key(key, modifiers) => {
                 match app_context
                     .keymap_config_ref()
                     .default
-                    .get(&Event::Key(key))
+                    .get(&Event::Key(key, modifiers))
                     .unwrap()
                 {
                     ActionBinding::Single { action, .. } => {

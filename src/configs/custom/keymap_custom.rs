@@ -17,20 +17,31 @@ use {
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// The action binding.
 pub enum ActionBinding {
+    /// A single action binding.
+    /// It binds a single key binding to an action.
+    /// In tgt a key plus a modifier is considered a single key binding.
     Single {
         action: Action,
         description: Option<String>,
     },
+    /// A multiple action binding.
+    /// It is used to bind multiple keys to an action.
     Multiple(HashMap<Event, ActionBinding>),
 }
 
 #[derive(Clone, Debug)]
 /// The keymap configuration.
 pub struct KeymapConfig {
+    /// The default keymap configuration.
+    /// They can be used in any component.
     pub default: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the chats list component.
     pub chats_list: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the chat component.
     pub chat: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the prompt component.
     pub prompt: HashMap<Event, ActionBinding>,
 }
 /// The keymap configuration implementation.
@@ -50,12 +61,13 @@ impl KeymapConfig {
     ///
     /// # Arguments
     /// * `v` - A vector of strings that represents the unrecognized settings.
-    fn print_config_file_error(v: Vec<String>) {
+    fn print_config_file_error(s: &str, v: Vec<String>) {
         eprintln!(
         "\n\
-         [TGT] ConfigFileError: Some setting were not recognized: {:?}\n    \
+         [TGT] ConfigFileError: Some setting were not recognized, the field {} is {:?}\n    \
          Please check the {} configuration file in the config directory or\n    \
          the default config file in the GitHub repository.",
+         s,
         v,
         ConfigType::Keymap.as_default_filename()
         );
@@ -96,7 +108,7 @@ impl KeymapConfig {
                     "Some events were not recognized for key: {:?}",
                     keymap.keys
                 );
-                Self::print_config_file_error(keymap.keys);
+                Self::print_config_file_error("keys", keymap.keys);
                 std::process::exit(1);
             }
             let action: Action = match Action::from_str(&keymap.command) {
@@ -113,7 +125,10 @@ impl KeymapConfig {
                     "Some actions were not recognized for command: {:?}",
                     keymap.command
                 );
-                Self::print_config_file_error(Vec::from([keymap.command]));
+                Self::print_config_file_error(
+                    "command",
+                    Vec::from([keymap.command]),
+                );
                 std::process::exit(1);
             }
 
