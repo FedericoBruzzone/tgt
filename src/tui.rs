@@ -6,7 +6,7 @@ use {
             status_bar::StatusBar, title_bar::TitleBar, SMALL_AREA_HEIGHT,
             SMALL_AREA_WIDTH,
         },
-        configs::custom::keymap_custom::{ActionBinding, KeymapConfig},
+        configs::custom::keymap_custom::KeymapConfig,
         enums::{action::Action, component_name::ComponentName, event::Event},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
@@ -84,7 +84,6 @@ impl Tui {
         self.keymap_config = Some(keymap_config);
         self
     }
-
     /// Register an action handler that can send actions for processing if
     /// necessary.
     ///
@@ -98,7 +97,7 @@ impl Tui {
     pub fn register_action_handler(
         &mut self,
         tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), AppError> {
         self.action_tx = Some(tx.clone());
         self.components.iter_mut().try_for_each(|(_, component)| {
             component.register_action_handler(tx.clone())
@@ -118,22 +117,6 @@ impl Tui {
         &mut self,
         event: Option<Event>,
     ) -> Result<Option<Action>, AppError> {
-        // [TODO]: It should be done inside of a "Context"
-        if let Some(action) = self
-            .keymap_config
-            .as_ref()
-            .unwrap()
-            .default
-            .get(event.as_ref().unwrap())
-        {
-            match action {
-                ActionBinding::Single { action, .. } => {
-                    return Ok(Some(action.clone()));
-                }
-                ActionBinding::Multiple(_map_event_action) => {}
-            }
-        }
-
         // Handle focus
         self.components
             .iter_mut()

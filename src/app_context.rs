@@ -130,7 +130,8 @@ impl AppContext {
     /// Get the unbounded receiver that receives action for processing.
     ///
     /// # Returns
-    /// * `&mut UnboundedReceiver<Action>` - A mutable reference to the unbounded receiver that receives action for processing.
+    /// * `&mut UnboundedReceiver<Action>` - A mutable reference to the
+    ///   unbounded receiver that receives action for processing.
     pub fn action_rx_mut_ref(&mut self) -> &mut UnboundedReceiver<Action> {
         &mut self.action_rx
     }

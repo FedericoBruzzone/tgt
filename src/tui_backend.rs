@@ -202,13 +202,6 @@ impl TuiBackend {
                         Some(Ok(event)) => {
                         match event {
                           CrosstermEvent::Key(key) => {
-                            // if key.kind == KeyEventKind::Press {
-                            //   if key.code == KeyCode::Char('q') {
-                            //     _event_tx.send(Event::Quit)?;
-                            //   } else {
-                            //     _event_tx.send(Event::Key(key))?;
-                            //   }
-                            // }
                             event_tx.send(Event::Key(key))?;
                           },
                           CrosstermEvent::Mouse(mouse) => {
@@ -217,8 +210,8 @@ impl TuiBackend {
                           CrosstermEvent::Resize(width, height) => {
                             event_tx.send(Event::Resize(width, height))?;
                           },
-                          CrosstermEvent::FocusLost => {} // TODO: handle focus lost
-                          CrosstermEvent::FocusGained => {} // TODO: handle focus gained
+                          CrosstermEvent::FocusLost => {} // [TODO] handle focus lost
+                          CrosstermEvent::FocusGained => {} // [TODO] handle focus gained
                           _ => unimplemented!()
                         }
                       },

@@ -2,10 +2,12 @@ use {
     crate::{
         app_context::AppContext,
         app_error::AppError,
+        configs::custom::keymap_custom::ActionBinding,
         enums::{action::Action, event::Event},
         tui_backend::TuiBackend,
     },
     ratatui::layout::Rect,
+    std::collections::HashMap,
 };
 
 /// Run the main event loop for the application.
@@ -60,7 +62,6 @@ async fn handle_tui_backend_events(
     if let Some(event) = tui_backend.next().await {
         match event {
             // Event::Quit => action_tx.send(Action::Quit)?,
-            // Event::Key(key) => action_tx.send(Action::Key(key))?,
             Event::Render => {
                 app_context.action_tx_ref().send(Action::Render)?
             }
@@ -70,18 +71,67 @@ async fn handle_tui_backend_events(
             Event::Mouse(mouse) => {
                 app_context.action_tx_ref().send(Action::Mouse(mouse))?
             }
+            Event::Key(key) => {
+                match app_context
+                    .keymap_config_ref()
+                    .default
+                    .get(&Event::Key(key))
+                    .unwrap()
+                {
+                    ActionBinding::Single { action, .. } => {
+                        app_context.action_tx_ref().send(action.clone())?
+                    }
+                    ActionBinding::Multiple(map_event_action) => {
+                        consume_until_single_action(
+                            app_context,
+                            tui_backend,
+                            map_event_action.clone(),
+                        )
+                        .await
+                    }
+                }
+            }
             _ =>
-                /* Event::Init */
+                /* Event::Quit */
+            /* Event::Init */
                 {}
         }
+
         if let Some(action) = app_context
             .tui_mut_ref()
             .handle_events(Some(event.clone()))?
         {
-            app_context.action_tx_ref().send(action)?;
+            app_context.action_tx_ref().send(action)?
         }
     }
     Ok(())
+}
+
+/// Consume events until a single action is produced.
+/// This function is used to consume events until a single action is produced
+/// from a map of events to actions.
+/// This is useful for handling multiple key bindings that produce the same
+/// action, or simply to consume events until a single action is produced.
+///
+/// # Arguments
+/// * `app_context` - A mutable reference to the `AppContext` struct.
+/// * `tui_backend` - A mutable reference to the `TuiBackend` struct.
+/// * `map_event_action` - A map of events to actions.
+async fn consume_until_single_action(
+    app_context: &mut AppContext,
+    tui_backend: &mut TuiBackend,
+    map_event_action: HashMap<Event, ActionBinding>,
+) {
+    loop {
+        if let Some(event) = tui_backend.next().await {
+            if let Some(ActionBinding::Single { action, .. }) =
+                map_event_action.get(&event)
+            {
+                app_context.action_tx_ref().send(action.clone()).unwrap();
+                break;
+            }
+        }
+    }
 }
 
 /// Handle incoming actions from the application.

@@ -4,7 +4,7 @@ use {
     std::str::FromStr,
 };
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 // Action` is an enum that represents an action that can be handled by the
 /// main application loop and the components of the user interface.
 pub enum Action {
