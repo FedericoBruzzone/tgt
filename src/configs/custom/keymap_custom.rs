@@ -134,7 +134,7 @@ impl KeymapConfig {
 
             let description = keymap.description.clone();
 
-            if let Err(AppError::AlreadyBound(err)) =
+            if let Err(AppError::AlreadyBound(_err)) =
                 Self::insert_keymap(&mut hashmap, event, action, description)
             {
                 tracing::warn!(
@@ -146,7 +146,6 @@ impl KeymapConfig {
                         .collect::<Vec<String>>(),
                     keymap.command
                 );
-                tracing::error!(err);
             }
         }
         hashmap
@@ -183,7 +182,7 @@ impl KeymapConfig {
                             "Key already bound to a command: {:?}",
                             event[0]
                         );
-                        tracing::warn!(err);
+                        tracing::error!(err);
                         return Err(AppError::AlreadyBound(err));
                     }
                     Entry::Vacant(e) => {
@@ -210,7 +209,7 @@ impl KeymapConfig {
                             "Key already bound to a command: {:?}",
                             event[0]
                         );
-                        tracing::warn!(err);
+                        tracing::error!(err);
                         Err(AppError::AlreadyBound(err))
                     }
                 },
