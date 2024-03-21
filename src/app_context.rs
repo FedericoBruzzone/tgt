@@ -27,7 +27,7 @@ pub struct AppContext {
     /// A boolean flag that represents whether the clipboard is enabled or not.
     pub paste: bool,
 }
-
+/// Implement the `AppContext` struct.
 impl AppContext {
     /// Create a new instance of the `App` struct.
     ///

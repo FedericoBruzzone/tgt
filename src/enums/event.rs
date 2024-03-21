@@ -15,14 +15,15 @@ pub enum Event {
     /// Init event.
     Init,
     /// Quit event.
-    Quit,
+    Quit, // Not used
+    /// Render event.
     Render,
+    /// Resize event with width and height.
+    Resize(u16, u16),
     /// Key event with a `KeyCode` and `KeyModifiers`.
     Key(KeyCode, KeyModifiers),
     /// Mouse event with a `MouseEvent` struct.
     Mouse(MouseEvent),
-    /// Resize event with width and height.
-    Resize(u16, u16),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -60,7 +61,7 @@ impl Event {
             "f11" => Ok(Event::Key(KeyCode::F(11), modifiers)),
             "f12" => Ok(Event::Key(KeyCode::F(12), modifiers)),
             e => {
-                if e.len() == 1 && e.chars().all(char::is_alphabetic) {
+                if e.len() == 1 && e.chars().next().unwrap().is_ascii() {
                     Ok(Event::Key(
                         KeyCode::Char(e.chars().next().unwrap()),
                         modifiers,

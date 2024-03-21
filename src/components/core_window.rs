@@ -1,4 +1,5 @@
 use {
+    super::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE},
     crate::{
         components::{
             chat_list_window::ChatListWindow,
@@ -9,7 +10,7 @@ use {
         enums::{action::Action, component_name::ComponentName},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
-    std::collections::HashMap,
+    std::{collections::HashMap, io},
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -25,7 +26,10 @@ pub struct CoreWindow {
     /// A flag indicating whether the `CoreWindow` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
-    #[allow(dead_code)]
+    /// The size of the prompt component.
+    size_prompt: u16,
+    /// The size of the chat list component.
+    size_chat_list: u16,
     /// The name of the component that is currently focused.
     focused: Option<ComponentName>,
 }
@@ -61,6 +65,8 @@ impl CoreWindow {
         let command_tx = None;
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
+        let size_prompt = 3;
+        let size_chat_list = 20;
         let small_area = false;
         let focused = None;
 
@@ -68,6 +74,8 @@ impl CoreWindow {
             name,
             command_tx,
             components,
+            size_chat_list,
+            size_prompt,
             small_area,
             focused,
         }
@@ -82,6 +90,38 @@ impl CoreWindow {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+
+    /// Increase the size of the chat list component.
+    pub fn increase_chat_list_size(&mut self) {
+        if self.size_chat_list == MAX_CHAT_LIST_SIZE {
+            return;
+        }
+        self.size_chat_list += 1;
+    }
+
+    /// Increase the size of the chat list component.
+    pub fn increase_size_prompt(&mut self) {
+        if self.size_prompt == MAX_PROMPT_SIZE {
+            return;
+        }
+        self.size_prompt += 1;
+    }
+
+    /// Decrease the size of the chat list component.
+    pub fn decrease_chat_list_size(&mut self) {
+        if self.size_chat_list == 0 {
+            return;
+        }
+        self.size_chat_list -= 1;
+    }
+
+    /// Decrease the size of the chat list component.
+    pub fn decrease_size_prompt(&mut self) {
+        if self.size_prompt == 0 {
+            return;
+        }
+        self.size_prompt -= 1;
     }
 }
 
@@ -115,20 +155,53 @@ impl Component for CoreWindow {
         Ok(())
     }
 
+    fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
+        match action {
+            Action::FocusComponent(component_name) => {
+                self.focused = Some(component_name);
+                Ok(None)
+            }
+            Action::UnfocusComponent => {
+                self.focused = None;
+                Ok(None)
+            }
+            Action::IncreaseChatListSize => {
+                self.increase_chat_list_size();
+                Ok(None)
+            }
+            Action::DecreaseChatListSize => {
+                self.decrease_chat_list_size();
+                Ok(None)
+            }
+            Action::IncreasePromptSize => {
+                self.increase_size_prompt();
+                Ok(None)
+            }
+            Action::DecreasePromptSize => {
+                self.decrease_size_prompt();
+                Ok(None)
+            }
+            _ => Ok(None),
+        }
+    }
+
     fn draw(
         &mut self,
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
-    ) -> std::io::Result<()> {
-        // let size_chats = if area.width < SMALL_AREA_WIDTH { 0 } else { 20 };
-        let size_chats = if self.small_area { 0 } else { 20 };
-        let size_prompt = 3;
+    ) -> io::Result<()> {
+        let size_chat_list = if self.small_area {
+            0
+        } else {
+            self.size_chat_list
+        };
+        let size_prompt = self.size_prompt;
 
         let core_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(size_chats),
-                Constraint::Percentage(100 - size_chats),
+                Constraint::Percentage(size_chat_list),
+                Constraint::Percentage(100 - size_chat_list),
             ])
             .split(area);
 

@@ -7,7 +7,7 @@ use {
         tui_backend::TuiBackend,
     },
     ratatui::layout::Rect,
-    std::collections::HashMap,
+    std::{collections::HashMap, time::Instant},
 };
 
 /// Run the main event loop for the application.
@@ -45,7 +45,6 @@ pub async fn run_app(
 
     Ok(())
 }
-
 /// Handle incoming events from the TUI backend and produce actions if
 /// necessary.
 ///
@@ -61,16 +60,12 @@ async fn handle_tui_backend_events(
 ) -> Result<(), AppError> {
     if let Some(event) = tui_backend.next().await {
         match event {
-            // Event::Quit => action_tx.send(Action::Quit)?,
             Event::Render => {
                 app_context.action_tx_ref().send(Action::Render)?
             }
             Event::Resize(width, height) => app_context
                 .action_tx_ref()
                 .send(Action::Resize(width, height))?,
-            Event::Mouse(mouse) => {
-                app_context.action_tx_ref().send(Action::Mouse(mouse))?
-            }
             Event::Key(key, modifiers) => {
                 match app_context
                     .keymap_config_ref()
@@ -93,10 +88,12 @@ async fn handle_tui_backend_events(
             }
             _ =>
                 /* Event::Quit */
+            /* Event::Mouse(mouse) */
             /* Event::Init */
                 {}
         }
 
+        // [TODO] Remove this if block
         if let Some(action) = app_context
             .tui_mut_ref()
             .handle_events(Some(event.clone()))?
@@ -106,12 +103,12 @@ async fn handle_tui_backend_events(
     }
     Ok(())
 }
-
 /// Consume events until a single action is produced.
 /// This function is used to consume events until a single action is produced
 /// from a map of events to actions.
 /// This is useful for handling multiple key bindings that produce the same
 /// action, or simply to consume events until a single action is produced.
+/// The time limit for consuming events is 1 second.
 ///
 /// # Arguments
 /// * `app_context` - A mutable reference to the `AppContext` struct.
@@ -122,6 +119,7 @@ async fn consume_until_single_action(
     tui_backend: &mut TuiBackend,
     map_event_action: HashMap<Event, ActionBinding>,
 ) {
+    let start = Instant::now();
     loop {
         if let Some(event) = tui_backend.next().await {
             if let Some(ActionBinding::Single { action, .. }) =
@@ -131,9 +129,11 @@ async fn consume_until_single_action(
                 break;
             }
         }
+        if start.elapsed().as_secs() > 1 {
+            break;
+        }
     }
 }
-
 /// Handle incoming actions from the application.
 ///
 /// # Arguments
@@ -159,7 +159,6 @@ pub fn handle_app_actions(
                     .resize(Rect::new(0, 0, width, height))?;
                 tui_backend.terminal.draw(|f| {
                     app_context.tui_mut_ref().draw(f, f.size()).unwrap();
-                    // TODO: handle with AppError
                 })?;
             }
             Action::Quit => {
@@ -176,3 +175,11 @@ pub fn handle_app_actions(
     }
     Ok(())
 }
+
+// let mut size: u16 = 20;
+// let mut should_quit = false;
+// while !should_quit {
+//   tui.terminal.draw(|f| Self::ui(size, f))?;
+//   size = ((size as i16) + Self::handle_events_size()?) as u16;
+//   should_quit = Self::handle_events_quit()?;
+// }

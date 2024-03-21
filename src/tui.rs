@@ -10,7 +10,7 @@ use {
         enums::{action::Action, component_name::ComponentName, event::Event},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
-    std::collections::HashMap,
+    std::{collections::HashMap, io},
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -117,7 +117,7 @@ impl Tui {
         &mut self,
         event: Option<Event>,
     ) -> Result<Option<Action>, AppError> {
-        // Handle focus
+        // It would be enough send the action to the `CoreWindow` component
         self.components
             .iter_mut()
             .try_fold(None, |acc, (_, component)| {
@@ -137,11 +137,17 @@ impl Tui {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    pub fn update(
-        &mut self,
-        action: Action,
-    ) -> std::io::Result<Option<Action>> {
-        // Handle focus
+    pub fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
+        match action {
+            Action::FocusComponent(component_name) => {
+                self.focused = Some(component_name);
+            }
+            Action::UnfocusComponent => {
+                self.focused = None;
+            }
+            _ => {}
+        }
+        // It would be enough send the action to the `CoreWindow` component
         self.components
             .iter_mut()
             .try_fold(None, |acc, (_, component)| {
@@ -164,7 +170,7 @@ impl Tui {
         &mut self,
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), AppError> {
         if area.width < SMALL_AREA_WIDTH {
             self.components.iter_mut().for_each(|(_, component)| {
                 component.with_small_area(true);

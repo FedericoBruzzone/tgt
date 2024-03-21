@@ -64,7 +64,7 @@ impl KeymapConfig {
     fn print_config_file_error(s: &str, v: Vec<String>) {
         eprintln!(
         "\n\
-         [TGT] ConfigFileError: Some setting were not recognized, the field {} is {:?}\n    \
+         [TGT] ConfigFileError: Some setting were not recognized, the {} filed is {:?}\n    \
          Please check the {} configuration file in the config directory or\n    \
          the default config file in the GitHub repository.",
          s,
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
-        assert_eq!(keymap_config.default.len(), 3);
+        assert_eq!(keymap_config.default.len(), 11);
         assert_eq!(keymap_config.chats_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
