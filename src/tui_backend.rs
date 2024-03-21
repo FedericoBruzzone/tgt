@@ -5,6 +5,7 @@ use {
         event::{
             DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
             EnableMouseCapture, Event as CrosstermEvent, EventStream,
+            KeyEventKind,
         },
         terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -202,7 +203,10 @@ impl TuiBackend {
                         Some(Ok(event)) => {
                         match event {
                           CrosstermEvent::Key(key) => {
-                            event_tx.send(Event::Key(key.code, key.modifiers))?;
+                            // Needed for Windows because without it the keys is sent twice
+                            if key.kind == KeyEventKind::Press {
+                              event_tx.send(Event::Key(key.code, key.modifiers))?;
+                            }
                           },
                           CrosstermEvent::Mouse(mouse) => {
                             event_tx.send(Event::Mouse(mouse))?;
