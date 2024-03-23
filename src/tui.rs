@@ -171,6 +171,11 @@ impl Tui {
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> Result<(), AppError> {
+        self.components
+            .get_mut(&ComponentName::StatusBar)
+            .unwrap()
+            .handle_key_events(Event::UpdateArea(area))?;
+
         if area.width < SMALL_AREA_WIDTH {
             self.components.iter_mut().for_each(|(_, component)| {
                 component.with_small_area(true);
@@ -186,7 +191,7 @@ impl Tui {
             [
                 Constraint::Length(1),
                 Constraint::Min(SMALL_AREA_HEIGHT),
-                Constraint::Length(1),
+                Constraint::Length(3),
             ],
         )
         .split(area);

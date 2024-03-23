@@ -67,33 +67,34 @@ async fn handle_tui_backend_events(
                 .action_tx_ref()
                 .send(Action::Resize(width, height))?,
             Event::Key(key, modifiers) => {
-                match app_context
+                app_context
+                    .action_tx_ref()
+                    .send(Action::Key(key, modifiers))?;
+
+                if let Some(action_binding) = app_context
                     .keymap_config_ref()
                     .default
                     .get(&Event::Key(key, modifiers))
-                    .unwrap()
                 {
-                    ActionBinding::Single { action, .. } => {
-                        app_context.action_tx_ref().send(action.clone())?
-                    }
-                    ActionBinding::Multiple(map_event_action) => {
-                        consume_until_single_action(
-                            app_context,
-                            tui_backend,
-                            map_event_action.clone(),
-                        )
-                        .await;
+                    match action_binding {
+                        ActionBinding::Single { action, .. } => {
+                            app_context.action_tx_ref().send(action.clone())?
+                        }
+                        ActionBinding::Multiple(map_event_action) => {
+                            consume_until_single_action(
+                                app_context,
+                                tui_backend,
+                                map_event_action.clone(),
+                            )
+                            .await;
+                        }
                     }
                 }
             }
-            _ =>
-                /* Event::Quit */
-            /* Event::Mouse(mouse) */
-            /* Event::Init */
-                {}
+            _ => {}
         }
 
-        // [TODO] Remove this if block
+        // [TODO] Remove this if block because we have to send only the actions.
         if let Some(action) = app_context
             .tui_mut_ref()
             .handle_events(Some(event.clone()))?

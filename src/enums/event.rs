@@ -1,8 +1,12 @@
 use std::str::FromStr;
 
-use crossterm::event::{KeyCode, KeyModifiers, MouseEvent};
+use ratatui::layout::Rect;
 
-use crate::app_error::AppError;
+use {
+    crate::app_error::AppError,
+    crossterm::event::{KeyCode, KeyModifiers, MouseEvent},
+    std::fmt::{self, Display, Formatter},
+};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 /// `Event` is an enum that represents the different types of events that can be
@@ -24,6 +28,8 @@ pub enum Event {
     Key(KeyCode, KeyModifiers),
     /// Mouse event with a `MouseEvent` struct.
     Mouse(MouseEvent),
+    /// Update area event with a `Rect` struct.
+    UpdateArea(Rect),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -98,6 +104,41 @@ impl FromStr for Event {
             )
         } else {
             Err(AppError::InvalidEvent(s.to_string()))
+        }
+    }
+}
+
+/// Implement the `Display` trait for `Event`.
+impl Display for Event {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Event::Unknown => write!(f, "Unknown"),
+            Event::Init => write!(f, "Init"),
+            Event::Quit => write!(f, "Quit"),
+            Event::Render => write!(f, "Render"),
+            Event::Resize(width, height) => {
+                write!(f, "Resize({}, {})", width, height)
+            }
+            Event::Key(key, modifiers) => {
+                let k = if let KeyCode::Char(c) = key {
+                    c.to_string()
+                } else {
+                    format!("{:?}", key)
+                };
+
+                match *modifiers {
+                    KeyModifiers::NONE => write!(f, "{}", k),
+                    KeyModifiers::CONTROL => write!(f, "Ctrl+{}", k),
+                    KeyModifiers::ALT => write!(f, "Alt+{}", k),
+                    KeyModifiers::SHIFT => write!(f, "Shift+{}", k),
+                    KeyModifiers::SUPER => write!(f, "Super+{}", k),
+                    KeyModifiers::META => write!(f, "Meta+{}", k),
+                    KeyModifiers::HYPER => write!(f, "Hyper+{}", k),
+                    _ => write!(f, "{:?}+{}", modifiers, k),
+                }
+            }
+            Event::Mouse(mouse) => write!(f, "Mouse({:?})", mouse),
+            Event::UpdateArea(area) => write!(f, "UpdateArea({:?})", area),
         }
     }
 }

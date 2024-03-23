@@ -1,5 +1,7 @@
 use {
-    super::component_name::ComponentName, crate::app_error::AppError,
+    super::component_name::ComponentName,
+    crate::app_error::AppError,
+    crossterm::event::{KeyCode, KeyModifiers},
     std::str::FromStr,
 };
 
@@ -29,6 +31,8 @@ pub enum Action {
     IncreasePromptSize,
     /// Decrease Prompt size action.
     DecreasePromptSize,
+    /// Key action with a key code.
+    Key(KeyCode, KeyModifiers),
 }
 
 /// Implement the `FormStr` trait for `Action`.

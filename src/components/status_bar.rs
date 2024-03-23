@@ -1,15 +1,15 @@
 use {
     crate::{
         components::component::{Component, HandleSmallArea},
-        enums::action::Action,
+        enums::{action::Action, event::Event},
     },
     ratatui::{
         layout::{Alignment, Rect},
-        widgets::{
-            block::{Block, Position, Title},
-            Borders,
-        },
+        style::{Style, Stylize},
+        text::{Line, Span},
+        widgets::{block::Block, Borders, Paragraph, Wrap},
     },
+    std::io,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -25,14 +25,18 @@ pub struct StatusBar {
     /// A flag indicating whether the `StatusBar` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
+    /// The area of the terminal where the all the content will be rendered.
+    terminal_area: Rect,
+    /// The last key pressed.
+    last_key: Event,
 }
-
+/// Default implementation for `StatusBar`.
 impl Default for StatusBar {
     fn default() -> Self {
         Self::new()
     }
 }
-
+/// Implementation of `StatusBar`.
 impl StatusBar {
     /// Create a new instance of the `StatusBar` struct.
     ///
@@ -42,10 +46,14 @@ impl StatusBar {
         let command_tx = None;
         let name = "".to_string();
         let small_area = false;
+        let terminal_area = Rect::default();
+        let last_key = Event::Unknown;
         StatusBar {
             command_tx,
             name,
             small_area,
+            terminal_area,
+            last_key,
         }
     }
     /// Set the name of the `StatusBar`.
@@ -85,26 +93,65 @@ impl Component for StatusBar {
         Ok(())
     }
 
+    fn handle_key_events(
+        &mut self,
+        event: Event,
+    ) -> io::Result<Option<Action>> {
+        match event {
+            Event::UpdateArea(area) => {
+                self.terminal_area = area;
+                Ok(None)
+            }
+            Event::Key(key, modifiers) => {
+                self.last_key = Event::Key(key, modifiers);
+                Ok(None)
+            }
+            _ => Ok(None),
+        }
+    }
+
     fn draw(
         &mut self,
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> std::io::Result<()> {
+        let text = vec![Line::from(vec![
+            Span::raw("Press "),
+            Span::styled("q ", Style::new().green().italic()),
+            Span::raw("or "),
+            Span::styled("ctrl+c ", Style::new().green().italic()),
+            Span::raw("to quit."),
+            //
+            Span::raw("     "),
+            Span::styled("Press key: ", Style::new().bold()),
+            Span::styled(
+                self.last_key.to_string(),
+                Style::new().yellow().italic(),
+            ),
+            //
+            Span::raw("     "),
+            Span::styled("Size: ", Style::new().bold()),
+            Span::styled(
+                self.terminal_area.width.to_string(),
+                Style::new().blue().italic(),
+            ),
+            Span::raw(" x "),
+            Span::styled(
+                self.terminal_area.height.to_string(),
+                Style::new().blue().italic(),
+            ),
+        ])];
+
         frame.render_widget(
-            Block::new()
-                .borders(Borders::BOTTOM)
-                .title(
-                    Title::from(self.name.as_str()).position(Position::Bottom),
+            Paragraph::new(text)
+                .block(
+                    Block::new()
+                        .title(self.name.as_str())
+                        .borders(Borders::ALL),
                 )
-                .title(
-                    Title::from(
-                        area.width.to_string()
-                            + "x"
-                            + area.height.to_string().as_str(),
-                    )
-                    .position(Position::Bottom)
-                    .alignment(Alignment::Center),
-                ),
+                .style(Style::new().white().on_black())
+                .alignment(Alignment::Center)
+                .wrap(Wrap { trim: true }),
             area,
         );
 
