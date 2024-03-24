@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
 /// The command keymap configuration.
-pub struct KeyMapEntry {
+pub struct KeymapEntry {
     /// The key combination.
     /// It must be a valid key combination.
     pub keys: Vec<String>, // Event
@@ -15,21 +15,21 @@ pub struct KeyMapEntry {
 
 #[derive(Clone, Debug, Deserialize)]
 /// The keymap configuration.
-pub struct KeyMapMode {
+pub struct KeymapMode {
     #[serde(default)]
     /// The keymap entries.
-    pub keymap: Vec<KeyMapEntry>,
+    pub keymap: Vec<KeymapEntry>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 /// The raw keymap configuration.
-pub struct KeyMapRaw {
+pub struct KeymapRaw {
     /// The keymap for the default mode.
-    pub default: Option<KeyMapMode>,
+    pub default: Option<KeymapMode>,
     /// The keymap for the chat list mode.
-    pub chats_list: Option<KeyMapMode>,
+    pub chats_list: Option<KeymapMode>,
     /// The keymap for the chat mode.
-    pub chat: Option<KeyMapMode>,
+    pub chat: Option<KeymapMode>,
     /// The keymap for the chat edit mode.
-    pub prompt: Option<KeyMapMode>,
+    pub prompt: Option<KeymapMode>,
 }

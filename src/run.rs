@@ -176,11 +176,3 @@ pub fn handle_app_actions(
     }
     Ok(())
 }
-
-// let mut size: u16 = 20;
-// let mut should_quit = false;
-// while !should_quit {
-//   tui.terminal.draw(|f| Self::ui(size, f))?;
-//   size = ((size as i16) + Self::handle_events_size()?) as u16;
-//   should_quit = Self::handle_events_quit()?;
-// }

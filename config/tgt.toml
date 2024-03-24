@@ -1,0 +1,11 @@
+# `mouse_support` enables mouse support in the terminal.
+mouse_support = true
+# `paste_support` enables paste support in the terminal.
+paste_support = true
+# `frame_rate` is the frame rate of the terminal in frames per second.
+# The suggested frame rate are:
+# - 120.0 for ultra smooth animations
+# - 60.0 for smooth animations
+# - 30.0 for normal animations
+# - 15.0 for slow animations
+frame_rate = 60.0

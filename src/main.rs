@@ -17,7 +17,10 @@ use crate::{
     app_error::AppError,
     configs::{
         config_file::ConfigFile,
-        custom::{keymap_custom::KeymapConfig, logger_custom::LoggerConfig},
+        custom::{
+            app_custom::AppConfig, keymap_custom::KeymapConfig,
+            logger_custom::LoggerConfig,
+        },
     },
     logger::Logger,
     tui_backend::TuiBackend,
@@ -26,6 +29,7 @@ use crate::{
 lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
     pub static ref KEYMAP_CONFIG: KeymapConfig = KeymapConfig::get_config();
+    pub static ref APP_CONFIG: AppConfig = AppConfig::get_config();
 }
 
 /// The main entry point for the application.
@@ -42,6 +46,10 @@ async fn tokio_main() -> Result<(), AppError> {
     let keymap_config = KEYMAP_CONFIG.clone();
     tracing::info!("Keymap config: {:#?}", keymap_config);
     println!("{:#?}", keymap_config);
+
+    let app_config = APP_CONFIG.clone();
+    tracing::info!("App config: {:#?}", app_config);
+    println!("{:#?}", app_config);
 
     let mut app_context = AppContext::new(keymap_config)?
         .with_mouse(true)

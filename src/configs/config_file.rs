@@ -187,6 +187,8 @@ pub trait ConfigFile: Sized + Default + Clone {
     }
     /// Allow the fields of the default configuration to be overridden by the
     /// fields of the custom configuration when merging the configurations.
+    /// Usually, the custom configuration is written by the user and the default
+    /// configuration is provided by the application.
     ///
     /// # Returns
     /// `true` if the fields of the default configuration can be overridden by

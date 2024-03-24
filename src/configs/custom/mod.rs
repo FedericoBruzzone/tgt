@@ -2,6 +2,7 @@ use {
     super::config_type::ConfigType, crate::configs::default_config_dir, std::io,
 };
 
+pub mod app_custom;
 pub mod keymap_custom;
 pub mod logger_custom;
 
@@ -35,6 +36,14 @@ pub fn default_config_logger_file_path() -> io::Result<String> {
 /// The default configuration file path for the keymap.
 pub fn default_config_keymap_file_path() -> io::Result<String> {
     default_config_file_path_of(ConfigType::Keymap)
+}
+
+/// Get the default configuration file path for the application.
+///
+/// # Returns
+/// The default configuration file path for the application.
+pub fn default_config_app_file_path() -> io::Result<String> {
+    default_config_file_path_of(ConfigType::App)
 }
 
 // #[cfg(not(target_os = "windows"))]

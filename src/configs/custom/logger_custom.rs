@@ -124,12 +124,11 @@ mod tests {
 
     #[test]
     fn test_logger_config_merge() {
-        let logger_raw = LoggerRaw {
+        let mut logger_config = LoggerConfig::from(LoggerRaw {
             log_folder: Some(".data_raw".to_string()),
             log_file: Some("tgt_raw.log".to_string()),
             log_level: Some("info".to_string()),
-        };
-        let mut logger_config = LoggerConfig::from(logger_raw);
+        });
         let logger_raw = LoggerRaw {
             log_folder: None,
             log_file: None,

@@ -27,7 +27,7 @@ pub struct AppContext {
     /// A boolean flag that represents whether the clipboard is enabled or not.
     pub paste: bool,
 }
-/// Implement the `AppContext` struct.
+/// Implementation of the `AppContext` struct.
 impl AppContext {
     /// Create a new instance of the `App` struct.
     ///
@@ -35,10 +35,10 @@ impl AppContext {
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `App` struct or an error.
     pub fn new(keymap_config: KeymapConfig) -> Result<Self, std::io::Error> {
-        let frame_rate = 60.0;
         let tui = Tui::new().with_keymap_config(keymap_config.clone());
         let (action_tx, action_rx) =
             tokio::sync::mpsc::unbounded_channel::<Action>();
+        let frame_rate = 60.0;
         let quit = false;
         let mouse = false;
         let paste = false;

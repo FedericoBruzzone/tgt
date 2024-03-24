@@ -5,7 +5,7 @@ use {
             self,
             config_file::ConfigFile,
             config_type::ConfigType,
-            raw::keymap_raw::{KeyMapEntry, KeyMapRaw},
+            raw::keymap_raw::{KeymapEntry, KeymapRaw},
         },
         enums::{action::Action, event::Event},
     },
@@ -51,7 +51,7 @@ impl KeymapConfig {
     /// # Returns
     /// The default keymap configuration.
     pub fn default_result() -> Result<Self, AppError> {
-        configs::deserialize_to_config_into::<KeyMapRaw, Self>(Path::new(
+        configs::deserialize_to_config_into::<KeymapRaw, Self>(Path::new(
             &configs::custom::default_config_keymap_file_path()?,
         ))
     }
@@ -84,7 +84,7 @@ impl KeymapConfig {
     /// # Returns
     /// A hashmap of event and action binding.
     fn keymaps_vec_to_map(
-        keymaps: Vec<KeyMapEntry>,
+        keymaps: Vec<KeymapEntry>,
     ) -> HashMap<Event, ActionBinding> {
         let mut hashmap = HashMap::new();
 
@@ -232,7 +232,7 @@ impl KeymapConfig {
 }
 /// The implementation of the configuration file for the keymap.
 impl ConfigFile for KeymapConfig {
-    type Raw = KeyMapRaw;
+    type Raw = KeymapRaw;
 
     fn get_type() -> ConfigType {
         ConfigType::Keymap
@@ -279,8 +279,8 @@ impl Default for KeymapConfig {
 }
 /// The conversion from the raw keymap configuration to the keymap
 /// configuration.
-impl From<KeyMapRaw> for KeymapConfig {
-    fn from(raw: KeyMapRaw) -> Self {
+impl From<KeymapRaw> for KeymapConfig {
+    fn from(raw: KeymapRaw) -> Self {
         Self {
             default: Self::keymaps_vec_to_map(raw.default.unwrap().keymap),
             chats_list: Self::keymaps_vec_to_map(
@@ -299,7 +299,7 @@ mod tests {
             configs::{
                 config_file::ConfigFile,
                 custom::keymap_custom::{ActionBinding, KeymapConfig},
-                raw::keymap_raw::{KeyMapEntry, KeyMapMode, KeyMapRaw},
+                raw::keymap_raw::{KeymapEntry, KeymapMode, KeymapRaw},
             },
             enums::{action::Action, event::Event},
         },
@@ -317,11 +317,11 @@ mod tests {
 
     #[test]
     fn test_keymap_config_from_raw_empty() {
-        let keymap_raw = KeyMapRaw {
-            default: Some(KeyMapMode { keymap: vec![] }),
-            chats_list: Some(KeyMapMode { keymap: vec![] }),
-            chat: Some(KeyMapMode { keymap: vec![] }),
-            prompt: Some(KeyMapMode { keymap: vec![] }),
+        let keymap_raw = KeymapRaw {
+            default: Some(KeymapMode { keymap: vec![] }),
+            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.default.len(), 0);
@@ -332,17 +332,17 @@ mod tests {
 
     #[test]
     fn test_keymap_config_from_raw() {
-        let keymap_raw = KeyMapRaw {
-            default: Some(KeyMapMode {
-                keymap: vec![KeyMapEntry {
+        let keymap_raw = KeymapRaw {
+            default: Some(KeymapMode {
+                keymap: vec![KeymapEntry {
                     keys: vec!["q".to_string()],
                     command: "quit".to_string(),
                     description: None,
                 }],
             }),
-            chats_list: Some(KeyMapMode { keymap: vec![] }),
-            chat: Some(KeyMapMode { keymap: vec![] }),
-            prompt: Some(KeyMapMode { keymap: vec![] }),
+            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.default.len(), 1);
@@ -353,30 +353,30 @@ mod tests {
 
     #[test]
     fn test_keymap_config_merge() {
-        let keymap_raw = KeyMapRaw {
-            default: Some(KeyMapMode {
-                keymap: vec![KeyMapEntry {
+        let keymap_raw = KeymapRaw {
+            default: Some(KeymapMode {
+                keymap: vec![KeymapEntry {
                     keys: vec!["q".to_string()],
                     command: "quit".to_string(),
                     description: None,
                 }],
             }),
-            chats_list: Some(KeyMapMode { keymap: vec![] }),
-            chat: Some(KeyMapMode { keymap: vec![] }),
-            prompt: Some(KeyMapMode { keymap: vec![] }),
+            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
         };
         let mut keymap_config = KeymapConfig::from(keymap_raw);
-        let keymap_raw = KeyMapRaw {
-            default: Some(KeyMapMode {
-                keymap: vec![KeyMapEntry {
+        let keymap_raw = KeymapRaw {
+            default: Some(KeymapMode {
+                keymap: vec![KeymapEntry {
                     keys: vec!["q".to_string()],
                     command: "render".to_string(),
                     description: None,
                 }],
             }),
-            chats_list: Some(KeyMapMode { keymap: vec![] }),
-            chat: Some(KeyMapMode { keymap: vec![] }),
-            prompt: Some(KeyMapMode { keymap: vec![] }),
+            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.default.len(), 1);
@@ -394,5 +394,10 @@ mod tests {
                 description: None
             }
         );
+    }
+
+    #[test]
+    fn test_keymap_config_override_fields() {
+        assert!(KeymapConfig::override_fields());
     }
 }
