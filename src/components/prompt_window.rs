@@ -1,10 +1,11 @@
 use {
     crate::{
-        components::component::{Component, HandleSmallArea},
+        components::component::{Component, HandleFocus, HandleSmallArea},
         enums::action::Action,
     },
     ratatui::{
         layout::Rect,
+        style::{Color, Style},
         symbols::{
             border::{Set, PLAIN},
             line::NORMAL,
@@ -27,6 +28,8 @@ pub struct PromptWindow {
     /// A flag indicating whether the `PromptWindow` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
+    /// Indicates whether the `PromptWindow` is focused or not.
+    focused: bool,
 }
 
 impl Default for PromptWindow {
@@ -44,11 +47,13 @@ impl PromptWindow {
         let name = "".to_string();
         let command_tx = None;
         let small_area = false;
+        let focused = false;
 
         PromptWindow {
             name,
             command_tx,
             small_area,
+            focused,
         }
     }
     /// Set the name of the `PromptWindow`.
@@ -61,6 +66,19 @@ impl PromptWindow {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+}
+
+/// Implement the `HandleFocus` trait for the `PromptWindow` struct.
+/// This trait allows the `PromptWindow` to be focused or unfocused.
+impl HandleFocus for PromptWindow {
+    /// Set the `focused` flag for the `PromptWindow`.
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+    /// Set the `focused` flag for the `PromptWindow`.
+    fn unfocus(&mut self) {
+        self.focused = false;
     }
 }
 
@@ -103,10 +121,16 @@ impl Component for PromptWindow {
             },
             ..PLAIN
         };
+        let color_focused = if self.focused {
+            Color::Cyan
+        } else {
+            Color::White
+        };
 
         frame.render_widget(
             Block::new()
                 .border_set(collapsed_top_and_left_border_set)
+                .border_style(Style::default().fg(color_focused))
                 .borders(Borders::ALL)
                 .title(self.name.as_str()),
             area,

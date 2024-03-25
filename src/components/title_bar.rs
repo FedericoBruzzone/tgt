@@ -1,6 +1,6 @@
 use {
     crate::{
-        components::component::{Component, HandleSmallArea},
+        components::component::{Component, HandleFocus, HandleSmallArea},
         enums::action::Action,
     },
     ratatui::{
@@ -26,6 +26,8 @@ pub struct TitleBar {
     /// A flag indicating whether the `TitleBar` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
+    /// Indicates whether the `TitleBar` is focused or not.
+    focused: bool,
 }
 
 impl Default for TitleBar {
@@ -39,10 +41,12 @@ impl TitleBar {
         let command_tx = None;
         let name = "".to_string();
         let small_area = false;
+        let focused = false;
         TitleBar {
             command_tx,
             name,
             small_area,
+            focused,
         }
     }
     /// Set the name of the `TitleBar`.
@@ -55,6 +59,19 @@ impl TitleBar {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+}
+
+/// Implement the `HandleFocus` trait for the `TitleBar` struct.
+/// This trait allows the `TitleBar` to be focused or unfocused.
+impl HandleFocus for TitleBar {
+    /// Set the `focused` flag for the `TitleBar`.
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+    /// Set the `focused` flag for the `TitleBar`.
+    fn unfocus(&mut self) {
+        self.focused = false;
     }
 }
 

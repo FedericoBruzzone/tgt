@@ -13,7 +13,7 @@ use {
 /// the user interface. Implementors of this trait can be registered with the
 /// main application loop and will be able to receive events, update state, and
 /// be rendered on the screen.
-pub trait Component: HandleSmallArea {
+pub trait Component: HandleSmallArea + HandleFocus {
     /// Register an action handler that can send actions for processing if
     /// necessary.
     ///
@@ -152,4 +152,18 @@ pub trait HandleSmallArea {
     /// * `small_area` - A boolean indicating if the area is too small.
     #[allow(unused_variables)]
     fn with_small_area(&mut self, small_area: bool);
+}
+
+/// `HandleFocus` is a trait that represents a component that can handle focus
+/// actions. Implementors of this trait can be notified when they have focus
+/// and when they lose focus.
+pub trait HandleFocus {
+    /// This method is called when the component should focus.
+    /// This should set the state of the component to reflect the fact that it
+    /// has focus.
+    fn focus(&mut self);
+    /// This method is called when the component should unfocus.
+    /// This should set the state of the component to reflect the fact that it
+    /// has lost focus.
+    fn unfocus(&mut self);
 }

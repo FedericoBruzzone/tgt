@@ -1,10 +1,11 @@
 use {
     crate::{
-        components::component::{Component, HandleSmallArea},
+        components::component::{Component, HandleFocus, HandleSmallArea},
         enums::action::Action,
     },
     ratatui::{
         layout::Rect,
+        style::{Color, Style},
         symbols::{border, line},
         widgets::{block, Borders},
     },
@@ -23,6 +24,8 @@ pub struct ChatWindow {
     /// A flag indicating whether the `ChatWindow` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
+    /// Indicates whether the `ChatWindow` is focused or not.
+    focused: bool,
 }
 
 impl Default for ChatWindow {
@@ -40,10 +43,12 @@ impl ChatWindow {
         let command_tx = None;
         let name = "".to_string();
         let small_area = false;
+        let focused = false;
         ChatWindow {
             command_tx,
             name,
             small_area,
+            focused,
         }
     }
     /// Set the name of the `ChatWindow`.
@@ -56,6 +61,19 @@ impl ChatWindow {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+}
+
+/// Implement the `HandleFocus` trait for the `ChatWindow` struct.
+/// This trait allows the `ChatListWindow` to be focused or unfocused.
+impl HandleFocus for ChatWindow {
+    /// Set the `focused` flag for the `ChatWindow`.
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+    /// Set the `focused` flag for the `ChatWindow`.
+    fn unfocus(&mut self) {
+        self.focused = false;
     }
 }
 
@@ -97,10 +115,16 @@ impl Component for ChatWindow {
                 ..border::PLAIN
             }
         };
+        let color_focused = if self.focused {
+            Color::Cyan
+        } else {
+            Color::White
+        };
 
         frame.render_widget(
             block::Block::new()
                 .border_set(border)
+                .border_style(Style::default().fg(color_focused))
                 .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
                 .title(self.name.as_str()),
             area,

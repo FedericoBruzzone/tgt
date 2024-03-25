@@ -4,7 +4,7 @@ use {
         components::{
             chat_list_window::ChatListWindow,
             chat_window::ChatWindow,
-            component::{Component, HandleSmallArea},
+            component::{Component, HandleFocus, HandleSmallArea},
             prompt_window::PromptWindow,
         },
         enums::{action::Action, component_name::ComponentName},
@@ -30,8 +30,12 @@ pub struct CoreWindow {
     size_prompt: u16,
     /// The size of the chat list component.
     size_chat_list: u16,
-    /// The name of the component that is currently focused.
-    focused: Option<ComponentName>,
+    /// The name of the component that currently has focus. It is an optional
+    /// value because no component may have focus. The focus is a component
+    /// inside the `CoreWindow`.
+    component_focused: Option<ComponentName>,
+    /// Indicates whether the `CoreWindow` is focused or not.
+    focused: bool,
 }
 
 impl Default for CoreWindow {
@@ -68,7 +72,8 @@ impl CoreWindow {
         let size_prompt = 3;
         let size_chat_list = 20;
         let small_area = false;
-        let focused = None;
+        let component_focused = None;
+        let focused = false;
 
         CoreWindow {
             name,
@@ -77,6 +82,7 @@ impl CoreWindow {
             size_chat_list,
             size_prompt,
             small_area,
+            component_focused,
             focused,
         }
     }
@@ -125,6 +131,19 @@ impl CoreWindow {
     }
 }
 
+/// Implement the `HandleFocus` trait for the `CoreWindow` struct.
+/// This trait allows the `CoreWindow` to be focused or unfocused.
+impl HandleFocus for CoreWindow {
+    /// Set the `focused` flag for the `CoreWindow`.
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+    /// Set the `focused` flag for the `CoreWindow`.
+    fn unfocus(&mut self) {
+        self.focused = false;
+    }
+}
+
 /// Implement the `HandleSmallArea` trait for the `CoreWindow` struct.
 /// This trait allows the `CoreWindow` to display a smaller version of itself if
 /// necessary.
@@ -158,11 +177,24 @@ impl Component for CoreWindow {
     fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
         match action {
             Action::FocusComponent(component_name) => {
-                self.focused = Some(component_name);
+                self.component_focused = Some(component_name);
+                self.components
+                    .get_mut(&component_name)
+                    .unwrap_or_else(|| {
+                        panic!("Failed to get component: {}", component_name)
+                    })
+                    .focus();
+                self.components
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &component_name)
+                    .for_each(|(_, component)| component.unfocus());
                 Ok(None)
             }
             Action::UnfocusComponent => {
-                self.focused = None;
+                self.component_focused = None;
+                for (_, component) in self.components.iter_mut() {
+                    component.unfocus();
+                }
                 Ok(None)
             }
             Action::IncreaseChatListSize => {

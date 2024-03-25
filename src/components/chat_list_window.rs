@@ -1,6 +1,6 @@
 use {
     crate::{
-        components::component::{Component, HandleSmallArea},
+        components::component::{Component, HandleFocus, HandleSmallArea},
         enums::action::Action,
     },
     ratatui::{
@@ -15,8 +15,6 @@ use {
     tokio::sync::mpsc::UnboundedSender,
 };
 
-pub const CHAT_LIST: &str = "chat_list_window";
-
 /// `ChatListWindow` is a struct that represents a window for displaying a list
 /// of chat items. It is responsible for managing the layout and rendering of
 /// the chat list.
@@ -29,7 +27,9 @@ pub struct ChatListWindow {
     /// smaller version of itself.
     small_area: bool,
     /// A list of chat items to be displayed in the `ChatListWindow`.
-    chat_list: Vec<String>, // TODO: Use chat_item struct
+    chat_list: Vec<String>, // [TODO] Use chat_item struct
+    /// Indicates whether the `ChatListWindow` is focused or not.
+    focused: bool,
 }
 
 impl Default for ChatListWindow {
@@ -55,12 +55,14 @@ impl ChatListWindow {
             "Chat 2".to_string(),
             "Chat 2".to_string(),
         ];
+        let focused = false;
 
         ChatListWindow {
             name,
             command_tx,
             small_area,
             chat_list,
+            focused,
         }
     }
     /// Set the name of the `ChatListWindow`.
@@ -73,6 +75,19 @@ impl ChatListWindow {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+}
+
+/// Implement the `HandleFocus` trait for the `ChatListWindow` struct.
+/// This trait allows the `ChatListWindow` to be focused or unfocused.
+impl HandleFocus for ChatListWindow {
+    /// Set the `focused` flag for the `ChatListWindow`.
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+    /// Set the `focused` flag for the `ChatListWindow`.
+    fn unfocus(&mut self) {
+        self.focused = false;
     }
 }
 
@@ -105,6 +120,11 @@ impl Component for ChatListWindow {
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> std::io::Result<()> {
+        let color_focused = if self.focused {
+            Color::Cyan
+        } else {
+            Color::White
+        };
         let list = List::new(
             self.chat_list
                 .iter()
@@ -113,8 +133,9 @@ impl Component for ChatListWindow {
         )
         .block(
             Block::default()
-                .title("List")
+                .title("Chat List")
                 .border_set(PLAIN)
+                .border_style(Style::default().fg(color_focused))
                 .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
                 .title(Title::from(self.name.as_str())),
         )

@@ -1,6 +1,6 @@
 use {
     crate::{
-        components::component::{Component, HandleSmallArea},
+        components::component::{Component, HandleFocus, HandleSmallArea},
         enums::{action::Action, event::Event},
     },
     ratatui::{
@@ -25,6 +25,8 @@ pub struct StatusBar {
     /// A flag indicating whether the `StatusBar` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
+    /// Indicates whether the `StatusBar` is focused or not.
+    focused: bool,
     /// The area of the terminal where the all the content will be rendered.
     terminal_area: Rect,
     /// The last key pressed.
@@ -48,12 +50,15 @@ impl StatusBar {
         let small_area = false;
         let terminal_area = Rect::default();
         let last_key = Event::Unknown;
+        let focused = false;
+
         StatusBar {
             command_tx,
             name,
             small_area,
             terminal_area,
             last_key,
+            focused,
         }
     }
     /// Set the name of the `StatusBar`.
@@ -66,6 +71,19 @@ impl StatusBar {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+}
+
+/// Implement the `HandleFocus` trait for the `StatusBar` struct.
+/// This trait allows the `StatusBar` to be focused or unfocused.
+impl HandleFocus for StatusBar {
+    /// Set the `focused` flag for the `StatusBar`.
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+    /// Set the `focused` flag for the `StatusBar`.
+    fn unfocus(&mut self) {
+        self.focused = false;
     }
 }
 
@@ -120,7 +138,7 @@ impl Component for StatusBar {
             Span::styled("q ", Style::new().green().italic()),
             Span::raw("or "),
             Span::styled("ctrl+c ", Style::new().green().italic()),
-            Span::raw("to quit."),
+            Span::raw("to quit"),
             //
             Span::raw("     "),
             Span::styled("Press key: ", Style::new().bold()),
