@@ -1,6 +1,7 @@
 use {
     crate::{
-        configs::custom::keymap_custom::KeymapConfig, enums::action::Action,
+        configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
+        enums::action::Action,
         tui::Tui,
     },
     tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -13,82 +14,43 @@ pub struct AppContext {
     tui: Tui,
     /// The keymap configuration.
     keymap_config: KeymapConfig,
+    /// The application configuration.
+    app_config: AppConfig,
     /// An unbounded sender that send action for processing.
     action_rx: UnboundedReceiver<Action>,
     /// An unbounded receiver that receives action for processing.
     action_tx: UnboundedSender<Action>,
-    /// The frame rate at which the user interface should be rendered.
-    pub frame_rate: f64,
     /// A boolean flag that represents whether the application should quit or
     /// not.
     pub quit: bool,
-    /// A boolean flag that represents whether the mouse is enabled or not.
-    pub mouse: bool,
-    /// A boolean flag that represents whether the clipboard is enabled or not.
-    pub paste: bool,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
     /// Create a new instance of the `App` struct.
     ///
+    /// # Arguments
+    /// * `app_config` - The application configuration.
+    /// * `keymap_config` - The keymap configuration.
+    ///
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `App` struct or an error.
-    pub fn new(keymap_config: KeymapConfig) -> Result<Self, std::io::Error> {
+    pub fn new(
+        app_config: AppConfig,
+        keymap_config: KeymapConfig,
+    ) -> Result<Self, std::io::Error> {
         let tui = Tui::new().with_keymap_config(keymap_config.clone());
         let (action_tx, action_rx) =
             tokio::sync::mpsc::unbounded_channel::<Action>();
-        let frame_rate = 60.0;
         let quit = false;
-        let mouse = false;
-        let paste = false;
         Ok(Self {
             tui,
             keymap_config,
+            app_config,
             action_rx,
             action_tx,
-            frame_rate,
             quit,
-            mouse,
-            paste,
         })
-    }
-    /// Set the frame rate at which the user interface should be rendered.
-    ///
-    /// # Arguments
-    /// * `frame_rate` - The frame rate at which the user interface should be
-    ///
-    /// # Returns
-    /// * `Self` - The `App` struct.
-    pub fn with_frame_rate(mut self, frame_rate: f64) -> Self {
-        self.frame_rate = frame_rate;
-        self
-    }
-    /// Set the boolean flag that represents whether the mouse is enabled or
-    /// not.
-    ///
-    /// # Arguments
-    /// * `mouse` - A boolean flag that represents whether the mouse is enabled
-    ///  or not.
-    ///
-    ///  # Returns
-    ///  * `Self` - The `App` struct.
-    pub fn with_mouse(mut self, mouse: bool) -> Self {
-        self.mouse = mouse;
-        self
-    }
-    /// Set the boolean flag that represents whether the clipboard is enabled
-    /// or not.
-    ///
-    /// # Arguments
-    /// * `paste` - A boolean flag that represents whether the clipboard is
-    ///  enabled or not.
-    ///
-    ///  # Returns
-    ///  * `Self` - The `App` struct.
-    pub fn with_paste(mut self, paste: bool) -> Self {
-        self.paste = paste;
-        self
     }
     /// Get the user interface for the application.
     ///
@@ -118,6 +80,21 @@ impl AppContext {
     /// * `&mut KeymapConfig` - A mutable reference to the keymap configuration.
     pub fn keymap_config_mut_ref(&mut self) -> &mut KeymapConfig {
         &mut self.keymap_config
+    }
+    /// Get the application configuration.
+    ///
+    /// # Returns
+    /// * `&AppConfig` - A reference to the application configuration.
+    pub fn app_config_ref(&self) -> &AppConfig {
+        &self.app_config
+    }
+    /// Get the application configuration.
+    ///
+    /// # Returns
+    /// * `&mut AppConfig` - A mutable reference to the application
+    ///   configuration.
+    pub fn app_config_mut_ref(&mut self) -> &mut AppConfig {
+        &mut self.app_config
     }
     /// Get the unbounded receiver that receives action for processing.
     ///

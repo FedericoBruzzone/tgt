@@ -51,13 +51,11 @@ async fn tokio_main() -> Result<(), AppError> {
     tracing::info!("App config: {:#?}", app_config);
     println!("{:#?}", app_config);
 
-    let mut app_context = AppContext::new(keymap_config)?
-        .with_mouse(true)
-        .with_paste(true);
+    let mut app_context = AppContext::new(app_config, keymap_config)?;
     let mut tui_backend = TuiBackend::new(
-        app_context.frame_rate,
-        app_context.mouse,
-        app_context.paste,
+        app_context.app_config_ref().frame_rate,
+        app_context.app_config_ref().mouse_support,
+        app_context.app_config_ref().paste_support,
     )?;
 
     tracing::info!("Starting main");
