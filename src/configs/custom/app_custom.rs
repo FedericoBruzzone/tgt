@@ -18,6 +18,10 @@ pub struct AppConfig {
     pub paste_support: bool,
     /// The frame rate.
     pub frame_rate: f64,
+    /// The status bar visibility.
+    pub show_status_bar: bool,
+    /// The title bar visibility.
+    pub show_title_bar: bool,
 }
 /// The application configuration implementation.
 impl AppConfig {
@@ -56,6 +60,12 @@ impl ConfigFile for AppConfig {
                 if let Some(frame_rate) = other.frame_rate {
                     self.frame_rate = frame_rate;
                 }
+                if let Some(show_status_bar) = other.show_status_bar {
+                    self.show_status_bar = show_status_bar;
+                }
+                if let Some(show_title_bar) = other.show_title_bar {
+                    self.show_title_bar = show_title_bar;
+                }
                 self.clone()
             }
         }
@@ -75,6 +85,8 @@ impl From<AppRaw> for AppConfig {
             mouse_support: raw.mouse_support.unwrap(),
             paste_support: raw.paste_support.unwrap(),
             frame_rate: raw.frame_rate.unwrap(),
+            show_status_bar: raw.show_status_bar.unwrap(),
+            show_title_bar: raw.show_title_bar.unwrap(),
         }
     }
 }
@@ -100,6 +112,8 @@ mod tests {
             mouse_support: Some(true),
             paste_support: Some(true),
             frame_rate: Some(30.0),
+            show_status_bar: Some(true),
+            show_title_bar: Some(true),
         };
         let app_config = AppConfig::from(app_raw);
         assert!(app_config.mouse_support);
@@ -113,11 +127,15 @@ mod tests {
             mouse_support: Some(true),
             paste_support: Some(true),
             frame_rate: Some(60.0),
+            show_status_bar: Some(true),
+            show_title_bar: Some(true),
         });
         let app_raw = AppRaw {
             mouse_support: Some(false),
             paste_support: Some(false),
             frame_rate: None,
+            show_status_bar: None,
+            show_title_bar: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(!app_config.mouse_support);

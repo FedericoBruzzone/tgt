@@ -9,4 +9,10 @@ pub struct AppRaw {
     pub paste_support: Option<bool>,
     /// The frame rate at which the user interface should be rendered.
     pub frame_rate: Option<f64>,
+    /// A boolean flag that represents whether the status bar should be shown
+    /// or not.
+    pub show_status_bar: Option<bool>,
+    /// A boolean flag that represents whether the title bar should be shown or
+    /// not.
+    pub show_title_bar: Option<bool>,
 }

@@ -6,7 +6,7 @@ use {
             status_bar::StatusBar, title_bar::TitleBar, SMALL_AREA_HEIGHT,
             SMALL_AREA_WIDTH,
         },
-        configs::custom::keymap_custom::KeymapConfig,
+        configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
         enums::{action::Action, component_name::ComponentName, event::Event},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
@@ -23,9 +23,11 @@ pub struct Tui {
     action_tx: Option<UnboundedSender<Action>>,
     /// A hashmap of components that make up the user interface.
     components: HashMap<ComponentName, Box<dyn Component>>,
-    /// The keymap configuration.
-    keymap_config: Option<KeymapConfig>,
+    /// The application configuration.
+    app_config: AppConfig,
     #[allow(dead_code)]
+    /// The keymap configuration.
+    keymap_config: KeymapConfig,
     /// The name of the component that currently has focus. It is an optional
     /// value because no component may have focus. The focus is a component
     /// inside the `CoreWindow`.
@@ -34,20 +36,24 @@ pub struct Tui {
 /// Implement the `Default` trait for the `Tui` struct.
 impl Default for Tui {
     fn default() -> Self {
-        Self::new()
+        Self::new(AppConfig::default(), KeymapConfig::default())
     }
 }
 /// Implement the `Tui` struct.
 impl Tui {
     /// Create a new instance of the `Tui` struct.
     ///
+    /// # Arguments
+    /// * `app_config` - The application configuration.
+    /// * `keymap_config` - The keymap configuration.
+    ///
     /// # Returns
     /// * `Self` - The new instance of the `Tui` struct.
-    pub fn new() -> Self {
+    pub fn new(app_config: AppConfig, keymap_config: KeymapConfig) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::TitleBar,
-                TitleBar::new().with_name("TG-TUI").new_boxed(),
+                TitleBar::new().with_name("Tgt").new_boxed(),
             ),
             (
                 ComponentName::CoreWindow,
@@ -63,26 +69,14 @@ impl Tui {
         let focused = None;
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
-        let keymap_config = None;
 
         Tui {
             action_tx,
             components,
             keymap_config,
             focused,
+            app_config,
         }
-    }
-    /// Set the keymap configuration for the user interface.
-    /// The keymap configuration is used to map events to actions.
-    ///
-    /// # Arguments
-    /// * `keymap_config` - The keymap configuration for the user interface.
-    ///
-    /// # Returns
-    /// * `Self` - The modified instance of the `Tui` struct.
-    pub fn with_keymap_config(mut self, keymap_config: KeymapConfig) -> Self {
-        self.keymap_config = Some(keymap_config);
-        self
     }
     /// Register an action handler that can send actions for processing if
     /// necessary.
@@ -117,16 +111,10 @@ impl Tui {
         &mut self,
         event: Option<Event>,
     ) -> Result<Option<Action>, AppError> {
-        // It would be enough send the action to the `CoreWindow` component
         self.components
-            .iter_mut()
-            .try_fold(None, |acc, (_, component)| {
-                match component.handle_events(event.clone()) {
-                    Ok(Some(action)) => Ok(Some(action)),
-                    Ok(None) => Ok(acc),
-                    Err(e) => Err(e),
-                }
-            })
+            .get_mut(&ComponentName::CoreWindow)
+            .unwrap()
+            .handle_events(event.clone())
     }
     /// Update the state of the component based on a received action.
     ///
@@ -147,7 +135,9 @@ impl Tui {
             }
             _ => {}
         }
-        // It would be enough send the action to the `CoreWindow` component
+
+        // We can not send the action only to the `CoreWindow` component because
+        // the `StatusBar` component needs to know the area to render the size.
         self.components
             .iter_mut()
             .try_fold(None, |acc, (_, component)| {
@@ -174,24 +164,35 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::StatusBar)
             .unwrap()
-            .handle_key_events(Event::UpdateArea(area))?;
+            .update(Action::UpdateArea(area))?;
 
-        if area.width < SMALL_AREA_WIDTH {
-            self.components.iter_mut().for_each(|(_, component)| {
-                component.with_small_area(true);
-            });
-        } else {
-            self.components.iter_mut().for_each(|(_, component)| {
-                component.with_small_area(false);
-            });
-        }
+        self.components
+            .get_mut(&ComponentName::CoreWindow)
+            .unwrap()
+            .with_small_area(area.width < SMALL_AREA_WIDTH);
 
         let main_layout = Layout::new(
             Direction::Vertical,
             [
-                Constraint::Length(1),
+                Constraint::Length(if self.app_config.show_title_bar {
+                    if area.height > SMALL_AREA_HEIGHT + 5 {
+                        3
+                    } else {
+                        0
+                    }
+                } else {
+                    0
+                }),
                 Constraint::Min(SMALL_AREA_HEIGHT),
-                Constraint::Length(3),
+                Constraint::Length(if self.app_config.show_status_bar {
+                    if area.height > SMALL_AREA_HEIGHT + 5 {
+                        3
+                    } else {
+                        0
+                    }
+                } else {
+                    0
+                }),
             ],
         )
         .split(area);
@@ -199,6 +200,10 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::TitleBar)
             .unwrap_or_else(|| {
+                tracing::error!(
+                    "Failed to get component: {}",
+                    ComponentName::TitleBar
+                );
                 panic!("Failed to get component: {}", ComponentName::TitleBar)
             })
             .draw(frame, main_layout[0])?;
@@ -206,6 +211,10 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::CoreWindow)
             .unwrap_or_else(|| {
+                tracing::error!(
+                    "Failed to get component: {}",
+                    ComponentName::CoreWindow
+                );
                 panic!("Failed to get component: {}", ComponentName::CoreWindow)
             })
             .draw(frame, main_layout[1])?;
@@ -213,6 +222,10 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::StatusBar)
             .unwrap_or_else(|| {
+                tracing::error!(
+                    "Failed to get component: {}",
+                    ComponentName::StatusBar
+                );
                 panic!("Failed to get component: {}", ComponentName::StatusBar)
             })
             .draw(frame, main_layout[2])?;

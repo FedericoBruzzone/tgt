@@ -5,16 +5,13 @@ use {
     },
     ratatui::{
         layout::{Alignment, Rect},
-        widgets::{
-            block::{Block, Position, Title},
-            Borders,
-        },
+        style::{Style, Stylize},
+        text::{Line, Span},
+        widgets::{block::Block, Borders, Paragraph, Wrap},
     },
     std::io,
     tokio::sync::mpsc,
 };
-
-pub const TITLE_BAR: &str = "title_bar";
 
 /// `TitleBar` is a struct that represents a title bar.
 /// It is responsible for managing the layout and rendering of the title bar.
@@ -104,14 +101,17 @@ impl Component for TitleBar {
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> io::Result<()> {
-        frame.render_widget(
-            Block::new().borders(Borders::TOP).title(
-                Title::from(self.name.as_str())
-                    .position(Position::Top)
-                    .alignment(Alignment::Center),
-            ),
-            area,
-        );
+        let text = vec![Line::from(vec![
+            Span::styled(self.name.as_str(), Style::new().bold()),
+            Span::raw(" - A TUI for Telegram"),
+        ])];
+        let paragraph = Paragraph::new(text)
+            .block(Block::new().borders(Borders::ALL))
+            .style(Style::new().white().on_black())
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+
+        frame.render_widget(paragraph, area);
 
         Ok(())
     }

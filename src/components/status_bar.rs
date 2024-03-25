@@ -13,8 +13,6 @@ use {
     tokio::sync::mpsc::UnboundedSender,
 };
 
-pub const STATUS_BAR: &str = "status_bar";
-
 /// `StatusBar` is a struct that represents a status bar.
 /// It is responsible for managing the layout and rendering of the status bar.
 pub struct StatusBar {
@@ -111,16 +109,13 @@ impl Component for StatusBar {
         Ok(())
     }
 
-    fn handle_key_events(
-        &mut self,
-        event: Event,
-    ) -> io::Result<Option<Action>> {
-        match event {
-            Event::UpdateArea(area) => {
+    fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
+        match action {
+            Action::UpdateArea(area) => {
                 self.terminal_area = area;
                 Ok(None)
             }
-            Event::Key(key, modifiers) => {
+            Action::Key(key, modifiers) => {
                 self.last_key = Event::Key(key, modifiers);
                 Ok(None)
             }
@@ -160,18 +155,13 @@ impl Component for StatusBar {
             ),
         ])];
 
-        frame.render_widget(
-            Paragraph::new(text)
-                .block(
-                    Block::new()
-                        .title(self.name.as_str())
-                        .borders(Borders::ALL),
-                )
-                .style(Style::new().white().on_black())
-                .alignment(Alignment::Center)
-                .wrap(Wrap { trim: true }),
-            area,
-        );
+        let paragraph = Paragraph::new(text)
+            .block(Block::new().title(self.name.as_str()).borders(Borders::ALL))
+            .style(Style::new().white().on_black())
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+
+        frame.render_widget(paragraph, area);
 
         Ok(())
     }

@@ -53,7 +53,7 @@ impl CoreWindow {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::ChatList,
-                ChatListWindow::new().with_name("Chats").new_boxed(),
+                ChatListWindow::new().with_name("Chat list").new_boxed(),
             ),
             (
                 ComponentName::Chat,
@@ -227,7 +227,6 @@ impl Component for CoreWindow {
         } else {
             self.size_chat_list
         };
-        let size_prompt = self.size_prompt;
 
         let core_layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -246,7 +245,10 @@ impl Component for CoreWindow {
 
         let sub_core_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(size_prompt)])
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Length(self.size_prompt),
+            ])
             .split(core_layout[1]);
 
         self.components

@@ -39,7 +39,7 @@ impl AppContext {
         app_config: AppConfig,
         keymap_config: KeymapConfig,
     ) -> Result<Self, std::io::Error> {
-        let tui = Tui::new().with_keymap_config(keymap_config.clone());
+        let tui = Tui::new(app_config.clone(), keymap_config.clone());
         let (action_tx, action_rx) =
             tokio::sync::mpsc::unbounded_channel::<Action>();
         let quit = false;

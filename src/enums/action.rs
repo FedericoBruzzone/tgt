@@ -2,6 +2,7 @@ use {
     super::component_name::ComponentName,
     crate::app_error::AppError,
     crossterm::event::{KeyCode, KeyModifiers},
+    ratatui::layout::Rect,
     std::str::FromStr,
 };
 
@@ -33,6 +34,8 @@ pub enum Action {
     DecreasePromptSize,
     /// Key action with a key code.
     Key(KeyCode, KeyModifiers),
+    /// Update area action with a rectangular area.
+    UpdateArea(Rect),
 }
 
 /// Implement the `FormStr` trait for `Action`.

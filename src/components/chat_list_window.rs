@@ -133,7 +133,6 @@ impl Component for ChatListWindow {
         )
         .block(
             Block::default()
-                .title("Chat List")
                 .border_set(PLAIN)
                 .border_style(Style::default().fg(color_focused))
                 .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
