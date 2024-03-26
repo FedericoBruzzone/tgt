@@ -8,6 +8,7 @@ use {
     },
     ratatui::layout::Rect,
     std::{collections::HashMap, time::Instant},
+    tokio::sync::mpsc::UnboundedSender,
 };
 
 /// Run the main event loop for the application.
@@ -71,6 +72,7 @@ async fn handle_tui_backend_events(
                     .action_tx_ref()
                     .send(Action::Key(key, modifiers))?;
 
+                // Handle default key bindings.
                 if let Some(action_binding) = app_context
                     .keymap_config_ref()
                     .default
@@ -82,7 +84,7 @@ async fn handle_tui_backend_events(
                         }
                         ActionBinding::Multiple(map_event_action) => {
                             consume_until_single_action(
-                                app_context,
+                                app_context.action_tx_ref(),
                                 tui_backend,
                                 map_event_action.clone(),
                             )
@@ -94,7 +96,8 @@ async fn handle_tui_backend_events(
             _ => {}
         }
 
-        // [TODO] Remove this if block because we have to send only the actions.
+        // Note that sending the event to the tui it will send the event
+        // directly to the `CoreWindow` component.
         if let Some(action) = app_context
             .tui_mut_ref()
             .handle_events(Some(event.clone()))?
@@ -112,11 +115,11 @@ async fn handle_tui_backend_events(
 /// The time limit for consuming events is 1 second.
 ///
 /// # Arguments
-/// * `app_context` - A mutable reference to the `AppContext` struct.
+/// * `action_tx` - An unbounded sender that can send actions.
 /// * `tui_backend` - A mutable reference to the `TuiBackend` struct.
 /// * `map_event_action` - A map of events to actions.
 async fn consume_until_single_action(
-    app_context: &mut AppContext,
+    action_tx: &UnboundedSender<Action>,
     tui_backend: &mut TuiBackend,
     map_event_action: HashMap<Event, ActionBinding>,
 ) {
@@ -126,7 +129,7 @@ async fn consume_until_single_action(
             if let Some(ActionBinding::Single { action, .. }) =
                 map_event_action.get(&event)
             {
-                app_context.action_tx_ref().send(action.clone()).unwrap();
+                action_tx.send(action.clone()).unwrap();
                 break;
             }
         }
@@ -168,11 +171,7 @@ pub fn handle_app_actions(
             _ => {}
         }
 
-        if let Some(action) =
-            app_context.tui_mut_ref().update(action.clone())?
-        {
-            app_context.action_tx_ref().send(action)?;
-        }
+        app_context.tui_mut_ref().update(action.clone())
     }
     Ok(())
 }

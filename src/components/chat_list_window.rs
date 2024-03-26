@@ -9,7 +9,7 @@ use {
         symbols::border::PLAIN,
         widgets::{
             block::{Block, Title},
-            Borders, List, ListDirection,
+            Borders, List, ListDirection, ListState,
         },
     },
     tokio::sync::mpsc::UnboundedSender,
@@ -28,6 +28,8 @@ pub struct ChatListWindow {
     small_area: bool,
     /// A list of chat items to be displayed in the `ChatListWindow`.
     chat_list: Vec<String>, // [TODO] Use chat_item struct
+    /// The state of the list.
+    chat_list_state: ListState,
     /// Indicates whether the `ChatListWindow` is focused or not.
     focused: bool,
 }
@@ -55,6 +57,7 @@ impl ChatListWindow {
             "Chat 2".to_string(),
             "Chat 2".to_string(),
         ];
+        let chat_list_state = ListState::default();
         let focused = false;
 
         ChatListWindow {
@@ -62,6 +65,7 @@ impl ChatListWindow {
             command_tx,
             small_area,
             chat_list,
+            chat_list_state,
             focused,
         }
     }
@@ -75,6 +79,41 @@ impl ChatListWindow {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+
+    /// Select the next chat item in the list.
+    fn next(&mut self) {
+        let i = match self.chat_list_state.selected() {
+            Some(i) => {
+                if i >= self.chat_list.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.chat_list_state.select(Some(i));
+    }
+
+    /// Select the previous chat item in the list.
+    fn previous(&mut self) {
+        let i = match self.chat_list_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.chat_list.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.chat_list_state.select(Some(i));
+    }
+
+    /// Unselect the chat item in the list.
+    fn unselect(&mut self) {
+        self.chat_list_state.select(None);
     }
 }
 
@@ -115,6 +154,15 @@ impl Component for ChatListWindow {
         Ok(())
     }
 
+    fn update(&mut self, action: Action) {
+        match action {
+            Action::ChatListNext => self.next(),
+            Action::ChatListPrevious => self.previous(),
+            Action::ChatListUnselect => self.unselect(),
+            _ => {}
+        }
+    }
+
     fn draw(
         &mut self,
         frame: &mut ratatui::Frame<'_>,
@@ -125,25 +173,24 @@ impl Component for ChatListWindow {
         } else {
             Color::White
         };
-        let list = List::new(
-            self.chat_list
-                .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<&str>>(),
-        )
-        .block(
-            Block::default()
-                .border_set(PLAIN)
-                .border_style(Style::default().fg(color_focused))
-                .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-                .title(Title::from(self.name.as_str())),
-        )
-        .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        .highlight_symbol(">>")
-        .repeat_highlight_symbol(true)
-        .direction(ListDirection::BottomToTop);
-        frame.render_widget(list, area);
+
+        let items = self.chat_list.iter().map(|item| item.as_str());
+
+        let list = List::new(items)
+            .block(
+                Block::default()
+                    .border_set(PLAIN)
+                    .border_style(Style::default().fg(color_focused))
+                    .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
+                    .title(Title::from(self.name.as_str())),
+            )
+            .style(Style::default().fg(Color::White))
+            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_symbol(">>")
+            .repeat_highlight_symbol(true)
+            .direction(ListDirection::TopToBottom);
+
+        frame.render_stateful_widget(list, area, &mut self.chat_list_state);
         Ok(())
     }
 }

@@ -9,7 +9,6 @@ use {
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
-    std::io,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -109,17 +108,15 @@ impl Component for StatusBar {
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
+    fn update(&mut self, action: Action) {
         match action {
             Action::UpdateArea(area) => {
                 self.terminal_area = area;
-                Ok(None)
             }
             Action::Key(key, modifiers) => {
                 self.last_key = Event::Key(key, modifiers);
-                Ok(None)
             }
-            _ => Ok(None),
+            _ => {}
         }
     }
 

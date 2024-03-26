@@ -7,7 +7,7 @@ use {
             config_type::ConfigType,
             raw::keymap_raw::{KeymapEntry, KeymapRaw},
         },
-        enums::{action::Action, event::Event},
+        enums::{action::Action, component_name::ComponentName, event::Event},
     },
     std::{
         collections::{hash_map::Entry, HashMap},
@@ -38,7 +38,7 @@ pub struct KeymapConfig {
     /// They can be used in any component.
     pub default: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the chats list component.
-    pub chats_list: HashMap<Event, ActionBinding>,
+    pub chat_list: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the chat component.
     pub chat: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the prompt component.
@@ -229,6 +229,29 @@ impl KeymapConfig {
             },
         }
     }
+
+    /// Get the keymap configuration of a component.
+    /// It is used to get the keymap configuration of a component.
+    ///
+    /// # Arguments
+    /// * `component_name` - The name of the component.
+    ///
+    /// # Returns
+    /// The keymap configuration of the component.
+    pub fn get_map_of(
+        &self,
+        component_name: Option<ComponentName>,
+    ) -> &HashMap<Event, ActionBinding> {
+        match component_name {
+            Some(componnt) => match componnt {
+                ComponentName::ChatList => &self.chat_list,
+                ComponentName::Chat => &self.chat,
+                ComponentName::Prompt => &self.prompt,
+                _ => &self.default,
+            },
+            None => &self.default,
+        }
+    }
 }
 /// The implementation of the configuration file for the keymap.
 impl ConfigFile for KeymapConfig {
@@ -253,7 +276,7 @@ impl ConfigFile for KeymapConfig {
                 }
                 if let Some(chats_list) = other.chats_list {
                     for (k, v) in Self::keymaps_vec_to_map(chats_list.keymap) {
-                        self.chats_list.insert(k, v);
+                        self.chat_list.insert(k, v);
                     }
                 }
                 if let Some(chat) = other.chat {
@@ -283,9 +306,7 @@ impl From<KeymapRaw> for KeymapConfig {
     fn from(raw: KeymapRaw) -> Self {
         Self {
             default: Self::keymaps_vec_to_map(raw.default.unwrap().keymap),
-            chats_list: Self::keymaps_vec_to_map(
-                raw.chats_list.unwrap().keymap,
-            ),
+            chat_list: Self::keymaps_vec_to_map(raw.chats_list.unwrap().keymap),
             chat: Self::keymaps_vec_to_map(raw.chat.unwrap().keymap),
             prompt: Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap),
         }
@@ -310,7 +331,7 @@ mod tests {
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
         assert_eq!(keymap_config.default.len(), 11);
-        assert_eq!(keymap_config.chats_list.len(), 0);
+        assert_eq!(keymap_config.chat_list.len(), 3);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
     }
@@ -325,7 +346,7 @@ mod tests {
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.default.len(), 0);
-        assert_eq!(keymap_config.chats_list.len(), 0);
+        assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
     }
@@ -346,7 +367,7 @@ mod tests {
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.default.len(), 1);
-        assert_eq!(keymap_config.chats_list.len(), 0);
+        assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
     }
@@ -380,7 +401,7 @@ mod tests {
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.default.len(), 1);
-        assert_eq!(keymap_config.chats_list.len(), 0);
+        assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
         assert_eq!(

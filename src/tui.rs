@@ -10,7 +10,7 @@ use {
         enums::{action::Action, component_name::ComponentName, event::Event},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
-    std::{collections::HashMap, io},
+    std::collections::HashMap,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -28,10 +28,6 @@ pub struct Tui {
     #[allow(dead_code)]
     /// The keymap configuration.
     keymap_config: KeymapConfig,
-    /// The name of the component that currently has focus. It is an optional
-    /// value because no component may have focus. The focus is a component
-    /// inside the `CoreWindow`.
-    focused: Option<ComponentName>,
 }
 /// Implement the `Default` trait for the `Tui` struct.
 impl Default for Tui {
@@ -57,16 +53,16 @@ impl Tui {
             ),
             (
                 ComponentName::CoreWindow,
-                CoreWindow::new().with_name("CoreWindow").new_boxed(),
+                CoreWindow::new(keymap_config.clone())
+                    .with_name("CoreWindow")
+                    .new_boxed(),
             ),
             (
                 ComponentName::StatusBar,
                 StatusBar::new().with_name("Status Bar").new_boxed(),
             ),
         ];
-
         let action_tx = None;
-        let focused = None;
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
 
@@ -74,7 +70,6 @@ impl Tui {
             action_tx,
             components,
             keymap_config,
-            focused,
             app_config,
         }
     }
@@ -121,32 +116,12 @@ impl Tui {
     /// # Arguments
     ///
     /// * `action` - An action that may modify the state of the component.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Option<Action>>` - An action to be processed or none.
-    pub fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
-        match action {
-            Action::FocusComponent(component_name) => {
-                self.focused = Some(component_name);
-            }
-            Action::UnfocusComponent => {
-                self.focused = None;
-            }
-            _ => {}
-        }
-
+    pub fn update(&mut self, action: Action) {
         // We can not send the action only to the `CoreWindow` component because
         // the `StatusBar` component needs to know the area to render the size.
         self.components
             .iter_mut()
-            .try_fold(None, |acc, (_, component)| {
-                match component.update(action.clone()) {
-                    Ok(Some(action)) => Ok(Some(action)),
-                    Ok(None) => Ok(acc),
-                    Err(e) => Err(e),
-                }
-            })
+            .for_each(|(_, component)| component.update(action.clone()));
     }
     /// Render the user interface to the screen.
     ///
@@ -164,7 +139,7 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::StatusBar)
             .unwrap()
-            .update(Action::UpdateArea(area))?;
+            .update(Action::UpdateArea(area));
 
         self.components
             .get_mut(&ComponentName::CoreWindow)

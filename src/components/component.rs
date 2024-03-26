@@ -102,14 +102,8 @@ pub trait Component: HandleSmallArea + HandleFocus {
     /// # Arguments
     ///
     /// * `action` - An action that may modify the state of the component.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Option<Action>>` - An action to be processed or none.
     #[allow(unused_variables)]
-    fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
-        Ok(None)
-    }
+    fn update(&mut self, action: Action) {}
     /// Render the component on the screen. (REQUIRED)
     ///
     /// # Arguments

@@ -1,13 +1,15 @@
 use {
     super::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE},
     crate::{
+        app_error::AppError,
         components::{
             chat_list_window::ChatListWindow,
             chat_window::ChatWindow,
             component::{Component, HandleFocus, HandleSmallArea},
             prompt_window::PromptWindow,
         },
-        enums::{action::Action, component_name::ComponentName},
+        configs::custom::keymap_custom::{ActionBinding, KeymapConfig},
+        enums::{action::Action, component_name::ComponentName, event::Event},
     },
     ratatui::layout::{Constraint, Direction, Layout, Rect},
     std::{collections::HashMap, io},
@@ -20,7 +22,7 @@ pub struct CoreWindow {
     /// The name of the `CoreWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
-    command_tx: Option<UnboundedSender<Action>>,
+    action_tx: Option<UnboundedSender<Action>>,
     /// A map of components that are part of the `CoreWindow`.
     components: HashMap<ComponentName, Box<dyn Component>>,
     /// A flag indicating whether the `CoreWindow` should be displayed as a
@@ -30,6 +32,8 @@ pub struct CoreWindow {
     size_prompt: u16,
     /// The size of the chat list component.
     size_chat_list: u16,
+    /// The keymap configuration.
+    keymap_config: KeymapConfig,
     /// The name of the component that currently has focus. It is an optional
     /// value because no component may have focus. The focus is a component
     /// inside the `CoreWindow`.
@@ -40,7 +44,7 @@ pub struct CoreWindow {
 
 impl Default for CoreWindow {
     fn default() -> Self {
-        Self::new()
+        Self::new(KeymapConfig::default())
     }
 }
 
@@ -49,7 +53,7 @@ impl CoreWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `CoreWindow` struct.
-    pub fn new() -> Self {
+    pub fn new(keymap_config: KeymapConfig) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::ChatList,
@@ -66,22 +70,23 @@ impl CoreWindow {
         ];
 
         let name = "".to_string();
-        let command_tx = None;
+        let action_tx = None;
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
         let size_prompt = 3;
         let size_chat_list = 20;
         let small_area = false;
         let component_focused = None;
-        let focused = false;
+        let focused = true;
 
         CoreWindow {
             name,
-            command_tx,
+            action_tx,
             components,
             size_chat_list,
             size_prompt,
             small_area,
+            keymap_config,
             component_focused,
             focused,
         }
@@ -167,14 +172,33 @@ impl Component for CoreWindow {
         &mut self,
         tx: UnboundedSender<Action>,
     ) -> std::io::Result<()> {
-        self.command_tx = Some(tx.clone());
+        self.action_tx = Some(tx.clone());
         for (_, component) in self.components.iter_mut() {
             component.register_action_handler(tx.clone())?;
         }
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> io::Result<Option<Action>> {
+    fn handle_events(
+        &mut self,
+        event: Option<Event>,
+    ) -> Result<Option<Action>, AppError> {
+        let map = self.keymap_config.get_map_of(self.component_focused);
+        if let Some(action_binding) = map.get(&event.unwrap()) {
+            match action_binding {
+                ActionBinding::Single { action, .. } => {
+                    return Ok(Some(action.clone()));
+                }
+                ActionBinding::Multiple(_map_event_action) => {
+                    tracing::warn!("Multiple action bindings are not supported yet. They are supported only for default key bindings.");
+                    todo!();
+                }
+            }
+        }
+        Ok(Some(Action::Unknown))
+    }
+
+    fn update(&mut self, action: Action) {
         match action {
             Action::FocusComponent(component_name) => {
                 self.component_focused = Some(component_name);
@@ -188,32 +212,35 @@ impl Component for CoreWindow {
                     .iter_mut()
                     .filter(|(name, _)| *name != &component_name)
                     .for_each(|(_, component)| component.unfocus());
-                Ok(None)
             }
             Action::UnfocusComponent => {
                 self.component_focused = None;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
                 }
-                Ok(None)
             }
             Action::IncreaseChatListSize => {
                 self.increase_chat_list_size();
-                Ok(None)
             }
             Action::DecreaseChatListSize => {
                 self.decrease_chat_list_size();
-                Ok(None)
             }
             Action::IncreasePromptSize => {
                 self.increase_size_prompt();
-                Ok(None)
             }
             Action::DecreasePromptSize => {
                 self.decrease_size_prompt();
-                Ok(None)
             }
-            _ => Ok(None),
+            _ => {}
+        }
+
+        if let Some(focused) = self.component_focused {
+            self.components
+                .get_mut(&focused)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", focused)
+                })
+                .update(action);
         }
     }
 
@@ -223,6 +250,7 @@ impl Component for CoreWindow {
         area: Rect,
     ) -> io::Result<()> {
         let size_chat_list = if self.small_area {
+            // [TODO] This is not the espected behaviour
             0
         } else {
             self.size_chat_list

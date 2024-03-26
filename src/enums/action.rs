@@ -20,6 +20,7 @@ pub enum Action {
     Render,
     /// Resize action with width and height.
     Resize(u16, u16),
+
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
     /// Unfocus action.
@@ -36,6 +37,13 @@ pub enum Action {
     Key(KeyCode, KeyModifiers),
     /// Update area action with a rectangular area.
     UpdateArea(Rect),
+
+    /// ChatListNext action.
+    ChatListNext,
+    /// ChatListPrevious action.
+    ChatListPrevious,
+    /// ChatListSelect action.
+    ChatListUnselect,
 }
 
 /// Implement the `FormStr` trait for `Action`.
@@ -56,6 +64,9 @@ impl FromStr for Action {
             "decrease_chat_list_size" => Ok(Action::DecreaseChatListSize),
             "increase_prompt_size" => Ok(Action::IncreasePromptSize),
             "decrease_prompt_size" => Ok(Action::DecreasePromptSize),
+            "chat_list_next" => Ok(Action::ChatListNext),
+            "chat_list_previous" => Ok(Action::ChatListPrevious),
+            "chat_list_unselect" => Ok(Action::ChatListUnselect),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }
