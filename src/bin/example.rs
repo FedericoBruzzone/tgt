@@ -4,26 +4,16 @@
 // java example -> https://github.com/tdlib/td/blob/master/example/java/org/drinkless/tdlib/example/Example.java
 
 use {
-    std::{
-        collections::{BTreeSet, HashMap},
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc,
-        },
+    std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
     },
     tdlib::{
         enums::{self, AuthorizationState, LogStream, Update},
         functions,
-        types::{
-            BasicGroup, BasicGroupFullInfo, Chat, FormattedText,
-            InputMessageText, LogStreamFile, SecretChat, Supergroup,
-            SupergroupFullInfo, User, UserFullInfo,
-        },
+        types::{FormattedText, InputMessageText, LogStreamFile},
     },
-    tokio::{
-        sync::mpsc::{self, Receiver, Sender},
-        task::JoinHandle,
-    },
+    tokio::sync::mpsc::{self, Receiver, Sender},
 };
 
 fn ask_user(string: &str) -> String {
@@ -119,7 +109,7 @@ async fn handle_update(update: Update, auth_tx: &Sender<AuthorizationState>) {
             auth_tx.send(update.authorization_state).await.unwrap();
         }
         Update::User(x) => {
-            eprintln!("[HANDLE UPDATE]: {:?} {:?}", x.user.usernames, x.user.id)
+            eprintln!("[USER UPDATE]: {:?} {:?}", x.user.usernames, x.user.id)
         }
         // Update::UserStatus(_) => {
         //     eprintln!("[HANDLE UPDATE]: UserStatus")
@@ -381,115 +371,4 @@ async fn main() {
 
     // Wait for the previously spawned task to end the execution
     handle.await.unwrap();
-}
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct OrderedChat {
-    pub position: i64,
-    pub chat_id: i64,
-}
-
-pub struct TgBackend {
-    // thread for receiving updates from tdlib
-    pub handle_updates: JoinHandle<()>,
-
-    // TODO need thread to receive action/events from app
-    pub client_id: i32,
-
-    pub authorization_state: Option<AuthorizationState>,
-    pub have_authorization: bool,
-    pub need_quit: bool,
-    pub can_quit: bool,
-
-    pub users: HashMap<i64, User>,
-    pub basic_groups: HashMap<i64, BasicGroup>,
-    pub supergroups: HashMap<i64, Supergroup>,
-    pub secret_chats: HashMap<i32, SecretChat>,
-
-    pub chats: HashMap<i64, Chat>,
-    pub main_chat_list: BTreeSet<OrderedChat>,
-    pub have_full_main_chat_list: bool,
-
-    pub users_full_info: HashMap<i64, UserFullInfo>,
-    pub basic_groups_full_info: HashMap<i64, BasicGroupFullInfo>,
-    pub supergroups_full_info: HashMap<i64, SupergroupFullInfo>,
-}
-
-impl TgBackend {
-    pub fn new() -> Result<Self, std::io::Error> {
-        let handle_updates = tokio::spawn(async {});
-
-        let client_id = tdlib::create_client();
-
-        let authorization_state = None;
-        // probably useless in real app
-        let have_authorization = false;
-        // probably useless in real app
-        let need_quit = false;
-        // probably useless in real app
-        let can_quit = false;
-
-        // maybe all datastructures needs to be thread safe
-        let users: HashMap<i64, User> = HashMap::new();
-        let basic_groups: HashMap<i64, BasicGroup> = HashMap::new();
-        let supergroups: HashMap<i64, Supergroup> = HashMap::new();
-        let secret_chats: HashMap<i32, SecretChat> = HashMap::new();
-
-        let chats: HashMap<i64, Chat> = HashMap::new();
-        let main_chat_list: BTreeSet<OrderedChat> = BTreeSet::new();
-        let have_full_main_chat_list = false;
-
-        let users_full_info: HashMap<i64, UserFullInfo> = HashMap::new();
-        let basic_groups_full_info: HashMap<i64, BasicGroupFullInfo> =
-            HashMap::new();
-        let supergroups_full_info: HashMap<i64, SupergroupFullInfo> =
-            HashMap::new();
-
-        Ok(Self {
-            handle_updates,
-            client_id,
-            authorization_state,
-            have_authorization,
-            need_quit,
-            can_quit,
-            users,
-            basic_groups,
-            supergroups,
-            secret_chats,
-            chats,
-            main_chat_list,
-            have_full_main_chat_list,
-            users_full_info,
-            basic_groups_full_info,
-            supergroups_full_info,
-        })
-    }
-
-    pub async fn set_logging(&self) {
-        // TODO read data from config file
-
-        // Set a fairly low verbosity level. We mainly do this because tdlib
-        // requires to perform a random request with the client to start
-        // receiving updates for it.
-        functions::set_log_verbosity_level(2, self.client_id)
-            .await
-            .unwrap();
-
-        // Create log file
-        let log_stream_file = LogStreamFile {
-            path: ".data/tdlib.log".into(),
-            max_file_size: 1 << 27,
-            redirect_stderr: false,
-        };
-
-        // Set log stream to file
-        if let Err(error) = functions::set_log_stream(
-            LogStream::File(log_stream_file),
-            self.client_id,
-        )
-        .await
-        {
-            eprintln!("[ERROR] \"Write access to the current directory is required\": {error:?}")
-        }
-    }
 }
