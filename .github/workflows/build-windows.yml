@@ -21,6 +21,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  TDLIB_VERSION: 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
   API_HASH: a3406de8d171bb422bb6ddf3bbd800e2
   API_ID: 94575
 
@@ -35,12 +36,13 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: td/
-          key: ${{ runner.os }}-TDLib
+          key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/tdlib/td.git
           cd td
+          git checkout $TDLIB_VERSION
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
           git checkout cd5e746ec203c8c3c61647e0886a8df8c1e78e41

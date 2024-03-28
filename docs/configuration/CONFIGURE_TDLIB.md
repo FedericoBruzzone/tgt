@@ -4,6 +4,8 @@ The steps to build TDLib can be found [here](https://tdlib.github.io/td/build.ht
 
 About the `api_id` you can get one form [https://my.telegram.org](https://my.telegram.org), for other info check the official [documentation](https://core.telegram.org/api/obtaining_api_id).
 
+Current supported TDLib version: [1.8.19](https://github.com/tdlib/td/commit/2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09).
+
 ## Build TDLib
 
 ### MacOS (Intel)
@@ -14,6 +16,7 @@ xcode-select --install
 brew install gperf cmake openssl
 git clone https://github.com/tdlib/td.git
 cd td
+git checkout 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
 rm -rf build
 mkdir build
 cd build
@@ -81,6 +84,7 @@ Run these commands in PowerShell to build TDLib and to install it to td/tdlib:
 ```powershell
 git clone https://github.com/tdlib/td.git
 cd td
+git checkout 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 git checkout cd5e746ec203c8c3c61647e0886a8df8c1e78e41
@@ -120,6 +124,7 @@ sudo apt-get upgrade
 sudo apt-get install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-14 libc++-dev libc++abi-dev
 git clone https://github.com/tdlib/td.git
 cd td
+git checkout 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
 rm -rf build
 mkdir build
 cd build
@@ -180,6 +185,7 @@ cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
 ```bash
 git clone https://github.com/tdlib/td.git
 cd td
+git checkout 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
 rm -rf build
 mkdir build
 cd build
