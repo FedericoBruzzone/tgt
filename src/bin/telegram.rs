@@ -57,14 +57,14 @@ impl PartialOrd for OrderedChat {
 impl Ord for OrderedChat {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self.position.order != other.position.order {
-            if self.position.order < other.position.order {
+            if self.position.order > other.position.order {
                 return core::cmp::Ordering::Less;
             } else {
                 return core::cmp::Ordering::Greater;
             }
         }
         if self.chat_id != other.chat_id {
-            if self.chat_id < other.chat_id {
+            if self.chat_id > other.chat_id {
                 return core::cmp::Ordering::Less;
             } else {
                 return core::cmp::Ordering::Greater;
@@ -194,10 +194,11 @@ impl TgBackend {
                             auth_tx.send(update.authorization_state).unwrap();
                         }
                         Update::User(update_user) => {
-                            eprintln!(
-                                "[USER UPDATE]: {:?} {:?}",
-                                update_user.user.usernames, update_user.user.id
-                            );
+                            // eprintln!(
+                            //     "[USER UPDATE]: {:?} {:?}",
+                            //     update_user.user.usernames,
+                            // update_user.user.id
+                            // );
 
                             users
                                 .lock()
@@ -745,7 +746,7 @@ impl TgBackend {
     }
 
     async fn get_command(&mut self) {
-        let command = ask_user("Enter command (gcs - GetChats, gc <chatId> - GetChat, me - GetMe, sm <chatId> <message> - SendMessage, lo - LogOut, q - Quit): ");
+        let command = ask_user("Enter command (gcs - GetChats, gc <chatId> - GetChat, me - GetMe, sm <chatId> <message> - SendMessage, lo - LogOut, q - Quit, mcl - MainChatList, h <chatId> - GetChatHistory): ");
         let commands: Vec<&str> = command.split(' ').collect();
         match commands[0] {
             "gcs" => {
@@ -818,6 +819,66 @@ impl TgBackend {
                 match functions::close(self.client_id).await {
                     Ok(me) => println!("[CLOSE]: {me:?}"),
                     Err(error) => eprintln!("[CLOSE]: {error:?}"),
+                }
+            }
+            "mcl" => {
+                let mcl = self.main_chat_list.lock().unwrap();
+                let chats = self.chats.lock().unwrap();
+
+                for chat in mcl.iter() {
+                    let c = chats.get(&chat.chat_id).unwrap();
+                    let content = if let enums::MessageContent::MessageText(m) =
+                        c.last_message.clone().unwrap().content
+                    {
+                        m.text.text
+                    } else {
+                        String::new()
+                    };
+                    println!(
+                        "chat_id: {}, title: {}, last_message: {}",
+                        chat.chat_id,
+                        c.title,
+                        content.split('\n').next().unwrap_or("")
+                    );
+                }
+            }
+            "h" => {
+                let chat_id = commands[1].parse::<i64>().unwrap();
+                match functions::get_chat_history(
+                    chat_id,
+                    0,
+                    0,
+                    10,
+                    false,
+                    self.client_id,
+                )
+                .await
+                {
+                    Ok(enums::Messages::Messages(messages)) => {
+                        for message in messages.messages.into_iter().flatten() {
+                            let content =
+                                if let enums::MessageContent::MessageText(m) =
+                                    message.content
+                                {
+                                    m.text.text
+                                } else {
+                                    String::new()
+                                };
+                            let sender_id =
+                                if let enums::MessageSender::User(u) =
+                                    message.sender_id
+                                {
+                                    u.user_id
+                                } else {
+                                    0
+                                };
+                            println!(
+                                "sender_id: {:?}, content: {:?}",
+                                sender_id, content,
+                            )
+                        }
+                    }
+                    Err(error) => eprintln!("[GET CHAT HISTORY]: {error:?}"),
                 }
             }
             _ => (),
