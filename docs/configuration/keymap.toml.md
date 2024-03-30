@@ -33,7 +33,7 @@ keymap = [
 
 # The chat_list key bindings are only usable in the chat list component.
 # When the chat list is focused, the chat list key bindings will be active.
-[chats_list]
+[chat_list]
 
 # The chat key bindings are only usable in the chat component.
 # When the chat is focused, the chat key bindings will be active.

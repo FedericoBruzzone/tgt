@@ -26,7 +26,7 @@ pub enum AppError {
     InvalidEvent(String),
     /// It is a configuration file error. It is used when a key is already
     /// bound.
-    AlreadyBound(String),
+    AlreadyBound,
 }
 /// Convert an `std::io::Error` into an `AppError`.
 impl From<std::io::Error> for AppError {
@@ -59,8 +59,8 @@ impl Display for AppError {
             Self::InvalidEvent(event) => {
                 write!(f, "Invalid event: {}", event)
             }
-            Self::AlreadyBound(key) => {
-                write!(f, "Key already bound: {}", key)
+            Self::AlreadyBound => {
+                write!(f, "Key already bound")
             }
         }
     }

@@ -185,8 +185,12 @@ impl Component for ChatListWindow {
                     .title(Title::from(self.name.as_str())),
             )
             .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>")
+            .highlight_style(
+                Style::default()
+                    .add_modifier(Modifier::ITALIC)
+                    .bg(Color::Cyan),
+            )
+            .highlight_symbol(">> ")
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 

@@ -10,7 +10,7 @@ use {
         enums::{action::Action, component_name::ComponentName, event::Event},
     },
     std::{
-        collections::{hash_map::Entry, HashMap},
+        collections::{hash_map::Entry, HashMap, HashSet},
         path::Path,
         str::FromStr,
     },
@@ -29,6 +29,18 @@ pub enum ActionBinding {
     /// A multiple action binding.
     /// It is used to bind multiple keys to an action.
     Multiple(HashMap<Event, ActionBinding>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// The kind of keymap.
+/// It is used to check for conflicts in the keymaps.
+/// If a keymap entry is present in multiple keymaps, it is considered a
+/// conflict
+enum KeymapKind {
+    Default,
+    ChatList,
+    Chat,
+    Prompt,
 }
 
 #[derive(Clone, Debug)]
@@ -80,11 +92,13 @@ impl KeymapConfig {
     ///
     /// # Arguments
     /// * `keymaps` - A vector of keymap entries.
+    /// * `kind` - The kind of keymap.
     ///
     /// # Returns
     /// A hashmap of event and action binding.
     fn keymaps_vec_to_map(
         keymaps: Vec<KeymapEntry>,
+        kind: KeymapKind,
     ) -> HashMap<Event, ActionBinding> {
         let mut hashmap = HashMap::new();
 
@@ -105,7 +119,8 @@ impl KeymapConfig {
                 .collect();
             if keymap.keys.len() != event.len() {
                 tracing::warn!(
-                    "Some events were not recognized for key: {:?}",
+                    "Some events were not recognized in {:?} section for key: {:?}",
+                    kind,
                     keymap.keys
                 );
                 Self::print_config_file_error("keys", keymap.keys);
@@ -122,7 +137,8 @@ impl KeymapConfig {
             };
             if action == Action::Unknown {
                 tracing::warn!(
-                    "Some actions were not recognized for command: {:?}",
+                    "Some actions were not recognized in {:?} section for command: {:?}",
+                    kind,
                     keymap.command
                 );
                 Self::print_config_file_error(
@@ -134,22 +150,27 @@ impl KeymapConfig {
 
             let description = keymap.description.clone();
 
-            if let Err(AppError::AlreadyBound(_err)) =
-                Self::insert_keymap(&mut hashmap, event, action, description)
-            {
+            if let Err(AppError::AlreadyBound) = Self::insert_keymap(
+                &mut hashmap,
+                event,
+                action,
+                description,
+                kind.clone(),
+            ) {
                 tracing::warn!(
-                    "Keymap entry already exists: {:?} -> {:?}",
+                    "Keymap entry {:?} is already present in the {:?} section",
                     keymap
                         .keys
                         .iter()
                         .map(|k| k.to_string())
                         .collect::<Vec<String>>(),
-                    keymap.command
+                    kind
                 );
             }
         }
         hashmap
     }
+
     /// Insert a keymap entry into the keymap hashmap.
     /// It is used to insert a keymap entry into the keymap hashmap. It is
     /// recursive and it is used to insert a keymap entry with multiple events.
@@ -163,6 +184,7 @@ impl KeymapConfig {
     /// * `event` - A vector of events.
     /// * `action` - An action.
     /// * `description` - An optional description.
+    /// * `kind` - The kind of keymap.
     ///
     /// # Returns
     /// An error if the key is already bound to a command.
@@ -171,6 +193,7 @@ impl KeymapConfig {
         event: Vec<Event>,
         action: Action,
         description: Option<String>,
+        kind: KeymapKind,
     ) -> Result<(), AppError> {
         let num_events = event.len();
         match num_events {
@@ -178,12 +201,12 @@ impl KeymapConfig {
             1 => {
                 match keymap.entry(event[0].clone()) {
                     Entry::Occupied(_) => {
-                        let err = format!(
-                            "Key already bound to a command: {:?}",
-                            event[0]
+                        tracing::error!(
+                            "Key {:?} already bound to a command in {:?} section",
+                            event[0].to_string(),
+                            kind
                         );
-                        tracing::error!(err);
-                        return Err(AppError::AlreadyBound(err));
+                        return Err(AppError::AlreadyBound);
                     }
                     Entry::Vacant(e) => {
                         e.insert(ActionBinding::Single {
@@ -202,15 +225,16 @@ impl KeymapConfig {
                             event[1..].to_vec(),
                             action,
                             description,
+                            kind,
                         )
                     }
                     _ => {
-                        let err = format!(
-                            "Key already bound to a command: {:?}",
-                            event[0]
+                        tracing::error!(
+                            "Key {:?} already bound to a command in {:?} section",
+                            event[0].to_string(),
+                            kind
                         );
-                        tracing::error!(err);
-                        Err(AppError::AlreadyBound(err))
+                        Err(AppError::AlreadyBound)
                     }
                 },
                 Entry::Vacant(entry) => {
@@ -220,6 +244,7 @@ impl KeymapConfig {
                         event[1..].to_vec(),
                         action,
                         description,
+                        kind,
                     );
                     if res.is_ok() {
                         entry.insert(ActionBinding::Multiple(map));
@@ -227,6 +252,38 @@ impl KeymapConfig {
                     res
                 }
             },
+        }
+    }
+
+    /// Check for duplicates in the keymaps.
+    /// It is used to check for duplicates in the keymaps. If a keymap entry is
+    /// present in multiple keymaps, it is considered a conflict.
+    ///
+    /// # Arguments
+    /// * `default` - The default keymap.
+    /// * `chat_list` - The chat list keymap.
+    /// * `chat` - The chat keymap.
+    /// * `prompt` - The prompt keymap.
+    fn check_duplicates(
+        default: &HashMap<Event, ActionBinding>,
+        chat_list: &HashMap<Event, ActionBinding>,
+        chat: &HashMap<Event, ActionBinding>,
+        prompt: &HashMap<Event, ActionBinding>,
+    ) {
+        let mut all: Vec<&Event> = vec![];
+        all.extend(default.keys());
+        all.extend(chat_list.keys());
+        all.extend(chat.keys());
+        all.extend(prompt.keys());
+
+        let mut duplicates = HashSet::new();
+        for k in all {
+            if !duplicates.insert(k) {
+                tracing::warn!(
+                    "Keymap entry {:?} is already present in another keymap",
+                    k.to_string(),
+                );
+            }
         }
     }
 
@@ -253,6 +310,7 @@ impl KeymapConfig {
         }
     }
 }
+
 /// The implementation of the configuration file for the keymap.
 impl ConfigFile for KeymapConfig {
     type Raw = KeymapRaw;
@@ -269,26 +327,46 @@ impl ConfigFile for KeymapConfig {
         match other {
             None => self.clone(),
             Some(other) => {
+                // It is important that the default keymap is merged first.
+                // The other keymaps can override the default keymap, but the
+                // default keymap can not override the other keymaps.
                 if let Some(default) = other.default {
-                    for (k, v) in Self::keymaps_vec_to_map(default.keymap) {
+                    for (k, v) in Self::keymaps_vec_to_map(
+                        default.keymap,
+                        KeymapKind::Default,
+                    ) {
                         self.default.insert(k, v);
                     }
                 }
-                if let Some(chats_list) = other.chats_list {
-                    for (k, v) in Self::keymaps_vec_to_map(chats_list.keymap) {
+                if let Some(chat_list) = other.chat_list {
+                    for (k, v) in Self::keymaps_vec_to_map(
+                        chat_list.keymap,
+                        KeymapKind::ChatList,
+                    ) {
                         self.chat_list.insert(k, v);
                     }
                 }
                 if let Some(chat) = other.chat {
-                    for (k, v) in Self::keymaps_vec_to_map(chat.keymap) {
+                    for (k, v) in
+                        Self::keymaps_vec_to_map(chat.keymap, KeymapKind::Chat)
+                    {
                         self.chat.insert(k, v);
                     }
                 }
                 if let Some(prompt) = other.prompt {
-                    for (k, v) in Self::keymaps_vec_to_map(prompt.keymap) {
+                    for (k, v) in Self::keymaps_vec_to_map(
+                        prompt.keymap,
+                        KeymapKind::Prompt,
+                    ) {
                         self.prompt.insert(k, v);
                     }
                 }
+                Self::check_duplicates(
+                    &self.default,
+                    &self.chat_list,
+                    &self.chat,
+                    &self.prompt,
+                );
                 self.clone()
             }
         }
@@ -304,11 +382,28 @@ impl Default for KeymapConfig {
 /// configuration.
 impl From<KeymapRaw> for KeymapConfig {
     fn from(raw: KeymapRaw) -> Self {
+        let default = Self::keymaps_vec_to_map(
+            raw.default.unwrap().keymap,
+            KeymapKind::Default,
+        );
+        let chat_list = Self::keymaps_vec_to_map(
+            raw.chat_list.unwrap().keymap,
+            KeymapKind::ChatList,
+        );
+        let chat = Self::keymaps_vec_to_map(
+            raw.chat.unwrap().keymap,
+            KeymapKind::Chat,
+        );
+        let prompt = Self::keymaps_vec_to_map(
+            raw.prompt.unwrap().keymap,
+            KeymapKind::Prompt,
+        );
+        Self::check_duplicates(&default, &chat_list, &chat, &prompt);
         Self {
-            default: Self::keymaps_vec_to_map(raw.default.unwrap().keymap),
-            chat_list: Self::keymaps_vec_to_map(raw.chats_list.unwrap().keymap),
-            chat: Self::keymaps_vec_to_map(raw.chat.unwrap().keymap),
-            prompt: Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap),
+            default,
+            chat_list,
+            chat,
+            prompt,
         }
     }
 }
@@ -340,7 +435,7 @@ mod tests {
     fn test_keymap_config_from_raw_empty() {
         let keymap_raw = KeymapRaw {
             default: Some(KeymapMode { keymap: vec![] }),
-            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
@@ -361,7 +456,7 @@ mod tests {
                     description: None,
                 }],
             }),
-            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
@@ -382,7 +477,7 @@ mod tests {
                     description: None,
                 }],
             }),
-            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
@@ -395,7 +490,7 @@ mod tests {
                     description: None,
                 }],
             }),
-            chats_list: Some(KeymapMode { keymap: vec![] }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
         };

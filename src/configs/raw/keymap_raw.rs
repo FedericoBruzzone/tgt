@@ -27,7 +27,7 @@ pub struct KeymapRaw {
     /// The keymap for the default mode.
     pub default: Option<KeymapMode>,
     /// The keymap for the chat list mode.
-    pub chats_list: Option<KeymapMode>,
+    pub chat_list: Option<KeymapMode>,
     /// The keymap for the chat mode.
     pub chat: Option<KeymapMode>,
     /// The keymap for the chat edit mode.
