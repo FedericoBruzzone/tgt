@@ -1,6 +1,7 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
+        configs::config_theme::status_bar_size_info,
         enums::{action::Action, event::Event},
     },
     ratatui::{
@@ -143,12 +144,12 @@ impl Component for StatusBar {
             Span::styled("Size: ", Style::new().bold()),
             Span::styled(
                 self.terminal_area.width.to_string(),
-                Style::new().blue().italic(),
+                status_bar_size_info(),
             ),
             Span::raw(" x "),
             Span::styled(
                 self.terminal_area.height.to_string(),
-                Style::new().blue().italic(),
+                status_bar_size_info(),
             ),
         ])];
 

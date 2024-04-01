@@ -12,6 +12,7 @@ pub mod custom;
 pub mod raw;
 
 pub mod config_file;
+pub mod config_theme;
 pub mod config_type;
 
 pub const TGT_PROGRAM_NAME: &str = "tgt";

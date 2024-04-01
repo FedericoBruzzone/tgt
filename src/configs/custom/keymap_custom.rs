@@ -327,6 +327,7 @@ impl ConfigFile for KeymapConfig {
         match other {
             None => self.clone(),
             Some(other) => {
+                tracing::info!("Merging keymap config");
                 // It is important that the default keymap is merged first.
                 // The other keymaps can override the default keymap, but the
                 // default keymap can not override the other keymaps.
@@ -335,7 +336,12 @@ impl ConfigFile for KeymapConfig {
                         default.keymap,
                         KeymapKind::Default,
                     ) {
-                        self.default.insert(k, v);
+                        if self.default.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the default section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
                     }
                 }
                 if let Some(chat_list) = other.chat_list {
@@ -343,14 +349,24 @@ impl ConfigFile for KeymapConfig {
                         chat_list.keymap,
                         KeymapKind::ChatList,
                     ) {
-                        self.chat_list.insert(k, v);
+                        if self.chat_list.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the chat list section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
                     }
                 }
                 if let Some(chat) = other.chat {
                     for (k, v) in
                         Self::keymaps_vec_to_map(chat.keymap, KeymapKind::Chat)
                     {
-                        self.chat.insert(k, v);
+                        if self.chat.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the chat section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
                     }
                 }
                 if let Some(prompt) = other.prompt {
@@ -358,7 +374,12 @@ impl ConfigFile for KeymapConfig {
                         prompt.keymap,
                         KeymapKind::Prompt,
                     ) {
-                        self.prompt.insert(k, v);
+                        if self.prompt.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the prompt section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
                     }
                 }
                 Self::check_duplicates(
@@ -367,6 +388,7 @@ impl ConfigFile for KeymapConfig {
                     &self.chat,
                     &self.prompt,
                 );
+                println!("{:?}", self);
                 self.clone()
             }
         }

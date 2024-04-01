@@ -51,6 +51,7 @@ impl ConfigFile for AppConfig {
         match other {
             None => self.clone(),
             Some(other) => {
+                tracing::info!("Merging app config");
                 if let Some(mouse_support) = other.mouse_support {
                     self.mouse_support = mouse_support;
                 }

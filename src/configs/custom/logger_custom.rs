@@ -44,6 +44,7 @@ impl ConfigFile for LoggerConfig {
         match other {
             None => self.clone(),
             Some(other) => {
+                tracing::info!("Merging logger config");
                 if let Some(log_folder) = other.log_folder {
                     self.log_folder = log_folder;
                 }

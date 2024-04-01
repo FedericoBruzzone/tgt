@@ -27,10 +27,12 @@ pub enum AppError {
     /// It is a configuration file error. It is used when a key is already
     /// bound.
     AlreadyBound,
+    /// It is an invalid color.
+    InvalidColor(String),
 }
-/// Convert an `std::io::Error` into an `AppError`.
-impl From<std::io::Error> for AppError {
-    fn from(error: std::io::Error) -> Self {
+/// Convert an `Error` into an `AppError`.
+impl From<io::Error> for AppError {
+    fn from(error: io::Error) -> Self {
         Self::Io(error)
     }
 }
@@ -61,6 +63,9 @@ impl Display for AppError {
             }
             Self::AlreadyBound => {
                 write!(f, "Key already bound")
+            }
+            Self::InvalidColor(color) => {
+                write!(f, "Invalid color: {}", color)
             }
         }
     }
