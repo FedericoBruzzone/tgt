@@ -5,16 +5,16 @@ on:
     branches: [ main ]
     paths:
       - 'src/**'
-      - 'cargo.lock'
-      - 'cargo.toml'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
       - 'rustfmt.toml'
       - 'config/**'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/**'
-      - 'cargo.lock'
-      - 'cargo.toml'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
       - 'rustfmt.toml'
       - 'config/**'
 
