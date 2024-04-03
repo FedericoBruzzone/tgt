@@ -22,6 +22,8 @@ pub struct AppConfig {
     pub show_status_bar: bool,
     /// The title bar visibility.
     pub show_title_bar: bool,
+    /// Enable the theme.
+    pub theme_enable: bool,
 }
 /// The application configuration implementation.
 impl AppConfig {
@@ -88,6 +90,7 @@ impl From<AppRaw> for AppConfig {
             frame_rate: raw.frame_rate.unwrap(),
             show_status_bar: raw.show_status_bar.unwrap(),
             show_title_bar: raw.show_title_bar.unwrap(),
+            theme_enable: raw.theme_enable.unwrap(),
         }
     }
 }
@@ -115,6 +118,7 @@ mod tests {
             frame_rate: Some(30.0),
             show_status_bar: Some(true),
             show_title_bar: Some(true),
+            theme_enable: Some(true),
         };
         let app_config = AppConfig::from(app_raw);
         assert!(app_config.mouse_support);
@@ -130,6 +134,7 @@ mod tests {
             frame_rate: Some(60.0),
             show_status_bar: Some(true),
             show_title_bar: Some(true),
+            theme_enable: Some(true),
         });
         let app_raw = AppRaw {
             mouse_support: Some(false),
@@ -137,6 +142,7 @@ mod tests {
             frame_rate: None,
             show_status_bar: None,
             show_title_bar: None,
+            theme_enable: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(!app_config.mouse_support);

@@ -14,10 +14,7 @@ pub struct ThemeEntry {
 #[derive(Clone, Debug, Deserialize)]
 /// The raw theme configuration.
 pub struct ThemeRaw {
-    /// A boolean flag that represents whether the theme is enabled or not.
-    pub theme_enable: Option<bool>,
-    /// The background color.
-    pub background_color: Option<String>,
+    pub palette: Option<HashMap<String, String>>,
 
     /// The theme for the default mode.
     // pub default: Option<ThemeEntry>,

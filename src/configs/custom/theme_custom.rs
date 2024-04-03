@@ -144,8 +144,7 @@ impl From<ThemeEntry> for ThemeStyle {
 
 #[derive(Clone, Debug)]
 pub struct ThemeConfig {
-    pub theme_enable: bool,
-    pub background_color: String,
+    pub palette: HashMap<String, Color>,
 
     pub status_bar: HashMap<String, ThemeStyle>,
 }
@@ -173,11 +172,11 @@ impl ConfigFile for ThemeConfig {
             None => self.clone(),
             Some(other) => {
                 tracing::info!("Merging theme config");
-                if let Some(theme_enable) = other.theme_enable {
-                    self.theme_enable = theme_enable;
-                }
-                if let Some(background_color) = other.background_color {
-                    self.background_color = background_color;
+                if let Some(palette) = other.palette {
+                    palette.into_iter().for_each(|(k, v)| {
+                        self.palette
+                            .insert(k, ThemeStyle::str_to_color(&v).unwrap());
+                    });
                 }
                 if let Some(status_bar) = other.status_bar {
                     status_bar.into_iter().for_each(|(k, v)| {
@@ -198,18 +197,21 @@ impl Default for ThemeConfig {
 
 impl From<ThemeRaw> for ThemeConfig {
     fn from(raw: ThemeRaw) -> Self {
-        let theme_enable = raw.theme_enable.unwrap();
-        let background_color = raw.background_color.unwrap();
         let status_bar = raw
             .status_bar
             .unwrap()
             .into_iter()
             .map(|(k, v)| (k, ThemeStyle::from(v)))
             .collect();
+        let palette = raw
+            .palette
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, ThemeStyle::str_to_color(&v).unwrap()))
+            .collect();
 
         Self {
-            theme_enable,
-            background_color,
+            palette,
             status_bar,
         }
     }

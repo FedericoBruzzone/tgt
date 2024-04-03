@@ -15,4 +15,7 @@ pub struct AppRaw {
     /// A boolean flag that represents whether the title bar should be shown or
     /// not.
     pub show_title_bar: Option<bool>,
+    /// A boolean flag that represents whether the theme should be enabled or
+    /// not.
+    pub theme_enable: Option<bool>,
 }
