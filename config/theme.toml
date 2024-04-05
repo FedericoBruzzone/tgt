@@ -1,32 +1,44 @@
-[default]
+[palette]
+black = "#000000"
+white = "#ffffff"
+primary = "#00548e"
+primary_variant = "#0073b0"
+secondary = "#ca2504"
+secondary_variant = "#e33610"
+background = "#000000"
+surface = "#000000"
+error = "#D50000" # External
+on_primary = "#b2e3f7"
+on_secondary = "#ffcbbb"
+on_background = "#ffffff"
+on_surface = "#ffffff"
+on_error = "#FFCDD2" # External
+# ternary = "#efba5d"
+# on_ternary = "#f47868"
+
+[common]
+border_component_focused = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
+item_selected = { fg = "on_secondary", bg = "secondary", bold = false, underline = false, italic = true }
 
 [chat_list]
+self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
 
 [chat]
+self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
 
 [prompt]
+self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
 
 [status_bar]
-size_info = { fg = "light_blue", bg = "black", bold = false, underline = false, italic = false }
+self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
+size_info_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
+size_info_numbers = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
+press_key_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
+press_key_key = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
+message_quit_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
+message_quit_key = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
 
 [title_bar]
+self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
 
-[palette]
-white = "#ffffff"
-lilac = "#dbbfef"
-lavender = "#a4a0e8"
-comet = "#5a5977"
-bossanova = "#452859"
-midnight = "#3b224c"
-revolver = "#281733"
 
-silver = "#cccccc"
-sirocco = "#697C81"
-mint = "#9ff28f"
-almond = "#eccdba"
-chamois = "#E8DCA0"
-honey = "#efba5d"
-
-apricot = "#f47868"
-lightning = "#ffcd1c"
-delta = "#6F44F0"

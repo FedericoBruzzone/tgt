@@ -1,6 +1,7 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
+        configs::config_theme::style_title_bar,
         enums::action::Action,
     },
     ratatui::{
@@ -107,7 +108,7 @@ impl Component for TitleBar {
         ])];
         let paragraph = Paragraph::new(text)
             .block(Block::new().borders(Borders::ALL))
-            .style(Style::new().white().on_black())
+            .style(style_title_bar())
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });
 

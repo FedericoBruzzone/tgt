@@ -19,7 +19,8 @@ use crate::{
         config_file::ConfigFile,
         custom::{
             app_custom::AppConfig, keymap_custom::KeymapConfig,
-            logger_custom::LoggerConfig, theme_custom::ThemeConfig,
+            logger_custom::LoggerConfig, palette_custom::PaletteConfig,
+            theme_custom::ThemeConfig,
         },
     },
     logger::Logger,
@@ -30,6 +31,7 @@ lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
     pub static ref KEYMAP_CONFIG: KeymapConfig = KeymapConfig::get_config();
     pub static ref APP_CONFIG: AppConfig = AppConfig::get_config();
+    pub static ref PALETTE_CONFIG: PaletteConfig = PaletteConfig::get_config();
     pub static ref THEME_CONFIG: ThemeConfig = ThemeConfig::get_config();
 }
 
@@ -51,6 +53,10 @@ async fn tokio_main() -> Result<(), AppError> {
     let app_config = APP_CONFIG.clone();
     tracing::info!("App config: {:#?}", app_config);
     println!("{:#?}", app_config);
+
+    let palette_config = PALETTE_CONFIG.clone();
+    tracing::info!("Palette config: {:#?}", palette_config);
+    println!("{:#?}", palette_config);
 
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:#?}", theme_config);

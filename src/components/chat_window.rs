@@ -1,13 +1,13 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
+        configs::config_theme::{style_border_component_focused, style_chat},
         enums::action::Action,
     },
     ratatui::{
         layout::Rect,
-        style::{Color, Style},
         symbols::{border, line},
-        widgets::{block, Borders},
+        widgets::{Block, Borders},
     },
     tokio::sync::mpsc::UnboundedSender,
 };
@@ -115,20 +115,20 @@ impl Component for ChatWindow {
                 ..border::PLAIN
             }
         };
-        let color_focused = if self.focused {
-            Color::Cyan
+        let style_border_focused = if self.focused {
+            style_border_component_focused()
         } else {
-            Color::White
+            style_chat()
         };
 
-        frame.render_widget(
-            block::Block::new()
-                .border_set(border)
-                .border_style(Style::default().fg(color_focused))
-                .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-                .title(self.name.as_str()),
-            area,
-        );
+        let block = Block::new()
+            .border_set(border)
+            .border_style(style_border_focused)
+            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+            .style(style_chat())
+            .title(self.name.as_str());
+
+        frame.render_widget(block, area);
 
         Ok(())
     }

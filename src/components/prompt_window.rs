@@ -1,11 +1,11 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
+        configs::config_theme::{style_border_component_focused, style_prompt},
         enums::action::Action,
     },
     ratatui::{
         layout::Rect,
-        style::{Color, Style},
         symbols::{
             border::{Set, PLAIN},
             line::NORMAL,
@@ -121,20 +121,20 @@ impl Component for PromptWindow {
             },
             ..PLAIN
         };
-        let color_focused = if self.focused {
-            Color::Cyan
+        let style_border_focused = if self.focused {
+            style_border_component_focused()
         } else {
-            Color::White
+            style_prompt()
         };
 
-        frame.render_widget(
-            Block::new()
-                .border_set(collapsed_top_and_left_border_set)
-                .border_style(Style::default().fg(color_focused))
-                .borders(Borders::ALL)
-                .title(self.name.as_str()),
-            area,
-        );
+        let block = Block::new()
+            .border_set(collapsed_top_and_left_border_set)
+            .border_style(style_border_focused)
+            .borders(Borders::ALL)
+            .style(style_prompt())
+            .title(self.name.as_str());
+
+        frame.render_widget(block, area);
 
         Ok(())
     }

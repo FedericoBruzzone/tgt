@@ -10,12 +10,14 @@ use {
 /// * App - The application configuration file.
 /// * Keymap - The keymap configuration file.
 /// * Logger - The logger configuration file.
+/// * Palette - The palette configuration file.
 /// * Theme - The theme configuration file.
 /// * Telegram - The Telegram configuration file.
 pub enum ConfigType {
     App,
     Keymap,
     Logger,
+    Palette,
     Theme,
     Telegram,
 }
@@ -28,6 +30,7 @@ impl ConfigType {
             Self::App,
             Self::Keymap,
             Self::Logger,
+            Self::Palette,
             Self::Theme,
             Self::Telegram,
         ]
@@ -42,6 +45,8 @@ impl ConfigType {
             Self::App => "tgt",
             Self::Keymap => "keymap",
             Self::Logger => "logger",
+            // The palette configuration is defined in the theme configuration.
+            Self::Palette => "theme",
             Self::Theme => "theme",
             Self::Telegram => "telegram",
         }
@@ -56,6 +61,7 @@ impl ConfigType {
             Self::App => ".toml",
             Self::Keymap => ".toml",
             Self::Logger => ".toml",
+            Self::Palette => ".toml",
             Self::Theme => ".toml",
             Self::Telegram => ".toml",
         }
@@ -77,6 +83,7 @@ impl ConfigType {
             Self::App => formats,
             Self::Keymap => formats,
             Self::Logger => formats,
+            Self::Palette => formats,
             Self::Theme => formats,
             Self::Telegram => formats,
         }

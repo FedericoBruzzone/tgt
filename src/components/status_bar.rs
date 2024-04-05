@@ -1,12 +1,17 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::status_bar_size_info,
+        configs::config_theme::{
+            style_status_bar, style_status_bar_message_quit_key,
+            style_status_bar_message_quit_text, style_status_bar_press_key_key,
+            style_status_bar_press_key_text,
+            style_status_bar_size_info_numbers,
+            style_status_bar_size_info_text,
+        },
         enums::{action::Action, event::Event},
     },
     ratatui::{
         layout::{Alignment, Rect},
-        style::{Style, Stylize},
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
@@ -127,35 +132,35 @@ impl Component for StatusBar {
         area: Rect,
     ) -> std::io::Result<()> {
         let text = vec![Line::from(vec![
-            Span::raw("Press "),
-            Span::styled("q ", Style::new().green().italic()),
-            Span::raw("or "),
-            Span::styled("ctrl+c ", Style::new().green().italic()),
-            Span::raw("to quit"),
+            Span::styled("Press ", style_status_bar_message_quit_text()),
+            Span::styled("q ", style_status_bar_message_quit_key()),
+            Span::styled("or ", style_status_bar_message_quit_text()),
+            Span::styled("ctrl+c ", style_status_bar_message_quit_key()),
+            Span::styled("to quit", style_status_bar_message_quit_text()),
             //
             Span::raw("     "),
-            Span::styled("Press key: ", Style::new().bold()),
+            Span::styled("Press key: ", style_status_bar_press_key_text()),
             Span::styled(
                 self.last_key.to_string(),
-                Style::new().yellow().italic(),
+                style_status_bar_press_key_key(),
             ),
             //
             Span::raw("     "),
-            Span::styled("Size: ", Style::new().bold()),
+            Span::styled("Size: ", style_status_bar_size_info_text()),
             Span::styled(
                 self.terminal_area.width.to_string(),
-                status_bar_size_info(),
+                style_status_bar_size_info_numbers(),
             ),
-            Span::raw(" x "),
+            Span::styled(" x ", style_status_bar_size_info_text()),
             Span::styled(
                 self.terminal_area.height.to_string(),
-                status_bar_size_info(),
+                style_status_bar_size_info_numbers(),
             ),
         ])];
 
         let paragraph = Paragraph::new(text)
             .block(Block::new().title(self.name.as_str()).borders(Borders::ALL))
-            .style(Style::new().white().on_black())
+            .style(style_status_bar())
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });
 

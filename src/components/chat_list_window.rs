@@ -1,11 +1,14 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
+        configs::config_theme::{
+            style_border_component_focused, style_chat_list,
+            style_item_selected,
+        },
         enums::action::Action,
     },
     ratatui::{
         layout::Rect,
-        style::{Color, Modifier, Style},
         symbols::border::PLAIN,
         widgets::{
             block::{Block, Title},
@@ -168,10 +171,10 @@ impl Component for ChatListWindow {
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> std::io::Result<()> {
-        let color_focused = if self.focused {
-            Color::Cyan
+        let style_border_focused = if self.focused {
+            style_border_component_focused()
         } else {
-            Color::White
+            style_chat_list()
         };
 
         let items = self.chat_list.iter().map(|item| item.as_str());
@@ -180,17 +183,13 @@ impl Component for ChatListWindow {
             .block(
                 Block::default()
                     .border_set(PLAIN)
-                    .border_style(Style::default().fg(color_focused))
+                    .border_style(style_border_focused)
                     .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
                     .title(Title::from(self.name.as_str())),
             )
-            .style(Style::default().fg(Color::White))
-            .highlight_style(
-                Style::default()
-                    .add_modifier(Modifier::ITALIC)
-                    .bg(Color::Cyan),
-            )
-            .highlight_symbol(">> ")
+            .style(style_chat_list())
+            .highlight_style(style_item_selected())
+            .highlight_symbol("➤ ")
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 

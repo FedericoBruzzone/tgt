@@ -13,5 +13,5 @@ frame_rate = 60.0
 show_status_bar = true
 # `show_title_bar` enables the title bar at the top of the terminal.
 show_title_bar = true
-# ``theme_enable` enables the theme.
+# `theme_enable` enables the theme.
 theme_enable = true

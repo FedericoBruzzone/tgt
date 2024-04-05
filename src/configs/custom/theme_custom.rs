@@ -2,161 +2,43 @@ use {
     crate::{
         app_error::AppError,
         configs::{
-            self,
-            config_file::ConfigFile,
-            config_type::ConfigType,
-            raw::theme_raw::{ThemeEntry, ThemeRaw},
+            self, config_file::ConfigFile, config_theme::ThemeStyle,
+            config_type::ConfigType, raw::theme_raw::ThemeRaw,
         },
     },
-    ratatui::style::{Color, Modifier, Style},
     std::{collections::HashMap, path::Path},
 };
 
 #[derive(Clone, Debug)]
-pub struct ThemeStyle {
-    pub fg: Color,
-    pub bg: Color,
-    pub modifier: Modifier,
-}
-
-impl ThemeStyle {
-    pub fn set_bg(mut self, bg: Color) -> Self {
-        self.bg = bg;
-        self
-    }
-    pub fn set_fg(mut self, fg: Color) -> Self {
-        self.fg = fg;
-        self
-    }
-
-    pub fn insert(mut self, modifier: Modifier) -> Self {
-        self.modifier.insert(modifier);
-        self
-    }
-
-    pub fn as_style(&self) -> Style {
-        Style::from(self)
-    }
-
-    pub fn str_to_color(s: &str) -> Result<Color, AppError> {
-        match s {
-            "black" => Ok(Color::Black),
-            "red" => Ok(Color::Red),
-            "green" => Ok(Color::Green),
-            "yellow" => Ok(Color::Yellow),
-            "blue" => Ok(Color::Blue),
-            "magenta" => Ok(Color::Magenta),
-            "cyan" => Ok(Color::Cyan),
-            "gray" => Ok(Color::Gray),
-            "dark_gray" => Ok(Color::DarkGray),
-            "light_red" => Ok(Color::LightRed),
-            "light_green" => Ok(Color::LightGreen),
-            "light_yellow" => Ok(Color::LightYellow),
-            "light_blue" => Ok(Color::LightBlue),
-            "light_magenta" => Ok(Color::LightMagenta),
-            "light_cyan" => Ok(Color::LightCyan),
-            "white" => Ok(Color::White),
-            "reset" | "" => Ok(Color::Reset),
-            s if s.starts_with('#') => {
-                let hex = s.trim_start_matches('#');
-                match hex.len() {
-                    3 => {
-                        let r = u8::from_str_radix(&hex[0..1], 16).unwrap();
-                        let g = u8::from_str_radix(&hex[1..2], 16).unwrap();
-                        let b = u8::from_str_radix(&hex[2..3], 16).unwrap();
-                        Ok(Color::Rgb(r, g, b))
-                    }
-                    6 => {
-                        let r = u8::from_str_radix(&hex[0..2], 16).unwrap();
-                        let g = u8::from_str_radix(&hex[2..4], 16).unwrap();
-                        let b = u8::from_str_radix(&hex[4..6], 16).unwrap();
-                        Ok(Color::Rgb(r, g, b))
-                    }
-                    _ => Err(AppError::InvalidColor(s.to_string())),
-                }
-            }
-            s => {
-                if let [r, g, b] = s
-                    .split(',')
-                    .map(|s| s.trim())
-                    .collect::<Vec<&str>>()
-                    .as_slice()
-                {
-                    match (r.parse::<u8>(), g.parse::<u8>(), b.parse::<u8>()) {
-                        (Ok(r), Ok(g), Ok(b)) => {
-                            return Ok(Color::Rgb(r, g, b))
-                        }
-                        _ => return Err(AppError::InvalidColor(s.to_string())),
-                    }
-                }
-                match s.parse::<u8>() {
-                    Ok(n) => Ok(Color::Indexed(n)),
-                    _ => Err(AppError::InvalidColor(s.to_string())),
-                }
-            }
-        }
-    }
-}
-
-impl Default for ThemeStyle {
-    fn default() -> Self {
-        Self {
-            fg: Color::Reset,
-            bg: Color::Reset,
-            modifier: Modifier::empty(),
-        }
-    }
-}
-
-impl From<&ThemeStyle> for Style {
-    fn from(style: &ThemeStyle) -> Self {
-        Self::default()
-            .fg(style.fg)
-            .bg(style.bg)
-            .add_modifier(style.modifier)
-    }
-}
-
-impl From<ThemeEntry> for ThemeStyle {
-    fn from(entry: ThemeEntry) -> Self {
-        let fg = Self::str_to_color(&entry.fg.unwrap_or("reset".to_string()));
-        let bg = Self::str_to_color(&entry.bg.unwrap_or("reset".to_string()));
-        let mut modifier = Modifier::empty();
-        modifier.insert(match entry.italic {
-            Some(true) => Modifier::ITALIC,
-            _ => Modifier::empty(),
-        });
-        modifier.insert(match entry.bold {
-            Some(true) => Modifier::BOLD,
-            _ => Modifier::empty(),
-        });
-        modifier.insert(match entry.underline {
-            Some(true) => Modifier::UNDERLINED,
-            _ => Modifier::empty(),
-        });
-        Self {
-            fg: fg.unwrap(),
-            bg: bg.unwrap(),
-            modifier,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
+/// The theme configuration.
 pub struct ThemeConfig {
-    pub palette: HashMap<String, Color>,
-
+    /// The theme configuration for the all components.
+    pub common: HashMap<String, ThemeStyle>,
+    /// The theme configuration for the chat list.
+    pub chat_list: HashMap<String, ThemeStyle>,
+    /// The theme configuration for the chat.
+    pub chat: HashMap<String, ThemeStyle>,
+    /// The theme configuration for the prompt.
+    pub prompt: HashMap<String, ThemeStyle>,
+    /// The theme configuration for the status bar.
     pub status_bar: HashMap<String, ThemeStyle>,
+    /// The theme configuration for the title bar.
+    pub title_bar: HashMap<String, ThemeStyle>,
 }
 
+/// The theme configuration implementation.
 impl ThemeConfig {
+    /// Get the default theme configuration.
+    ///
+    /// # Returns
+    /// The default theme configuration.
     pub fn default_result() -> Result<Self, AppError> {
         configs::deserialize_to_config_into::<ThemeRaw, Self>(Path::new(
             &configs::custom::default_config_theme_file_path()?,
         ))
     }
 }
-
+/// The implementation of the configuration file for the theme.
 impl ConfigFile for ThemeConfig {
     type Raw = ThemeRaw;
 
@@ -172,10 +54,24 @@ impl ConfigFile for ThemeConfig {
             None => self.clone(),
             Some(other) => {
                 tracing::info!("Merging theme config");
-                if let Some(palette) = other.palette {
-                    palette.into_iter().for_each(|(k, v)| {
-                        self.palette
-                            .insert(k, ThemeStyle::str_to_color(&v).unwrap());
+                if let Some(common) = other.common {
+                    common.into_iter().for_each(|(k, v)| {
+                        self.common.insert(k, ThemeStyle::from(v));
+                    });
+                }
+                if let Some(chat_list) = other.chat_list {
+                    chat_list.into_iter().for_each(|(k, v)| {
+                        self.chat_list.insert(k, ThemeStyle::from(v));
+                    });
+                }
+                if let Some(chat) = other.chat {
+                    chat.into_iter().for_each(|(k, v)| {
+                        self.chat.insert(k, ThemeStyle::from(v));
+                    });
+                }
+                if let Some(prompt) = other.prompt {
+                    prompt.into_iter().for_each(|(k, v)| {
+                        self.prompt.insert(k, ThemeStyle::from(v));
                     });
                 }
                 if let Some(status_bar) = other.status_bar {
@@ -183,36 +79,285 @@ impl ConfigFile for ThemeConfig {
                         self.status_bar.insert(k, ThemeStyle::from(v));
                     });
                 }
+                if let Some(title_bar) = other.title_bar {
+                    title_bar.into_iter().for_each(|(k, v)| {
+                        self.title_bar.insert(k, ThemeStyle::from(v));
+                    });
+                }
                 self.clone()
             }
         }
     }
 }
-
+/// The default implementation for the theme configuration.
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self::default_result().unwrap()
     }
 }
-
+/// The conversion from the raw theme configuration to the theme configuration.
 impl From<ThemeRaw> for ThemeConfig {
     fn from(raw: ThemeRaw) -> Self {
+        let common = raw
+            .common
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, ThemeStyle::from(v)))
+            .collect();
+        let chat_list = raw
+            .chat_list
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, ThemeStyle::from(v)))
+            .collect();
+        let chat = raw
+            .chat
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, ThemeStyle::from(v)))
+            .collect();
+        let prompt = raw
+            .prompt
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, ThemeStyle::from(v)))
+            .collect();
         let status_bar = raw
             .status_bar
             .unwrap()
             .into_iter()
             .map(|(k, v)| (k, ThemeStyle::from(v)))
             .collect();
-        let palette = raw
-            .palette
+        let title_bar = raw
+            .title_bar
             .unwrap()
             .into_iter()
-            .map(|(k, v)| (k, ThemeStyle::str_to_color(&v).unwrap()))
+            .map(|(k, v)| (k, ThemeStyle::from(v)))
             .collect();
 
         Self {
-            palette,
+            common,
+            chat_list,
+            chat,
+            prompt,
             status_bar,
+            title_bar,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use ratatui::style::Color;
+
+    use crate::configs::{
+        config_file::ConfigFile,
+        custom::theme_custom::ThemeConfig,
+        raw::theme_raw::{ThemeEntry, ThemeRaw},
+    };
+
+    #[test]
+    fn test_theme_config_default() {
+        let theme_config =
+            crate::configs::custom::theme_custom::ThemeConfig::default();
+        assert_eq!(theme_config.common.len(), 2);
+        assert_eq!(theme_config.chat_list.len(), 1);
+        assert_eq!(theme_config.chat.len(), 1);
+        assert_eq!(theme_config.prompt.len(), 1);
+        assert_eq!(theme_config.status_bar.len(), 7);
+        assert_eq!(theme_config.title_bar.len(), 1);
+    }
+
+    #[test]
+    fn test_theme_config_from_raw_empty() {
+        let theme_raw = ThemeRaw {
+            common: Some(HashMap::new()),
+            chat_list: Some(HashMap::new()),
+            chat: Some(HashMap::new()),
+            prompt: Some(HashMap::new()),
+            status_bar: Some(HashMap::new()),
+            title_bar: Some(HashMap::new()),
+        };
+        let theme_config = ThemeConfig::from(theme_raw);
+        assert_eq!(theme_config.common.len(), 0);
+    }
+
+    #[test]
+    fn test_theme_config_from_raw() {
+        let mut common = HashMap::new();
+        common.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("red".to_string()),
+                bg: Some("black".to_string()),
+                italic: Some(true),
+                bold: Some(true),
+                underline: Some(true),
+            },
+        );
+        common.insert(
+            "selected".to_string(),
+            ThemeEntry {
+                fg: Some("black".to_string()),
+                bg: Some("red".to_string()),
+                italic: Some(false),
+                bold: Some(false),
+                underline: Some(false),
+            },
+        );
+        let mut chat_list = HashMap::new();
+        chat_list.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("red".to_string()),
+                bg: Some("black".to_string()),
+                italic: Some(true),
+                bold: Some(true),
+                underline: Some(true),
+            },
+        );
+        let mut chat = HashMap::new();
+        chat.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("red".to_string()),
+                bg: Some("black".to_string()),
+                italic: Some(true),
+                bold: Some(true),
+                underline: Some(true),
+            },
+        );
+        let theme_raw = ThemeRaw {
+            common: Some(common),
+            chat_list: Some(HashMap::new()),
+            chat: Some(HashMap::new()),
+            prompt: Some(HashMap::new()),
+            status_bar: Some(HashMap::new()),
+            title_bar: Some(HashMap::new()),
+        };
+        let theme_config = ThemeConfig::from(theme_raw);
+        assert_eq!(theme_config.common.len(), 2);
+        assert_eq!(theme_config.chat_list.len(), 0);
+        assert_eq!(theme_config.chat.len(), 0);
+        assert_eq!(theme_config.prompt.len(), 0);
+        assert_eq!(theme_config.status_bar.len(), 0);
+        assert_eq!(theme_config.title_bar.len(), 0);
+    }
+
+    #[test]
+    fn test_theme_config_merge() {
+        let mut common = HashMap::new();
+        common.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("red".to_string()),
+                bg: Some("black".to_string()),
+                italic: Some(true),
+                bold: Some(true),
+                underline: Some(true),
+            },
+        );
+        common.insert(
+            "selected".to_string(),
+            ThemeEntry {
+                fg: Some("black".to_string()),
+                bg: Some("red".to_string()),
+                italic: Some(false),
+                bold: Some(false),
+                underline: Some(false),
+            },
+        );
+        let mut chat_list = HashMap::new();
+        chat_list.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("red".to_string()),
+                bg: Some("black".to_string()),
+                italic: Some(true),
+                bold: Some(true),
+                underline: Some(true),
+            },
+        );
+        let mut chat = HashMap::new();
+        chat.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("red".to_string()),
+                bg: Some("black".to_string()),
+                italic: Some(true),
+                bold: Some(true),
+                underline: Some(true),
+            },
+        );
+        let theme_raw = ThemeRaw {
+            common: Some(common),
+            chat_list: Some(HashMap::new()),
+            chat: Some(HashMap::new()),
+            prompt: Some(HashMap::new()),
+            status_bar: Some(HashMap::new()),
+            title_bar: Some(HashMap::new()),
+        };
+        let mut theme_config = ThemeConfig::from(theme_raw);
+
+        let mut common = HashMap::new();
+        common.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("blue".to_string()),
+                bg: Some("white".to_string()),
+                italic: Some(false),
+                bold: Some(false),
+                underline: Some(false),
+            },
+        );
+        let mut chat_list = HashMap::new();
+        chat_list.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("blue".to_string()),
+                bg: Some("white".to_string()),
+                italic: Some(false),
+                bold: Some(false),
+                underline: Some(false),
+            },
+        );
+        let mut chat = HashMap::new();
+        chat.insert(
+            "default".to_string(),
+            ThemeEntry {
+                fg: Some("blue".to_string()),
+                bg: Some("white".to_string()),
+                italic: Some(false),
+                bold: Some(false),
+                underline: Some(false),
+            },
+        );
+        let theme_raw = ThemeRaw {
+            common: Some(common),
+            chat_list: Some(HashMap::new()),
+            chat: Some(HashMap::new()),
+            prompt: Some(HashMap::new()),
+            status_bar: Some(HashMap::new()),
+            title_bar: Some(HashMap::new()),
+        };
+        let theme_config = theme_config.merge(Some(theme_raw));
+        assert_eq!(theme_config.common.len(), 2);
+        assert_eq!(theme_config.chat_list.len(), 0);
+        assert_eq!(theme_config.chat.len(), 0);
+        assert_eq!(theme_config.prompt.len(), 0);
+        assert_eq!(theme_config.status_bar.len(), 0);
+        assert_eq!(theme_config.title_bar.len(), 0);
+        assert_eq!(theme_config.common.get("default").unwrap().fg, Color::Blue);
+        assert_eq!(
+            theme_config.common.get("default").unwrap().bg,
+            Color::Rgb(255, 255, 255)
+        );
+        assert_eq!(
+            theme_config.common.get("selected").unwrap().fg,
+            Color::Rgb(0, 0, 0)
+        );
+        assert_eq!(theme_config.common.get("selected").unwrap().bg, Color::Red);
     }
 }

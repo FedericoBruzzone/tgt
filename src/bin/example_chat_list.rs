@@ -1,9 +1,3 @@
-use std::{
-    error::Error,
-    io,
-    time::{Duration, Instant},
-};
-
 use {
     crossterm::{
         event::{
@@ -17,14 +11,29 @@ use {
         },
     },
     ratatui::{prelude::*, widgets::*},
+    std::{
+        error::Error,
+        io,
+        time::{Duration, Instant},
+    },
 };
 
+/// This struct holds the current state of the list and the items.
 struct StatefulList<T> {
+    /// The state of the list.
     state: ListState,
+    /// The items in the list.
     items: Vec<T>,
 }
 
 impl<T> StatefulList<T> {
+    /// Create a new `StatefulList` with the given items.
+    ///
+    /// # Arguments
+    /// * `items` - The items to add to the list.
+    ///
+    /// # Returns
+    /// A new instance of `StatefulList`.
     fn with_items(items: Vec<T>) -> StatefulList<T> {
         StatefulList {
             state: ListState::default(),
@@ -32,6 +41,10 @@ impl<T> StatefulList<T> {
         }
     }
 
+    /// Select the next item in the list.
+    ///
+    /// This will select the next item in the list. If the last item is already
+    /// selected, the first item will be selected.
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
@@ -46,6 +59,10 @@ impl<T> StatefulList<T> {
         self.state.select(Some(i));
     }
 
+    /// Select the previous item in the list.
+    ///
+    /// This will select the previous item in the list. If the first item is
+    /// already selected, the last item will be selected.
     fn previous(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
@@ -60,6 +77,10 @@ impl<T> StatefulList<T> {
         self.state.select(Some(i));
     }
 
+    /// Unselect the currently selected item.
+    ///
+    /// This will unselect the currently selected item.
+    /// If no item is selected, nothing will happen.
     fn unselect(&mut self) {
         self.state.select(None);
     }

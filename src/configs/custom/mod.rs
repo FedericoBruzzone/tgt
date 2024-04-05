@@ -5,6 +5,7 @@ use {
 pub mod app_custom;
 pub mod keymap_custom;
 pub mod logger_custom;
+pub mod palette_custom;
 pub mod theme_custom;
 
 /// Get the default configuration file path of the specified configuration type.
@@ -53,6 +54,14 @@ pub fn default_config_app_file_path() -> io::Result<String> {
 /// The default configuration file path for the theme.
 pub fn default_config_theme_file_path() -> io::Result<String> {
     default_config_file_path_of(ConfigType::Theme)
+}
+
+/// Get the default configuration file path for the palette.
+///
+/// # Returns
+/// The default configuration file path for the palette.
+pub fn default_config_palette_file_path() -> io::Result<String> {
+    default_config_file_path_of(ConfigType::Palette)
 }
 
 // #[cfg(not(target_os = "windows"))]

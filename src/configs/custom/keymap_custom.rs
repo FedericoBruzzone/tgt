@@ -388,7 +388,6 @@ impl ConfigFile for KeymapConfig {
                     &self.chat,
                     &self.prompt,
                 );
-                println!("{:?}", self);
                 self.clone()
             }
         }
