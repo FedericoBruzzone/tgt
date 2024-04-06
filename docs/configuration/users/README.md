@@ -10,5 +10,7 @@ Note that after the finding the first configuration file, `tgt` stops looking fo
 ## Configuration Files
 
 In the configuration directory, `tgt` looks for the following files:
-- `logger.toml` for logger configuration (see [Logger Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/logger.toml.md))
-- `keymap.toml` for keymap configuration (see [Keymap Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/keymap.toml.md))
+- `app.toml` for theme configuration (see [App Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/app.toml.md))
+- `keymap.toml` for keymap configuration (see [Keymap Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/keymap.toml.md))
+- `theme.toml` for theme configuration (see [Theme Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/theme.toml.md))
+- `logger.toml` for logger configuration (see [Logger Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/logger.toml.md))

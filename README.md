@@ -40,7 +40,7 @@
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
 For more information, do not hesitate to contact us (see the [Contact](#contact) section).
 
-The [CONFIGURE_TDLIB.md](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/CONFIGURE_TDLIB.md) file contains the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
+The [CONFIGURE_TDLIB.md](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/contributors/CONFIGURE_TDLIB.md) file contains the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
 
 ### Road Map
 

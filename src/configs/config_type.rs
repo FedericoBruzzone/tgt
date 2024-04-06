@@ -42,7 +42,7 @@ impl ConfigType {
     /// * `&'static str` - The file name without the file extension.
     pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::App => "tgt",
+            Self::App => "app",
             Self::Keymap => "keymap",
             Self::Logger => "logger",
             // The palette configuration is defined in the theme configuration.
