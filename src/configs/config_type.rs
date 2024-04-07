@@ -3,7 +3,7 @@ use {
     std::fmt::{Display, Formatter, Result},
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 /// `ConfigType` is an enum that represents the different types of configuration
 /// files that the application can use. The different types of configuration
 /// files are:

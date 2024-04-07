@@ -24,6 +24,8 @@ pub struct AppConfig {
     pub show_title_bar: bool,
     /// Enable the theme.
     pub theme_enable: bool,
+    /// The theme filename.
+    pub theme_filename: String,
 }
 /// The application configuration implementation.
 impl AppConfig {
@@ -69,6 +71,12 @@ impl ConfigFile for AppConfig {
                 if let Some(show_title_bar) = other.show_title_bar {
                     self.show_title_bar = show_title_bar;
                 }
+                if let Some(theme_enable) = other.theme_enable {
+                    self.theme_enable = theme_enable;
+                }
+                if let Some(theme_filename) = other.theme_filename {
+                    self.theme_filename = theme_filename;
+                }
                 self.clone()
             }
         }
@@ -91,6 +99,7 @@ impl From<AppRaw> for AppConfig {
             show_status_bar: raw.show_status_bar.unwrap(),
             show_title_bar: raw.show_title_bar.unwrap(),
             theme_enable: raw.theme_enable.unwrap(),
+            theme_filename: raw.theme_filename.unwrap(),
         }
     }
 }
@@ -108,6 +117,10 @@ mod tests {
         assert!(app_config.mouse_support);
         assert!(app_config.paste_support);
         assert_eq!(app_config.frame_rate, 60.0);
+        assert!(app_config.show_status_bar);
+        assert!(app_config.show_title_bar);
+        assert!(app_config.theme_enable);
+        assert_eq!(app_config.theme_filename, "theme.toml");
     }
 
     #[test]
@@ -119,11 +132,16 @@ mod tests {
             show_status_bar: Some(true),
             show_title_bar: Some(true),
             theme_enable: Some(true),
+            theme_filename: Some("test".to_string()),
         };
         let app_config = AppConfig::from(app_raw);
         assert!(app_config.mouse_support);
         assert!(app_config.paste_support);
         assert_eq!(app_config.frame_rate, 30.0);
+        assert!(app_config.show_status_bar);
+        assert!(app_config.show_title_bar);
+        assert!(app_config.theme_enable);
+        assert_eq!(app_config.theme_filename, "test");
     }
 
     #[test]
@@ -135,6 +153,7 @@ mod tests {
             show_status_bar: Some(true),
             show_title_bar: Some(true),
             theme_enable: Some(true),
+            theme_filename: Some("test".to_string()),
         });
         let app_raw = AppRaw {
             mouse_support: Some(false),
@@ -143,15 +162,50 @@ mod tests {
             show_status_bar: None,
             show_title_bar: None,
             theme_enable: None,
+            theme_filename: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(!app_config.mouse_support);
         assert!(!app_config.paste_support);
         assert_eq!(app_config.frame_rate, 60.0);
+        assert!(app_config.show_status_bar);
+        assert!(app_config.show_title_bar);
+        assert!(app_config.theme_enable);
+        assert_eq!(app_config.theme_filename, "test");
     }
 
     #[test]
     fn test_app_config_override_fields() {
         assert!(AppConfig::override_fields());
+    }
+
+    #[test]
+    fn test_merge_all_fields() {
+        let mut app_config = AppConfig::default();
+        let app_raw = AppRaw {
+            mouse_support: None,
+            paste_support: None,
+            frame_rate: None,
+            show_status_bar: None,
+            show_title_bar: None,
+            theme_enable: None,
+            theme_filename: None,
+        };
+        app_config = app_config.merge(Some(app_raw));
+        assert!(app_config.mouse_support);
+        assert!(app_config.paste_support);
+        assert_eq!(app_config.frame_rate, 60.0);
+        assert!(app_config.show_status_bar);
+        assert!(app_config.show_title_bar);
+        assert!(app_config.theme_enable);
+        assert_eq!(app_config.theme_filename, "theme.toml");
+    }
+
+    #[test]
+    fn test_get_type() {
+        assert_eq!(
+            AppConfig::get_type(),
+            crate::configs::config_type::ConfigType::App
+        );
     }
 }

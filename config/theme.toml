@@ -1,44 +1,62 @@
+# [palette]
+# black = "#000000"
+# white = "#ffffff"
+# primary = "#00548e"
+# primary_variant = "#0073b0"
+# secondary = "#ca2504"
+# secondary_variant = "#e33610"
+# background = "#000000"
+# surface = "#000000"
+# error = "#D50000" # External
+# primary_light = "#b2e3f7"
+# secondary_light = "#ffcbbb"
+# on_background = "#ffffff"
+# on_surface = "#ffffff"
+# on_error = "#FFCDD2" # External
+# # ternary = "#efba5d"
+# # on_ternary = "#f47868"
 [palette]
 black = "#000000"
 white = "#ffffff"
+background = "#000000"
 primary = "#00548e"
 primary_variant = "#0073b0"
+primary_light = "#b2e3f7"
 secondary = "#ca2504"
 secondary_variant = "#e33610"
-background = "#000000"
-surface = "#000000"
-error = "#D50000" # External
-on_primary = "#b2e3f7"
-on_secondary = "#ffcbbb"
-on_background = "#ffffff"
-on_surface = "#ffffff"
-on_error = "#FFCDD2" # External
-# ternary = "#efba5d"
-# on_ternary = "#f47868"
+secondary_light = "#ffcbbb"
+ternary = "#696969"
+ternary_variant = "#808080"
+ternary_light = "#d3d3d3"
+surface = "#141414"
+on_surface = "#dcdcdc"
+error = "#D50000"
+on_error = "#FFCDD2"
+
 
 [common]
 border_component_focused = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
-item_selected = { fg = "on_secondary", bg = "secondary", bold = false, underline = false, italic = true }
+item_selected = { fg = "ternary", bg = "ternary_light", bold = false, underline = false, italic = true }
 
 [chat_list]
-self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
 
 [chat]
-self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
+message_myself = { fg = "primary_light", bg = "ternary", bold = false, underline = false, italic = false }
+message_other = { fg = "secondary_light", bg = "ternary_variant", bold = false, underline = false, italic = false }
 
 [prompt]
-self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
 
 [status_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
-size_info_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
-size_info_numbers = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
-press_key_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
-press_key_key = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
-message_quit_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
-message_quit_key = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
+size_info_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+size_info_numbers = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
+press_key_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+press_key_key = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
+message_quit_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+message_quit_key = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
 
 [title_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
-
-

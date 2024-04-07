@@ -3,15 +3,15 @@ use {
         components::component::{Component, HandleFocus, HandleSmallArea},
         configs::config_theme::{
             style_border_component_focused, style_chat, style_chat_list,
+            style_chat_message_myself, style_chat_message_other,
             style_item_selected,
         },
         enums::action::Action,
     },
     ratatui::{
         layout::{Alignment, Rect},
-        style::Stylize,
         symbols::{border, line},
-        text::{Line, Text},
+        text::Line,
         widgets::{Block, Borders, List, ListDirection, ListItem, ListState},
     },
     tokio::sync::mpsc::UnboundedSender,
@@ -191,9 +191,20 @@ impl Component for ChatWindow {
             } else {
                 Alignment::Left
             };
+            let style = if i % 2 == 0 {
+                style_chat_message_myself()
+            } else {
+                style_chat_message_other()
+            };
+
             // ListItem::new(Text::from(item.as_str()).alignment(alignment))
             ListItem::new(
-                Line::from(item.as_str().on_blue()).alignment(alignment),
+                Line::from(
+                    item.as_str(), /* .fg(style.fg.unwrap()).bg(style.bg.
+                                    * unwrap()), */
+                )
+                .alignment(alignment)
+                .style(style),
             )
         });
 

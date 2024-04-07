@@ -66,9 +66,10 @@ pub trait ConfigFile: Sized + Default + Clone {
             )
         }
     }
-    /// Search the configuration directories for a file.
+    /// Search for a configuration file in the configuration directories.
     /// This function searches the configuration directories for the specified
-    /// file name and returns the first match.
+    /// file name and returns the path to the first matching file. If no
+    /// matching file is found, `None` is returned.
     ///
     /// # Arguments
     /// * `file_name` - The name of the file (including the file extension) to
@@ -77,7 +78,7 @@ pub trait ConfigFile: Sized + Default + Clone {
     /// # Returns
     /// The path to the first matching file or `None` if no matching file is
     /// found.
-    fn search_config_directories(file_name: &str) -> Option<PathBuf> {
+    fn search_config_file(file_name: &str) -> Option<PathBuf> {
         CONFIG_DIR_HIERARCHY
             .iter()
             .map(|path| path.join(file_name))
@@ -100,7 +101,7 @@ pub trait ConfigFile: Sized + Default + Clone {
     where
         R: DeserializeOwned,
     {
-        match Self::search_config_directories(file_name) {
+        match Self::search_config_file(file_name) {
             Some(file_path) => {
                 match configs::deserialize_to_config::<R>(&file_path) {
                     Ok(s) => {
@@ -145,7 +146,7 @@ pub trait ConfigFile: Sized + Default + Clone {
         S: std::default::Default,
     {
         // [TODO] Handle CLI arguments
-        match Self::search_config_directories(file_name) {
+        match Self::search_config_file(file_name) {
             Some(file_path) => {
                 match configs::deserialize_to_config_into::<R, S>(&file_path) {
                     Ok(s) => {

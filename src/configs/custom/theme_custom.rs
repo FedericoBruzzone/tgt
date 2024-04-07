@@ -5,6 +5,7 @@ use {
             self, config_file::ConfigFile, config_theme::ThemeStyle,
             config_type::ConfigType, raw::theme_raw::ThemeRaw,
         },
+        APP_CONFIG,
     },
     std::{collections::HashMap, path::Path},
 };
@@ -25,13 +26,12 @@ pub struct ThemeConfig {
     /// The theme configuration for the title bar.
     pub title_bar: HashMap<String, ThemeStyle>,
 }
-
 /// The theme configuration implementation.
 impl ThemeConfig {
     /// Get the default theme configuration.
     ///
     /// # Returns
-    /// The default theme configuration.
+    /// * `Result<Self>` - The default theme configuration.
     pub fn default_result() -> Result<Self, AppError> {
         configs::deserialize_to_config_into::<ThemeRaw, Self>(Path::new(
             &configs::custom::default_config_theme_file_path()?,
@@ -47,6 +47,23 @@ impl ConfigFile for ThemeConfig {
     }
     fn override_fields() -> bool {
         true
+    }
+
+    // We need to override the default implementation of the get_config function
+    // to use the theme_filename from the app config.
+    // The default value of theme_filename is "theme.toml".
+    fn get_config() -> Self {
+        if Self::override_fields() {
+            let mut default = Self::default();
+            default.merge(Self::deserialize_custom_config::<Self::Raw>(
+                // Self::get_type().as_default_filename().as_str(),
+                &APP_CONFIG.theme_filename,
+            ))
+        } else {
+            Self::deserialize_config_or_default::<Self::Raw, Self>(
+                Self::get_type().as_default_filename().as_str(),
+            )
+        }
     }
 
     fn merge(&mut self, other: Option<Self::Raw>) -> Self {
@@ -148,14 +165,15 @@ impl From<ThemeRaw> for ThemeConfig {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use ratatui::style::Color;
-
-    use crate::configs::{
-        config_file::ConfigFile,
-        custom::theme_custom::ThemeConfig,
-        raw::theme_raw::{ThemeEntry, ThemeRaw},
+    use {
+        crate::configs::{
+            config_file::ConfigFile,
+            config_type::ConfigType,
+            custom::theme_custom::ThemeConfig,
+            raw::theme_raw::{ThemeEntry, ThemeRaw},
+        },
+        ratatui::style::Color,
+        std::collections::HashMap,
     };
 
     #[test]
@@ -164,7 +182,7 @@ mod tests {
             crate::configs::custom::theme_custom::ThemeConfig::default();
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 1);
-        assert_eq!(theme_config.chat.len(), 1);
+        assert_eq!(theme_config.chat.len(), 3);
         assert_eq!(theme_config.prompt.len(), 1);
         assert_eq!(theme_config.status_bar.len(), 7);
         assert_eq!(theme_config.title_bar.len(), 1);
@@ -359,5 +377,35 @@ mod tests {
             Color::Rgb(0, 0, 0)
         );
         assert_eq!(theme_config.common.get("selected").unwrap().bg, Color::Red);
+    }
+
+    #[test]
+    fn test_override_fields() {
+        assert!(ThemeConfig::override_fields());
+    }
+
+    #[test]
+    fn test_merge_all_fields() {
+        let mut theme_config = ThemeConfig::default();
+        let theme_raw = ThemeRaw {
+            common: Some(HashMap::new()),
+            chat_list: Some(HashMap::new()),
+            chat: Some(HashMap::new()),
+            prompt: Some(HashMap::new()),
+            status_bar: Some(HashMap::new()),
+            title_bar: Some(HashMap::new()),
+        };
+        theme_config = theme_config.merge(Some(theme_raw));
+        assert_eq!(theme_config.common.len(), 2);
+        assert_eq!(theme_config.chat_list.len(), 1);
+        assert_eq!(theme_config.chat.len(), 3);
+        assert_eq!(theme_config.prompt.len(), 1);
+        assert_eq!(theme_config.status_bar.len(), 7);
+        assert_eq!(theme_config.title_bar.len(), 1);
+    }
+
+    #[test]
+    fn test_get_type() {
+        assert_eq!(ThemeConfig::get_type(), ConfigType::Theme);
     }
 }

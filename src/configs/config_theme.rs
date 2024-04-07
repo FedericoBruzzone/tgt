@@ -153,12 +153,10 @@ impl ThemeStyle {
 impl From<ThemeEntry> for ThemeStyle {
     fn from(entry: ThemeEntry) -> Self {
         let fg = Self::str_to_color_with_palette(
-            // `background` is the name used in the palette.
-            &entry.fg.unwrap_or("background".to_string()),
+            &entry.fg.unwrap_or("black".to_string()),
         );
         let bg = Self::str_to_color_with_palette(
-            // `on_background` is the name used in the palette.
-            &entry.bg.unwrap_or("on_background".to_string()),
+            &entry.bg.unwrap_or("white".to_string()),
         );
         let mut modifier = Modifier::empty();
         modifier.insert(match entry.italic {
@@ -246,6 +244,14 @@ pub fn style_chat() -> Style {
     theme_style!(THEME_CONFIG.chat.get("self").unwrap())
 }
 
+pub fn style_chat_message_myself() -> Style {
+    theme_style!(THEME_CONFIG.chat.get("message_myself").unwrap())
+}
+
+pub fn style_chat_message_other() -> Style {
+    theme_style!(THEME_CONFIG.chat.get("message_other").unwrap())
+}
+
 // ========= PROMPT =========
 pub fn style_prompt() -> Style {
     theme_style!(THEME_CONFIG.prompt.get("self").unwrap())
@@ -296,15 +302,15 @@ mod tests {
     #[test]
     fn test_theme_style_from() {
         let entry = ThemeEntry {
-            fg: Some("black".to_string()),
-            bg: Some("white".to_string()),
+            fg: Some("white".to_string()),
+            bg: Some("black".to_string()),
             italic: Some(true),
             bold: Some(true),
             underline: Some(true),
         };
         let style = ThemeStyle::from(entry);
-        assert_eq!(style.fg, Color::Rgb(0, 0, 0));
-        assert_eq!(style.bg, Color::Rgb(255, 255, 255));
+        assert_eq!(style.fg, Color::Rgb(255, 255, 255));
+        assert_eq!(style.bg, Color::Rgb(0, 0, 0));
         assert_eq!(
             style.modifier,
             Modifier::ITALIC | Modifier::BOLD | Modifier::UNDERLINED
@@ -353,8 +359,8 @@ mod tests {
     #[test]
     fn test_theme_style_str_to_color_with_palette() {
         let entry = ThemeEntry {
-            fg: Some("background".to_string()),
-            bg: Some("on_background".to_string()),
+            fg: Some("black".to_string()),
+            bg: Some("white".to_string()),
             italic: Some(true),
             bold: Some(true),
             underline: Some(true),

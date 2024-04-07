@@ -15,3 +15,6 @@ show_status_bar = true
 show_title_bar = true
 # `theme_enable` enables the theme.
 theme_enable = true
+# `theme_filename` is the name of the file that contains the theme.
+# The default filename is "theme.toml".
+theme_filename = "theme.toml"

@@ -89,7 +89,7 @@ impl ChatListWindow {
         let i = match self.chat_list_state.selected() {
             Some(i) => {
                 if i >= self.chat_list.len() - 1 {
-                    0
+                    i
                 } else {
                     i + 1
                 }
@@ -104,7 +104,7 @@ impl ChatListWindow {
         let i = match self.chat_list_state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.chat_list.len() - 1
+                    0
                 } else {
                     i - 1
                 }
@@ -178,15 +178,14 @@ impl Component for ChatListWindow {
         };
 
         let items = self.chat_list.iter().map(|item| item.as_str());
+        let block = Block::default()
+            .border_set(PLAIN)
+            .border_style(style_border_focused)
+            .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
+            .title(Title::from(self.name.as_str()));
 
         let list = List::new(items)
-            .block(
-                Block::default()
-                    .border_set(PLAIN)
-                    .border_style(style_border_focused)
-                    .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-                    .title(Title::from(self.name.as_str())),
-            )
+            .block(block)
             .style(style_chat_list())
             .highlight_style(style_item_selected())
             .highlight_symbol("➤ ")

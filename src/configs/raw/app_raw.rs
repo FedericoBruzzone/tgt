@@ -18,4 +18,6 @@ pub struct AppRaw {
     /// A boolean flag that represents whether the theme should be enabled or
     /// not.
     pub theme_enable: Option<bool>,
+    /// The name of the theme file that should be used.
+    pub theme_filename: Option<String>,
 }

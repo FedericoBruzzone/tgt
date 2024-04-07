@@ -152,4 +152,33 @@ mod tests {
     fn test_logger_config_override_fields() {
         assert!(LoggerConfig::override_fields());
     }
+
+    #[test]
+    fn test_merge_all_fields() {
+        let mut logger_config = LoggerConfig::default();
+        let logger_raw = LoggerRaw {
+            log_folder: None,
+            log_file: None,
+            log_level: None,
+        };
+        logger_config = logger_config.merge(Some(logger_raw));
+        assert_eq!(
+            logger_config.log_folder,
+            project_dir()
+                .unwrap()
+                .join(".data")
+                .to_string_lossy()
+                .to_string()
+        );
+        assert_eq!(logger_config.log_file, "tgt.log");
+        assert_eq!(logger_config.log_level, "info");
+    }
+
+    #[test]
+    fn test_logger_config_get_type() {
+        assert_eq!(
+            LoggerConfig::get_type(),
+            crate::configs::config_type::ConfigType::Logger
+        );
+    }
 }

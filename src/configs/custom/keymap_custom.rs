@@ -537,4 +537,28 @@ mod tests {
     fn test_keymap_config_override_fields() {
         assert!(KeymapConfig::override_fields());
     }
+
+    #[test]
+    fn test_merge_all_fields() {
+        let mut keymap_config = KeymapConfig::default();
+        let keymap_raw = KeymapRaw {
+            default: Some(KeymapMode { keymap: vec![] }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
+        };
+        keymap_config = keymap_config.merge(Some(keymap_raw));
+        assert_eq!(keymap_config.default.len(), 11);
+        assert_eq!(keymap_config.chat_list.len(), 3);
+        assert_eq!(keymap_config.chat.len(), 3);
+        assert_eq!(keymap_config.prompt.len(), 0);
+    }
+
+    #[test]
+    fn test_get_type() {
+        assert_eq!(
+            KeymapConfig::get_type(),
+            crate::configs::config_type::ConfigType::Keymap
+        );
+    }
 }
