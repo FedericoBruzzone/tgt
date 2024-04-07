@@ -44,6 +44,13 @@ pub enum Action {
     ChatListPrevious,
     /// ChatListSelect action.
     ChatListUnselect,
+
+    /// MessageListNext action.
+    MessageListNext,
+    /// MessageListPrevious action.
+    MessageListPrevious,
+    /// MessageListSelect action.
+    MessageListUnselect,
 }
 
 /// Implement the `FormStr` trait for `Action`.
@@ -67,6 +74,9 @@ impl FromStr for Action {
             "chat_list_next" => Ok(Action::ChatListNext),
             "chat_list_previous" => Ok(Action::ChatListPrevious),
             "chat_list_unselect" => Ok(Action::ChatListUnselect),
+            "message_list_next" => Ok(Action::MessageListNext),
+            "message_list_previous" => Ok(Action::MessageListPrevious),
+            "message_list_unselect" => Ok(Action::MessageListUnselect),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

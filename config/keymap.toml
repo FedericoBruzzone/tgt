@@ -40,6 +40,14 @@ keymap = [
 # The chat key bindings are only usable in the chat component.
 # When the chat is focused, the chat key bindings will be active.
 [chat]
+keymap = [
+  # Select the next message
+  { keys = ["down"], command = "message_list_next", description = "Select the next message"},
+  # Select the previous message
+  { keys = ["up"], command = "message_list_previous", description = "Select the previous message"},
+  # Unselect the current message
+  { keys = ["left"], command = "message_list_unselect", description = "Unselect the current message"},
+]
 
 # The prompt key bindings are only usable in the prompt component.
 # When the prompt is focused, the prompt key bindings will be active.

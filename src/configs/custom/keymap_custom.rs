@@ -448,7 +448,7 @@ mod tests {
         let keymap_config = KeymapConfig::default();
         assert_eq!(keymap_config.default.len(), 11);
         assert_eq!(keymap_config.chat_list.len(), 3);
-        assert_eq!(keymap_config.chat.len(), 0);
+        assert_eq!(keymap_config.chat.len(), 3);
         assert_eq!(keymap_config.prompt.len(), 0);
     }
 

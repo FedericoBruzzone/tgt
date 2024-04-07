@@ -15,8 +15,6 @@ use {
     tokio::sync::mpsc::UnboundedSender,
 };
 
-pub const PROMPT: &str = "prompt_window";
-
 /// `PromptWindow` is a struct that represents a window for displaying a prompt.
 /// It is responsible for managing the layout and rendering of the prompt
 /// window.

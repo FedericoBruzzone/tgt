@@ -1,18 +1,21 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{style_border_component_focused, style_chat},
+        configs::config_theme::{
+            style_border_component_focused, style_chat, style_chat_list,
+            style_item_selected,
+        },
         enums::action::Action,
     },
     ratatui::{
-        layout::Rect,
+        layout::{Alignment, Rect},
+        style::Stylize,
         symbols::{border, line},
-        widgets::{Block, Borders},
+        text::{Line, Text},
+        widgets::{Block, Borders, List, ListDirection, ListItem, ListState},
     },
     tokio::sync::mpsc::UnboundedSender,
 };
-
-pub const CHAT: &str = "chat_window";
 
 /// `ChatWindow` is a struct that represents a window for displaying a chat.
 /// It is responsible for managing the layout and rendering of the chat window.
@@ -24,6 +27,10 @@ pub struct ChatWindow {
     /// A flag indicating whether the `ChatWindow` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
+    /// A list of message items to be displayed in the `ChatWindow`.
+    message_list: Vec<String>, // [TODO] Use message_item struct
+    /// The state of the list.
+    message_list_state: ListState,
     /// Indicates whether the `ChatWindow` is focused or not.
     focused: bool,
 }
@@ -40,14 +47,27 @@ impl ChatWindow {
     /// # Returns
     /// * `Self` - The new instance of the `ChatWindow` struct.
     pub fn new() -> Self {
-        let command_tx = None;
         let name = "".to_string();
+        let command_tx = None;
         let small_area = false;
+        let message_list = vec![
+            "My message".to_string(),
+            "Your message".to_string(),
+            "My message".to_string(),
+            "Your message".to_string(),
+            "My message".to_string(),
+            "Your message".to_string(),
+            "My message".to_string(),
+            "Your message".to_string(),
+        ];
+        let message_list_state = ListState::default();
         let focused = false;
         ChatWindow {
-            command_tx,
             name,
+            command_tx,
             small_area,
+            message_list,
+            message_list_state,
             focused,
         }
     }
@@ -61,6 +81,41 @@ impl ChatWindow {
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
         self
+    }
+
+    /// Select the next message item in the list.
+    fn next(&mut self) {
+        let i = match self.message_list_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.message_list_state.select(Some(i));
+    }
+
+    /// Select the previous message item in the list.
+    fn previous(&mut self) {
+        let i = match self.message_list_state.selected() {
+            Some(i) => {
+                if i >= self.message_list.len() - 1 {
+                    i
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.message_list_state.select(Some(i));
+    }
+
+    /// Unselect the message item in the list.
+    fn unselect(&mut self) {
+        self.message_list_state.select(None);
     }
 }
 
@@ -101,6 +156,15 @@ impl Component for ChatWindow {
         Ok(())
     }
 
+    fn update(&mut self, action: Action) {
+        match action {
+            Action::MessageListNext => self.next(),
+            Action::MessageListPrevious => self.previous(),
+            Action::MessageListUnselect => self.unselect(),
+            _ => {}
+        }
+    }
+
     fn draw(
         &mut self,
         frame: &mut ratatui::Frame<'_>,
@@ -121,6 +185,18 @@ impl Component for ChatWindow {
             style_chat()
         };
 
+        let items = self.message_list.iter().enumerate().map(|(i, item)| {
+            let alignment = if i % 2 == 0 {
+                Alignment::Right
+            } else {
+                Alignment::Left
+            };
+            // ListItem::new(Text::from(item.as_str()).alignment(alignment))
+            ListItem::new(
+                Line::from(item.as_str().on_blue()).alignment(alignment),
+            )
+        });
+
         let block = Block::new()
             .border_set(border)
             .border_style(style_border_focused)
@@ -128,7 +204,14 @@ impl Component for ChatWindow {
             .style(style_chat())
             .title(self.name.as_str());
 
-        frame.render_widget(block, area);
+        let list = List::new(items)
+            .block(block)
+            .style(style_chat_list())
+            .highlight_style(style_item_selected())
+            .repeat_highlight_symbol(true)
+            .direction(ListDirection::BottomToTop);
+
+        frame.render_stateful_widget(list, area, &mut self.message_list_state);
 
         Ok(())
     }
