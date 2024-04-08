@@ -1,5 +1,8 @@
 use {
-    super::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE},
+    super::{
+        MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE,
+        MIN_PROMPT_SIZE,
+    },
     crate::{
         app_error::AppError,
         components::{
@@ -121,7 +124,7 @@ impl CoreWindow {
 
     /// Decrease the size of the chat list component.
     pub fn decrease_chat_list_size(&mut self) {
-        if self.size_chat_list == 0 {
+        if self.size_chat_list == MIN_CHAT_LIST_SIZE {
             return;
         }
         self.size_chat_list -= 1;
@@ -129,7 +132,7 @@ impl CoreWindow {
 
     /// Decrease the size of the chat list component.
     pub fn decrease_size_prompt(&mut self) {
-        if self.size_prompt == 0 {
+        if self.size_prompt == MIN_PROMPT_SIZE {
             return;
         }
         self.size_prompt -= 1;
@@ -190,7 +193,7 @@ impl Component for CoreWindow {
                     return Ok(Some(action.clone()));
                 }
                 ActionBinding::Multiple(_map_event_action) => {
-                    tracing::warn!("Multiple action bindings are not supported yet. They are supported only for default key bindings.");
+                    tracing::warn!("Multiple action bindings are not supported yet. They are supported only for default key bindings because there are not the app context to handle them here.");
                     todo!();
                 }
             }
@@ -230,6 +233,17 @@ impl Component for CoreWindow {
             }
             Action::DecreasePromptSize => {
                 self.decrease_size_prompt();
+            }
+            Action::TryQuit => {
+                if self.component_focused != Some(ComponentName::Prompt) {
+                    self.action_tx
+                        .as_ref()
+                        .unwrap_or_else(|| panic!("Failed to get action_tx"))
+                        .send(Action::Quit)
+                        .unwrap_or_else(|_| {
+                            panic!("Failed to send action: Quit")
+                        });
+                }
             }
             _ => {}
         }

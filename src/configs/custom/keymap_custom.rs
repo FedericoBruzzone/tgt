@@ -446,7 +446,7 @@ mod tests {
     #[test]
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
-        assert_eq!(keymap_config.default.len(), 11);
+        assert_eq!(keymap_config.default.len(), 10);
         assert_eq!(keymap_config.chat_list.len(), 3);
         assert_eq!(keymap_config.chat.len(), 3);
         assert_eq!(keymap_config.prompt.len(), 0);
@@ -548,7 +548,7 @@ mod tests {
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
-        assert_eq!(keymap_config.default.len(), 11);
+        assert_eq!(keymap_config.default.len(), 10);
         assert_eq!(keymap_config.chat_list.len(), 3);
         assert_eq!(keymap_config.chat.len(), 3);
         assert_eq!(keymap_config.prompt.len(), 0);

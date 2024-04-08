@@ -16,6 +16,10 @@ pub enum Action {
     Init,
     /// Quit action.
     Quit,
+    /// TryQuit action, it is used to try to quit the application.
+    /// It asks the the core window to confirm the quit action.
+    /// If the prompt is not focused, we can quit.
+    TryQuit,
     /// Render action.
     Render,
     /// Resize action with width and height.
@@ -60,6 +64,7 @@ impl FromStr for Action {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "quit" => Ok(Action::Quit),
+            "try_quit" => Ok(Action::TryQuit),
             "render" => Ok(Action::Render),
             "focus_chat_list" => {
                 Ok(Action::FocusComponent(ComponentName::ChatList))

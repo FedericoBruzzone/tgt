@@ -1,12 +1,12 @@
 # The default key bindings are usable in any app component.
 [default]
 keymap = [
+# Quit the application, example of multiple keys
+# { keys = ["w", "w"], command = "quit", description = "Quit the application"},
   # Quit the application
-  { keys = ["q"], command = "quit", description = "Quit the application"},
+  { keys = ["q"], command = "try_quit", description = "Quit the application"},
   # Quit the application
   { keys = ["ctrl+c"], command = "quit", description = "Quit the application"},
-  # Quit the application
-  { keys = ["w", "w"], command = "quit", description = "Quit the application"},
   # Focus the chat list
   { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
   # Focus the chat
@@ -16,13 +16,13 @@ keymap = [
   # Unfocus the current component
   { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
   # Increase the chat list size
-  { keys = ["shift+right"], command = "increase_chat_list_size", description = "Increase the chat list size"},
+  { keys = ["shift+L"], command = "increase_chat_list_size", description = "Increase the chat list size"},
   # Decrease the chat list size
-  { keys = ["shift+left"], command = "decrease_chat_list_size", description = "Decrease the chat list size"},
+  { keys = ["shift+H"], command = "decrease_chat_list_size", description = "Decrease the chat list size"},
   # Increase the prompt size
-  { keys = ["shift+up"], command = "increase_prompt_size", description = "Increase the prompt size"},
+  { keys = ["shift+K"], command = "increase_prompt_size", description = "Increase the prompt size"},
   # Decrease the prompt size
-  { keys = ["shift+down"], command = "decrease_prompt_size", description = "Decrease the prompt size"},
+  { keys = ["shift+J"], command = "decrease_prompt_size", description = "Decrease the prompt size"},
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
