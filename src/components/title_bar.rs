@@ -1,12 +1,14 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::style_title_bar,
+        configs::config_theme::{
+            style_title_bar, style_title_bar_title1, style_title_bar_title2,
+            style_title_bar_title3,
+        },
         enums::action::Action,
     },
     ratatui::{
         layout::{Alignment, Rect},
-        style::{Style, Stylize},
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
@@ -102,9 +104,28 @@ impl Component for TitleBar {
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> io::Result<()> {
+        let name: Vec<char> = self.name.chars().collect::<Vec<char>>();
+        // Span::raw(" - A TUI for Telegram"),
         let text = vec![Line::from(vec![
-            Span::styled(self.name.as_str(), Style::new().bold()),
-            Span::raw(" - A TUI for Telegram"),
+            Span::styled(name[0].to_string(), style_title_bar_title1()),
+            Span::styled(name[1].to_string(), style_title_bar_title2()),
+            Span::styled(name[2].to_string(), style_title_bar_title3()),
+            Span::styled(" - ", style_title_bar_title1()),
+            Span::styled("A", style_title_bar_title2()),
+            Span::styled(" T", style_title_bar_title3()),
+            Span::styled("U", style_title_bar_title1()),
+            Span::styled("I", style_title_bar_title2()),
+            Span::styled(" f", style_title_bar_title3()),
+            Span::styled("o", style_title_bar_title1()),
+            Span::styled("r", style_title_bar_title2()),
+            Span::styled(" T", style_title_bar_title3()),
+            Span::styled("e", style_title_bar_title1()),
+            Span::styled("l", style_title_bar_title2()),
+            Span::styled("e", style_title_bar_title3()),
+            Span::styled("g", style_title_bar_title1()),
+            Span::styled("r", style_title_bar_title2()),
+            Span::styled("a", style_title_bar_title3()),
+            Span::styled("m", style_title_bar_title1()),
         ])];
         let paragraph = Paragraph::new(text)
             .block(Block::new().borders(Borders::ALL))

@@ -45,12 +45,6 @@ pub struct CoreWindow {
     focused: bool,
 }
 
-impl Default for CoreWindow {
-    fn default() -> Self {
-        Self::new(KeymapConfig::default())
-    }
-}
-
 impl CoreWindow {
     /// Create a new instance of the `CoreWindow` struct.
     ///
@@ -105,7 +99,6 @@ impl CoreWindow {
         self.name = name.as_ref().to_string();
         self
     }
-
     /// Increase the size of the chat list component.
     pub fn increase_chat_list_size(&mut self) {
         if self.size_chat_list == MAX_CHAT_LIST_SIZE {
@@ -113,7 +106,6 @@ impl CoreWindow {
         }
         self.size_chat_list += 1;
     }
-
     /// Increase the size of the chat list component.
     pub fn increase_size_prompt(&mut self) {
         if self.size_prompt == MAX_PROMPT_SIZE {
@@ -121,7 +113,6 @@ impl CoreWindow {
         }
         self.size_prompt += 1;
     }
-
     /// Decrease the size of the chat list component.
     pub fn decrease_chat_list_size(&mut self) {
         if self.size_chat_list == MIN_CHAT_LIST_SIZE {
@@ -129,7 +120,6 @@ impl CoreWindow {
         }
         self.size_chat_list -= 1;
     }
-
     /// Decrease the size of the chat list component.
     pub fn decrease_size_prompt(&mut self) {
         if self.size_prompt == MIN_PROMPT_SIZE {
@@ -138,7 +128,6 @@ impl CoreWindow {
         self.size_prompt -= 1;
     }
 }
-
 /// Implement the `HandleFocus` trait for the `CoreWindow` struct.
 /// This trait allows the `CoreWindow` to be focused or unfocused.
 impl HandleFocus for CoreWindow {
@@ -238,10 +227,12 @@ impl Component for CoreWindow {
                 if self.component_focused != Some(ComponentName::Prompt) {
                     self.action_tx
                         .as_ref()
-                        .unwrap_or_else(|| panic!("Failed to get action_tx"))
+                        .unwrap_or_else(|| {
+                            panic!("Failed to get action_tx on CoreWindow")
+                        })
                         .send(Action::Quit)
                         .unwrap_or_else(|_| {
-                            panic!("Failed to send action: Quit")
+                            panic!("Failed to send action Quit from CoreWindow")
                         });
                 }
             }
@@ -263,12 +254,7 @@ impl Component for CoreWindow {
         frame: &mut ratatui::Frame<'_>,
         area: Rect,
     ) -> io::Result<()> {
-        let size_chat_list = if self.small_area {
-            // [TODO] This is not the espected behaviour
-            0
-        } else {
-            self.size_chat_list
-        };
+        let size_chat_list = self.size_chat_list; // if self.small_area { 0 } else { self.size_chat_list };
 
         let core_layout = Layout::default()
             .direction(Direction::Horizontal)

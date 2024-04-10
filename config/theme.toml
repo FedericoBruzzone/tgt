@@ -48,6 +48,7 @@ message_other = { fg = "secondary_light", bg = "ternary_variant", bold = false, 
 
 [prompt]
 self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
+message_preview_text = { fg = "ternary_light", bg = "background", bold = false, underline = false, italic = false }
 
 [status_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
@@ -60,3 +61,6 @@ message_quit_key = { fg = "secondary_light", bg = "surface", bold = false, under
 
 [title_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
+title1 = { fg = "primary_light", bg = "surface", bold = true, underline = true, italic = true }
+title2 = { fg = "secondary_light", bg = "surface", bold = true, underline = true, italic = true }
+title3 = { fg = "ternary_light", bg = "surface", bold = true, underline = true, italic = false }

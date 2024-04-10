@@ -89,10 +89,17 @@ async fn handle_tui_backend_events(
                                 map_event_action.clone(),
                             )
                             .await;
+                            // We need to return here to avoid sending the
+                            // event to the tui. At the moment, the components
+                            // are not able to handle multiple events.
+                            return Ok(());
                         }
                     }
                 }
             }
+            Event::Paste(ref text) => app_context
+                .action_tx_ref()
+                .send(Action::Paste(text.clone()))?,
             _ => {}
         }
 

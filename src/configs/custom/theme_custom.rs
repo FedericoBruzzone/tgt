@@ -183,9 +183,9 @@ mod tests {
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 1);
         assert_eq!(theme_config.chat.len(), 3);
-        assert_eq!(theme_config.prompt.len(), 1);
+        assert_eq!(theme_config.prompt.len(), 2);
         assert_eq!(theme_config.status_bar.len(), 7);
-        assert_eq!(theme_config.title_bar.len(), 1);
+        assert_eq!(theme_config.title_bar.len(), 4);
     }
 
     #[test]
@@ -399,9 +399,9 @@ mod tests {
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 1);
         assert_eq!(theme_config.chat.len(), 3);
-        assert_eq!(theme_config.prompt.len(), 1);
+        assert_eq!(theme_config.prompt.len(), 2);
         assert_eq!(theme_config.status_bar.len(), 7);
-        assert_eq!(theme_config.title_bar.len(), 1);
+        assert_eq!(theme_config.title_bar.len(), 4);
     }
 
     #[test]

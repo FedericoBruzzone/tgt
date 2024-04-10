@@ -5,7 +5,6 @@ use {
     },
     ratatui::style::{Color, Modifier, Style},
 };
-
 #[derive(Clone, Debug)]
 /// `ThemeStyle` is a struct that represents a style in the theme config.
 /// It is responsible for managing the style of the theme.
@@ -257,6 +256,10 @@ pub fn style_prompt() -> Style {
     theme_style!(THEME_CONFIG.prompt.get("self").unwrap())
 }
 
+pub fn style_prompt_message_preview_text() -> Style {
+    theme_style!(THEME_CONFIG.prompt.get("message_preview_text").unwrap())
+}
+
 // ========= STATUS BAR =========
 pub fn style_status_bar() -> Style {
     theme_style!(THEME_CONFIG.status_bar.get("self").unwrap())
@@ -288,6 +291,18 @@ pub fn style_status_bar_message_quit_key() -> Style {
 // ========= TITLE BAR =========
 pub fn style_title_bar() -> Style {
     theme_style!(THEME_CONFIG.title_bar.get("self").unwrap())
+}
+
+pub fn style_title_bar_title1() -> Style {
+    theme_style!(THEME_CONFIG.title_bar.get("title1").unwrap())
+}
+
+pub fn style_title_bar_title2() -> Style {
+    theme_style!(THEME_CONFIG.title_bar.get("title2").unwrap())
+}
+
+pub fn style_title_bar_title3() -> Style {
+    theme_style!(THEME_CONFIG.title_bar.get("title3").unwrap())
 }
 
 #[cfg(test)]

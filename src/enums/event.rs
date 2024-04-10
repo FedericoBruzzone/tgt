@@ -16,18 +16,18 @@ use {
 pub enum Event {
     /// Unknown event.
     Unknown,
-    /// Init event.
-    Init,
-    /// Quit event.
-    Quit, // Not used
-    /// Render event.
-    Render,
     /// Resize event with width and height.
     Resize(u16, u16),
     /// Key event with a `KeyCode` and `KeyModifiers`.
     Key(KeyCode, KeyModifiers),
+    /// Paste event with a `String`.
+    Paste(String),
     /// Mouse event with a `MouseEvent` struct.
     Mouse(MouseEvent),
+    /// Init event.
+    Init,
+    /// Render event.
+    Render,
     /// Update area event with a `Rect` struct.
     UpdateArea(Rect),
 }
@@ -85,25 +85,24 @@ impl FromStr for Event {
     type Err = AppError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Ok(event) = Self::event_with_modifiers(s, KeyModifiers::NONE) {
-            Ok(event)
-        } else if s.starts_with("ctrl+") {
-            Self::event_with_modifiers(
-                s.trim_start_matches("ctrl+"),
-                KeyModifiers::CONTROL,
-            )
-        } else if s.starts_with("alt+") {
-            Self::event_with_modifiers(
-                s.trim_start_matches("alt+"),
-                KeyModifiers::ALT,
-            )
-        } else if s.starts_with("shift+") {
-            Self::event_with_modifiers(
-                s.trim_start_matches("shift+"),
-                KeyModifiers::SHIFT,
-            )
+        let modifiers = s.split('+').collect::<Vec<&str>>();
+        if modifiers.len() > 1 {
+            let key = modifiers[modifiers.len() - 1];
+            let modifiers = modifiers[..modifiers.len() - 1]
+                .iter()
+                .map(|m| match *m {
+                    "ctrl" => KeyModifiers::CONTROL,
+                    "alt" => KeyModifiers::ALT,
+                    "shift" => KeyModifiers::SHIFT,
+                    "super" => KeyModifiers::SUPER,
+                    "meta" => KeyModifiers::META,
+                    "hyper" => KeyModifiers::HYPER,
+                    _ => KeyModifiers::NONE,
+                })
+                .fold(KeyModifiers::NONE, |acc, m| acc | m);
+            Self::event_with_modifiers(key, modifiers)
         } else {
-            Err(AppError::InvalidEvent(s.to_string()))
+            Self::event_with_modifiers(s, KeyModifiers::NONE)
         }
     }
 }
@@ -114,7 +113,6 @@ impl Display for Event {
         match self {
             Event::Unknown => write!(f, "Unknown"),
             Event::Init => write!(f, "Init"),
-            Event::Quit => write!(f, "Quit"),
             Event::Render => write!(f, "Render"),
             Event::Resize(width, height) => {
                 write!(f, "Resize({}, {})", width, height)
@@ -139,6 +137,7 @@ impl Display for Event {
             }
             Event::Mouse(mouse) => write!(f, "Mouse({:?})", mouse),
             Event::UpdateArea(area) => write!(f, "UpdateArea({:?})", area),
+            Event::Paste(s) => write!(f, "Paste({})", s),
         }
     }
 }

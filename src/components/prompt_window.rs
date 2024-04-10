@@ -1,7 +1,10 @@
 use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{style_border_component_focused, style_prompt},
+        configs::config_theme::{
+            style_border_component_focused, style_prompt,
+            style_prompt_message_preview_text,
+        },
         enums::action::Action,
     },
     crossterm::event::{KeyCode, KeyModifiers},
@@ -70,7 +73,7 @@ impl Input {
         }
     }
 
-    fn delete(&mut self) {
+    fn backspace(&mut self) {
         if self.text[self.cursor.1].is_empty() && self.cursor.1 > 0 {
             if let Some(tx) = self.command_tx.as_ref() {
                 tx.send(Action::DecreasePromptSize).unwrap();
@@ -86,6 +89,17 @@ impl Input {
         } else {
             self.text[self.cursor.1].remove(self.cursor.0 - 1);
             self.cursor.0 -= 1;
+        }
+    }
+
+    fn delete(&mut self) {
+        if self.cursor.0 == self.text[self.cursor.1].len() {
+            if self.cursor.1 < self.text.len() - 1 {
+                let line = self.text.remove(self.cursor.1 + 1);
+                self.text[self.cursor.1].extend(line);
+            }
+        } else {
+            self.text[self.cursor.1].remove(self.cursor.0);
         }
     }
 
@@ -153,6 +167,25 @@ impl Input {
 
     fn move_cursor_to_start(&mut self) {
         self.cursor.0 = 0;
+    }
+
+    fn delete_previous_word(&mut self) {
+        let line = &mut self.text[self.cursor.1];
+        let mut i = self.cursor.0;
+        while i > 0 && line[i - 1].is_whitespace() {
+            i -= 1;
+        }
+        while i > 0 && !line[i - 1].is_whitespace() {
+            i -= 1;
+        }
+        line.drain(i..self.cursor.0);
+        self.cursor.0 = i;
+    }
+
+    fn paste(&mut self, text: String) {
+        for c in text.chars() {
+            self.insert(c);
+        }
     }
 }
 
@@ -276,45 +309,55 @@ impl Component for PromptWindow {
     }
 
     fn update(&mut self, action: Action) {
-        if let Action::Key(key_code, key_modifiers) = action {
-            match (key_code, key_modifiers) {
-                // ALT + b
-                (KeyCode::Char('b'), KeyModifiers::ALT) => {
-                    self.input.move_cursor_to_previous_word();
+        match action {
+            Action::Key(key_code, key_modifiers) => {
+                match (key_code, key_modifiers) {
+                    (KeyCode::Left, KeyModifiers::ALT) => {
+                        self.input.move_cursor_to_previous_word();
+                    }
+                    (KeyCode::Right, KeyModifiers::ALT) => {
+                        self.input.move_cursor_to_next_word();
+                    }
+                    (KeyCode::Backspace, KeyModifiers::ALT) => {
+                        self.input.delete_previous_word();
+                    }
+                    (KeyCode::Left, KeyModifiers::SHIFT) => {
+                        self.input.move_cursor_to_start();
+                    }
+                    (KeyCode::Right, KeyModifiers::SHIFT) => {
+                        self.input.move_cursor_to_end();
+                    }
+                    (KeyCode::Char(c), _) => {
+                        self.input.insert(c);
+                    }
+                    (KeyCode::Backspace, KeyModifiers::NONE) => {
+                        self.input.backspace();
+                    }
+                    (KeyCode::Delete, KeyModifiers::NONE) => {
+                        self.input.delete();
+                    }
+                    (KeyCode::Enter, KeyModifiers::NONE) => {
+                        self.input.insert_newline();
+                    }
+                    (KeyCode::Left, KeyModifiers::NONE) => {
+                        self.input.move_cursor_left();
+                    }
+                    (KeyCode::Right, KeyModifiers::NONE) => {
+                        self.input.move_cursor_right();
+                    }
+                    (KeyCode::Up, KeyModifiers::NONE) => {
+                        self.input.move_cursor_up();
+                    }
+                    (KeyCode::Down, KeyModifiers::NONE) => {
+                        self.input.move_cursor_down();
+                    }
+                    _ => {}
                 }
-                // ALT + f
-                (KeyCode::Char('f'), KeyModifiers::ALT) => {
-                    self.input.move_cursor_to_next_word();
-                }
-                (KeyCode::Left, KeyModifiers::SHIFT) => {
-                    self.input.move_cursor_to_start();
-                }
-                (KeyCode::Right, KeyModifiers::SHIFT) => {
-                    self.input.move_cursor_to_end();
-                }
-                (KeyCode::Char(c), _) => {
-                    self.input.insert(c);
-                }
-                (KeyCode::Backspace, KeyModifiers::NONE) => {
-                    self.input.delete();
-                }
-                (KeyCode::Enter, KeyModifiers::NONE) => {
-                    self.input.insert_newline();
-                }
-                (KeyCode::Left, KeyModifiers::NONE) => {
-                    self.input.move_cursor_left();
-                }
-                (KeyCode::Right, KeyModifiers::NONE) => {
-                    self.input.move_cursor_right();
-                }
-                (KeyCode::Up, KeyModifiers::NONE) => {
-                    self.input.move_cursor_up();
-                }
-                (KeyCode::Down, KeyModifiers::NONE) => {
-                    self.input.move_cursor_down();
-                }
-                _ => {}
             }
+            Action::Paste(text) => {
+                self.input.paste(text);
+            }
+            _ => {}
         }
     }
 
@@ -335,20 +378,27 @@ impl Component for PromptWindow {
             },
             ..PLAIN
         };
-        let (text, style_border_focused) = if self.focused {
-            (self.input.text().clone(), style_border_component_focused())
+        let (text, style_text, style_border_focused) = if self.focused {
+            (
+                self.input.text().clone(),
+                style_prompt(),
+                style_border_component_focused(),
+            )
         } else {
-            ("Press <X> to focus".to_string(), style_prompt())
+            (
+                "Press <X> to send a message".to_string(),
+                style_prompt_message_preview_text(),
+                style_prompt(),
+            )
         };
 
         let block = Block::new()
             .border_set(collapsed_top_and_left_border_set)
             .border_style(style_border_focused)
             .borders(Borders::ALL)
-            .style(style_prompt())
             .title(self.name.as_str());
 
-        let input = Paragraph::new(text).block(block);
+        let input = Paragraph::new(text).style(style_text).block(block);
 
         frame.render_widget(input, area);
 

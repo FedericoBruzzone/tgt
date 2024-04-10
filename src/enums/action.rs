@@ -24,6 +24,8 @@ pub enum Action {
     Render,
     /// Resize action with width and height.
     Resize(u16, u16),
+    /// Paste action with a `String`.
+    Paste(String),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
