@@ -91,22 +91,37 @@ impl TuiBackend {
     /// This will disable the raw mode for the terminal and switch back to the
     /// main screen.
     ///
+    /// # Arguments
+    /// * `mouse` - A boolean flag that represents whether the mouse was enabled
+    ///   during the execution and need to be disabled.
+    /// * `paste` - A boolean flag that represents whether the paste mode was
+    ///   enabled during the execution and need to be disabled.
+    ///
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
-    pub fn exit(&self) -> Result<(), std::io::Error> {
+    pub fn force_exit(mouse: bool, paste: bool) -> Result<(), std::io::Error> {
         crossterm::terminal::disable_raw_mode()?;
         crossterm::execute!(
             std::io::stderr(),
             LeaveAlternateScreen,
             cursor::Show
         )?;
-        if self.mouse {
+        if mouse {
             crossterm::execute!(std::io::stderr(), DisableMouseCapture)?;
         }
-        if self.paste {
+        if paste {
             crossterm::execute!(std::io::stderr(), DisableBracketedPaste)?;
         }
         Ok(())
+    }
+    /// Exit the user interface and stop processing events.
+    /// This will disable the raw mode for the terminal and switch back to the
+    /// main screen.
+    ///
+    /// # Returns
+    /// * `Result<(), io::Error>` - An Ok result or an error.
+    pub fn exit(&self) -> Result<(), std::io::Error> {
+        TuiBackend::force_exit(self.mouse, self.paste)
     }
     /// Suspend the user interface and stop processing events.
     /// This will disable the raw mode for the terminal and switch back to the
