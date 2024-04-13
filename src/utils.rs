@@ -23,10 +23,7 @@ fn fail_with<E: std::fmt::Debug>(msg: &str, e: E) -> ! {
 ///
 /// # Returns
 /// * `T` - The value if the result is Ok.
-pub fn unwrap_or_fail<T, E: std::fmt::Debug>(
-    result: Result<T, E>,
-    msg: &str,
-) -> T {
+pub fn unwrap_or_fail<T, E: std::fmt::Debug>(result: Result<T, E>, msg: &str) -> T {
     match result {
         Ok(v) => v,
         Err(e) => fail_with(msg, e),

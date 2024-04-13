@@ -1,8 +1,5 @@
 use {
-    super::{
-        MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE,
-        MIN_PROMPT_SIZE,
-    },
+    super::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
     crate::{
         app_error::AppError,
         components::{
@@ -160,10 +157,7 @@ impl HandleSmallArea for CoreWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for CoreWindow {
-    fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.action_tx = Some(tx.clone());
         for (_, component) in self.components.iter_mut() {
             component.register_action_handler(tx.clone())?;
@@ -171,10 +165,7 @@ impl Component for CoreWindow {
         Ok(())
     }
 
-    fn handle_events(
-        &mut self,
-        event: Option<Event>,
-    ) -> Result<Option<Action>, AppError> {
+    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
         let map = self.keymap_config.get_map_of(self.component_focused);
         if let Some(action_binding) = map.get(&event.unwrap()) {
             match action_binding {
@@ -196,9 +187,7 @@ impl Component for CoreWindow {
                 self.component_focused = Some(component_name);
                 self.components
                     .get_mut(&component_name)
-                    .unwrap_or_else(|| {
-                        panic!("Failed to get component: {}", component_name)
-                    })
+                    .unwrap_or_else(|| panic!("Failed to get component: {}", component_name))
                     .focus();
                 self.components
                     .iter_mut()
@@ -227,13 +216,9 @@ impl Component for CoreWindow {
                 if self.component_focused != Some(ComponentName::Prompt) {
                     self.action_tx
                         .as_ref()
-                        .unwrap_or_else(|| {
-                            panic!("Failed to get action_tx on CoreWindow")
-                        })
+                        .unwrap_or_else(|| panic!("Failed to get action_tx on CoreWindow"))
                         .send(Action::Quit)
-                        .unwrap_or_else(|_| {
-                            panic!("Failed to send action Quit from CoreWindow")
-                        });
+                        .unwrap_or_else(|_| panic!("Failed to send action Quit from CoreWindow"));
                 }
             }
             _ => {}
@@ -242,18 +227,12 @@ impl Component for CoreWindow {
         if let Some(focused) = self.component_focused {
             self.components
                 .get_mut(&focused)
-                .unwrap_or_else(|| {
-                    panic!("Failed to get component: {}", focused)
-                })
+                .unwrap_or_else(|| panic!("Failed to get component: {}", focused))
                 .update(action);
         }
     }
 
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> io::Result<()> {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
         let size_chat_list = self.size_chat_list; // if self.small_area { 0 } else { self.size_chat_list };
 
         let core_layout = Layout::default()
@@ -266,31 +245,22 @@ impl Component for CoreWindow {
 
         self.components
             .get_mut(&ComponentName::ChatList)
-            .unwrap_or_else(|| {
-                panic!("Failed to get component: {}", ComponentName::ChatList)
-            })
+            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
             .draw(frame, core_layout[0])?;
 
         let sub_core_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Fill(1),
-                Constraint::Length(self.size_prompt),
-            ])
+            .constraints([Constraint::Fill(1), Constraint::Length(self.size_prompt)])
             .split(core_layout[1]);
 
         self.components
             .get_mut(&ComponentName::Chat)
-            .unwrap_or_else(|| {
-                panic!("Failed to get component: {}", ComponentName::Chat)
-            })
+            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
             .draw(frame, sub_core_layout[0])?;
 
         self.components
             .get_mut(&ComponentName::Prompt)
-            .unwrap_or_else(|| {
-                panic!("Failed to get component: {}", ComponentName::Prompt)
-            })
+            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
             .draw(frame, sub_core_layout[1])?;
 
         Ok(())

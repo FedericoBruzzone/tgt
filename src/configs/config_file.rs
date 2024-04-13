@@ -1,7 +1,5 @@
 use {
-    crate::configs::{
-        self, config_type::ConfigType, TGT_CONFIG_HOME, TGT_PROGRAM_NAME,
-    },
+    crate::configs::{self, config_type::ConfigType, TGT_CONFIG_HOME, TGT_PROGRAM_NAME},
     lazy_static::lazy_static,
     serde::de::DeserializeOwned,
     std::path::PathBuf,
@@ -105,10 +103,7 @@ pub trait ConfigFile: Sized + Default + Clone {
             Some(file_path) => {
                 match configs::deserialize_to_config::<R>(&file_path) {
                     Ok(s) => {
-                        tracing::info!(
-                            "Loaded config from {}",
-                            file_path.display()
-                        );
+                        tracing::info!("Loaded config from {}", file_path.display());
                         Some(s)
                     }
                     Err(e) => {
@@ -150,10 +145,7 @@ pub trait ConfigFile: Sized + Default + Clone {
             Some(file_path) => {
                 match configs::deserialize_to_config_into::<R, S>(&file_path) {
                     Ok(s) => {
-                        tracing::info!(
-                            "Loaded config from {}",
-                            file_path.display()
-                        );
+                        tracing::info!("Loaded config from {}", file_path.display());
                         s
                     }
                     Err(e) => {

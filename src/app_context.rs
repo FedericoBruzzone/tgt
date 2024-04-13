@@ -35,13 +35,9 @@ impl AppContext {
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `App` struct or an error.
-    pub fn new(
-        app_config: AppConfig,
-        keymap_config: KeymapConfig,
-    ) -> Result<Self, std::io::Error> {
+    pub fn new(app_config: AppConfig, keymap_config: KeymapConfig) -> Result<Self, std::io::Error> {
         let tui = Tui::new(app_config.clone(), keymap_config.clone());
-        let (action_tx, action_rx) =
-            tokio::sync::mpsc::unbounded_channel::<Action>();
+        let (action_tx, action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
         let quit = false;
         Ok(Self {
             tui,

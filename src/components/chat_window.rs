@@ -2,9 +2,8 @@ use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
         configs::config_theme::{
-            style_border_component_focused, style_chat, style_chat_list,
-            style_chat_message_myself, style_chat_message_other,
-            style_item_selected,
+            style_border_component_focused, style_chat, style_chat_list, style_chat_message_myself,
+            style_chat_message_other, style_item_selected,
         },
         enums::action::Action,
     },
@@ -148,10 +147,7 @@ impl HandleSmallArea for ChatWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatWindow {
-    fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.command_tx = Some(tx);
         Ok(())
     }
@@ -165,11 +161,7 @@ impl Component for ChatWindow {
         }
     }
 
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> std::io::Result<()> {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
         let border = if self.small_area {
             border::PLAIN
         } else {

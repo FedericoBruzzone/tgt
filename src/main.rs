@@ -20,9 +20,8 @@ use crate::{
     configs::{
         config_file::ConfigFile,
         custom::{
-            app_custom::AppConfig, keymap_custom::KeymapConfig,
-            logger_custom::LoggerConfig, palette_custom::PaletteConfig,
-            theme_custom::ThemeConfig,
+            app_custom::AppConfig, keymap_custom::KeymapConfig, logger_custom::LoggerConfig,
+            palette_custom::PaletteConfig, theme_custom::ThemeConfig,
         },
     },
     logger::Logger,

@@ -25,10 +25,7 @@ pub trait Component: HandleSmallArea + HandleFocus {
     ///
     /// * `Result<()>` - An Ok result or an error.
     #[allow(unused_variables)]
-    fn register_action_handler(
-        &mut self,
-        tx: mpsc::UnboundedSender<Action>,
-    ) -> io::Result<()> {
+    fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
         Ok(())
     }
     /// Initialize the component with a specified area if necessary.
@@ -53,17 +50,12 @@ pub trait Component: HandleSmallArea + HandleFocus {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_events(
-        &mut self,
-        event: Option<Event>,
-    ) -> Result<Option<Action>, AppError> {
+    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
         let r = match event {
             Some(Event::Key(key, modifiers)) => {
                 self.handle_key_events(Event::Key(key, modifiers))?
             }
-            Some(Event::Mouse(mouse_event)) => {
-                self.handle_mouse_events(mouse_event)?
-            }
+            Some(Event::Mouse(mouse_event)) => self.handle_mouse_events(mouse_event)?,
             _ => None,
         };
         Ok(r)
@@ -91,10 +83,7 @@ pub trait Component: HandleSmallArea + HandleFocus {
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
     #[allow(unused_variables)]
-    fn handle_mouse_events(
-        &mut self,
-        mouse: event::MouseEvent,
-    ) -> io::Result<Option<Action>> {
+    fn handle_mouse_events(&mut self, mouse: event::MouseEvent) -> io::Result<Option<Action>> {
         Ok(None)
     }
     /// Update the state of the component based on a received action. (REQUIRED)
@@ -114,11 +103,7 @@ pub trait Component: HandleSmallArea + HandleFocus {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn draw(
-        &mut self,
-        f: &mut ratatui::Frame<'_>,
-        area: layout::Rect,
-    ) -> io::Result<()>;
+    fn draw(&mut self, f: &mut ratatui::Frame<'_>, area: layout::Rect) -> io::Result<()>;
     /// Create a new boxed instance of the component.
     ///
     /// # Returns

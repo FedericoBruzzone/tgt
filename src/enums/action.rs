@@ -68,9 +68,7 @@ impl FromStr for Action {
             "quit" => Ok(Action::Quit),
             "try_quit" => Ok(Action::TryQuit),
             "render" => Ok(Action::Render),
-            "focus_chat_list" => {
-                Ok(Action::FocusComponent(ComponentName::ChatList))
-            }
+            "focus_chat_list" => Ok(Action::FocusComponent(ComponentName::ChatList)),
             "focus_chat" => Ok(Action::FocusComponent(ComponentName::Chat)),
             "focus_prompt" => Ok(Action::FocusComponent(ComponentName::Prompt)),
             "unfocus_component" => Ok(Action::UnfocusComponent),

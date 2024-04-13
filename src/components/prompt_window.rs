@@ -2,8 +2,7 @@ use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
         configs::config_theme::{
-            style_border_component_focused, style_prompt,
-            style_prompt_message_preview_text,
+            style_border_component_focused, style_prompt, style_prompt_message_preview_text,
         },
         enums::action::Action,
     },
@@ -299,10 +298,7 @@ impl HandleSmallArea for PromptWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for PromptWindow {
-    fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.action_tx = Some(tx.clone());
         self.input.set_command_tx(tx);
         Ok(())
@@ -310,50 +306,48 @@ impl Component for PromptWindow {
 
     fn update(&mut self, action: Action) {
         match action {
-            Action::Key(key_code, key_modifiers) => {
-                match (key_code, key_modifiers) {
-                    (KeyCode::Left, KeyModifiers::ALT) => {
-                        self.input.move_cursor_to_previous_word();
-                    }
-                    (KeyCode::Right, KeyModifiers::ALT) => {
-                        self.input.move_cursor_to_next_word();
-                    }
-                    (KeyCode::Backspace, KeyModifiers::ALT) => {
-                        self.input.delete_previous_word();
-                    }
-                    (KeyCode::Left, KeyModifiers::SHIFT) => {
-                        self.input.move_cursor_to_start();
-                    }
-                    (KeyCode::Right, KeyModifiers::SHIFT) => {
-                        self.input.move_cursor_to_end();
-                    }
-                    (KeyCode::Char(c), _) => {
-                        self.input.insert(c);
-                    }
-                    (KeyCode::Backspace, KeyModifiers::NONE) => {
-                        self.input.backspace();
-                    }
-                    (KeyCode::Delete, KeyModifiers::NONE) => {
-                        self.input.delete();
-                    }
-                    (KeyCode::Enter, KeyModifiers::NONE) => {
-                        self.input.insert_newline();
-                    }
-                    (KeyCode::Left, KeyModifiers::NONE) => {
-                        self.input.move_cursor_left();
-                    }
-                    (KeyCode::Right, KeyModifiers::NONE) => {
-                        self.input.move_cursor_right();
-                    }
-                    (KeyCode::Up, KeyModifiers::NONE) => {
-                        self.input.move_cursor_up();
-                    }
-                    (KeyCode::Down, KeyModifiers::NONE) => {
-                        self.input.move_cursor_down();
-                    }
-                    _ => {}
+            Action::Key(key_code, key_modifiers) => match (key_code, key_modifiers) {
+                (KeyCode::Left, KeyModifiers::ALT) => {
+                    self.input.move_cursor_to_previous_word();
                 }
-            }
+                (KeyCode::Right, KeyModifiers::ALT) => {
+                    self.input.move_cursor_to_next_word();
+                }
+                (KeyCode::Backspace, KeyModifiers::ALT) => {
+                    self.input.delete_previous_word();
+                }
+                (KeyCode::Left, KeyModifiers::SHIFT) => {
+                    self.input.move_cursor_to_start();
+                }
+                (KeyCode::Right, KeyModifiers::SHIFT) => {
+                    self.input.move_cursor_to_end();
+                }
+                (KeyCode::Char(c), _) => {
+                    self.input.insert(c);
+                }
+                (KeyCode::Backspace, KeyModifiers::NONE) => {
+                    self.input.backspace();
+                }
+                (KeyCode::Delete, KeyModifiers::NONE) => {
+                    self.input.delete();
+                }
+                (KeyCode::Enter, KeyModifiers::NONE) => {
+                    self.input.insert_newline();
+                }
+                (KeyCode::Left, KeyModifiers::NONE) => {
+                    self.input.move_cursor_left();
+                }
+                (KeyCode::Right, KeyModifiers::NONE) => {
+                    self.input.move_cursor_right();
+                }
+                (KeyCode::Up, KeyModifiers::NONE) => {
+                    self.input.move_cursor_up();
+                }
+                (KeyCode::Down, KeyModifiers::NONE) => {
+                    self.input.move_cursor_down();
+                }
+                _ => {}
+            },
             Action::Paste(text) => {
                 self.input.paste(text);
             }
@@ -361,11 +355,7 @@ impl Component for PromptWindow {
         }
     }
 
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> std::io::Result<()> {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
         self.update_input(area);
 
         let collapsed_top_and_left_border_set = Set {

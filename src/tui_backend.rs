@@ -3,9 +3,8 @@ use {
     crossterm::{
         cursor,
         event::{
-            DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
-            EnableMouseCapture, Event as CrosstermEvent, EventStream,
-            KeyEventKind,
+            DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
+            Event as CrosstermEvent, EventStream, KeyEventKind,
         },
         terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -45,16 +44,11 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `TuiBackend` struct or an error.
-    pub fn new(
-        frame_rate: f64,
-        mouse: bool,
-        paste: bool,
-    ) -> Result<Self, std::io::Error> {
+    pub fn new(frame_rate: f64, mouse: bool, paste: bool) -> Result<Self, std::io::Error> {
         let terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
         let task: JoinHandle<Result<(), SendError<Event>>> =
             tokio::spawn(async { Err(SendError(Event::Init)) });
-        let (event_tx, event_rx) =
-            tokio::sync::mpsc::unbounded_channel::<Event>();
+        let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         Ok(Self {
             terminal,
             task,
@@ -101,11 +95,7 @@ impl TuiBackend {
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn force_exit(mouse: bool, paste: bool) -> Result<(), std::io::Error> {
         crossterm::terminal::disable_raw_mode()?;
-        crossterm::execute!(
-            std::io::stderr(),
-            LeaveAlternateScreen,
-            cursor::Show
-        )?;
+        crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
         if mouse {
             crossterm::execute!(std::io::stderr(), DisableMouseCapture)?;
         }
@@ -208,8 +198,7 @@ impl TuiBackend {
 
             event_tx.send(Event::Init)?;
             loop {
-                let crossterm_event: Fuse<Next<'_, EventStream>> =
-                    reader.next().fuse();
+                let crossterm_event: Fuse<Next<'_, EventStream>> = reader.next().fuse();
                 let render_tick = render_interval.tick();
 
                 tokio::select! {

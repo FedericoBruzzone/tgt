@@ -2,8 +2,7 @@ use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
         configs::config_theme::{
-            style_title_bar, style_title_bar_title1, style_title_bar_title2,
-            style_title_bar_title3,
+            style_title_bar, style_title_bar_title1, style_title_bar_title2, style_title_bar_title3,
         },
         enums::action::Action,
     },
@@ -91,19 +90,12 @@ impl HandleSmallArea for TitleBar {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for TitleBar {
-    fn register_action_handler(
-        &mut self,
-        tx: mpsc::UnboundedSender<Action>,
-    ) -> io::Result<()> {
+    fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
         self.command_tx = Some(tx);
         Ok(())
     }
 
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> io::Result<()> {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
         let name: Vec<char> = self.name.chars().collect::<Vec<char>>();
         // Span::raw(" - A TUI for Telegram"),
         let text = vec![Line::from(vec![

@@ -1,15 +1,13 @@
 use {
-    crate::{
-        app_error::AppError, configs::custom::logger_custom::LoggerConfig,
-    },
+    crate::{app_error::AppError, configs::custom::logger_custom::LoggerConfig},
     std::{
         fs::{self, File},
         path::PathBuf,
     },
     tracing_error::ErrorLayer,
     tracing_subscriber::{
-        filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt,
-        registry::Registry, util::SubscriberInitExt, Layer,
+        filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt, registry::Registry,
+        util::SubscriberInitExt, Layer,
     },
 };
 
@@ -96,9 +94,7 @@ impl Logger {
             "RUST_LOG",
             std::env::var("RUST_LOG")
                 .or_else(|_| Ok(self.log_level.clone()))
-                .unwrap_or_else(|_: String| {
-                    format!("{}=info", env!("CARGO_CRATE_NAME"))
-                }),
+                .unwrap_or_else(|_: String| format!("{}=info", env!("CARGO_CRATE_NAME"))),
         );
     }
 }

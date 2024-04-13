@@ -1,10 +1,7 @@
 use {
     crate::{
         app_error::AppError,
-        configs::{
-            self, config_file::ConfigFile, config_type::ConfigType,
-            raw::app_raw::AppRaw,
-        },
+        configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::app_raw::AppRaw},
     },
     std::path::Path,
 };
@@ -107,8 +104,7 @@ impl From<AppRaw> for AppConfig {
 #[cfg(test)]
 mod tests {
     use crate::configs::{
-        config_file::ConfigFile, custom::app_custom::AppConfig,
-        raw::app_raw::AppRaw,
+        config_file::ConfigFile, custom::app_custom::AppConfig, raw::app_raw::AppRaw,
     };
 
     #[test]

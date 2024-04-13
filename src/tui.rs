@@ -2,9 +2,8 @@ use {
     crate::{
         app_error::AppError,
         components::{
-            component::Component, core_window::CoreWindow,
-            status_bar::StatusBar, title_bar::TitleBar, SMALL_AREA_HEIGHT,
-            SMALL_AREA_WIDTH,
+            component::Component, core_window::CoreWindow, status_bar::StatusBar,
+            title_bar::TitleBar, SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
         },
         configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
         enums::{action::Action, component_name::ComponentName, event::Event},
@@ -83,14 +82,11 @@ impl Tui {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    pub fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> Result<(), AppError> {
+    pub fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<(), AppError> {
         self.action_tx = Some(tx.clone());
-        self.components.iter_mut().try_for_each(|(_, component)| {
-            component.register_action_handler(tx.clone())
-        })?;
+        self.components
+            .iter_mut()
+            .try_for_each(|(_, component)| component.register_action_handler(tx.clone()))?;
         Ok(())
     }
     /// Handle incoming events and produce actions if necessary.
@@ -102,10 +98,7 @@ impl Tui {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    pub fn handle_events(
-        &mut self,
-        event: Option<Event>,
-    ) -> Result<Option<Action>, AppError> {
+    pub fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
         self.components
             .get_mut(&ComponentName::CoreWindow)
             .unwrap()
@@ -131,11 +124,7 @@ impl Tui {
     ///
     /// # Returns
     /// * `Result<()>` - An Ok result or an error.
-    pub fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> Result<(), AppError> {
+    pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> Result<(), AppError> {
         self.components
             .get_mut(&ComponentName::StatusBar)
             .unwrap()
@@ -175,10 +164,7 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::TitleBar)
             .unwrap_or_else(|| {
-                tracing::error!(
-                    "Failed to get component: {}",
-                    ComponentName::TitleBar
-                );
+                tracing::error!("Failed to get component: {}", ComponentName::TitleBar);
                 panic!("Failed to get component: {}", ComponentName::TitleBar)
             })
             .draw(frame, main_layout[0])?;
@@ -186,10 +172,7 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::CoreWindow)
             .unwrap_or_else(|| {
-                tracing::error!(
-                    "Failed to get component: {}",
-                    ComponentName::CoreWindow
-                );
+                tracing::error!("Failed to get component: {}", ComponentName::CoreWindow);
                 panic!("Failed to get component: {}", ComponentName::CoreWindow)
             })
             .draw(frame, main_layout[1])?;
@@ -197,10 +180,7 @@ impl Tui {
         self.components
             .get_mut(&ComponentName::StatusBar)
             .unwrap_or_else(|| {
-                tracing::error!(
-                    "Failed to get component: {}",
-                    ComponentName::StatusBar
-                );
+                tracing::error!("Failed to get component: {}", ComponentName::StatusBar);
                 panic!("Failed to get component: {}", ComponentName::StatusBar)
             })
             .draw(frame, main_layout[2])?;

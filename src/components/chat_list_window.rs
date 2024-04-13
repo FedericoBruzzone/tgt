@@ -2,8 +2,7 @@ use {
     crate::{
         components::component::{Component, HandleFocus, HandleSmallArea},
         configs::config_theme::{
-            style_border_component_focused, style_chat_list,
-            style_item_selected,
+            style_border_component_focused, style_chat_list, style_item_selected,
         },
         enums::action::Action,
     },
@@ -149,10 +148,7 @@ impl HandleSmallArea for ChatListWindow {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatListWindow {
-    fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.command_tx = Some(tx.clone());
         Ok(())
     }
@@ -166,11 +162,7 @@ impl Component for ChatListWindow {
         }
     }
 
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> std::io::Result<()> {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
         let style_border_focused = if self.focused {
             style_border_component_focused()
         } else {

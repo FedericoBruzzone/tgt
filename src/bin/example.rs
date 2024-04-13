@@ -33,25 +33,15 @@ async fn get_command(client_id: i32) -> bool {
             if commands.len() > 1 {
                 limit = commands[1].parse().unwrap();
             }
-            match functions::load_chats(
-                Some(enums::ChatList::Main),
-                limit,
-                client_id,
-            )
-            .await
-            {
+            match functions::load_chats(Some(enums::ChatList::Main), limit, client_id).await {
                 Ok(()) => (),
                 Err(error) => eprintln!("[GET MAIN CHAT LIST]: {error:?}"),
             }
         }
-        "gc" => {
-            match functions::get_chat(commands[1].parse().unwrap(), client_id)
-                .await
-            {
-                Ok(chat) => println!("[GET CHAT]: {chat:?}"),
-                Err(error) => eprintln!("[GET CHAT]: {error:?}"),
-            }
-        }
+        "gc" => match functions::get_chat(commands[1].parse().unwrap(), client_id).await {
+            Ok(chat) => println!("[GET CHAT]: {chat:?}"),
+            Err(error) => eprintln!("[GET CHAT]: {error:?}"),
+        },
         "me" => match functions::get_me(client_id).await {
             Ok(me) => println!("[GET ME]: {me:?}"),
             Err(error) => eprintln!("[GET ME]: {error:?}"),
@@ -59,16 +49,14 @@ async fn get_command(client_id: i32) -> bool {
         "sm" => {
             println!("[DEBUG]: {commands:?}");
             // let args: Vec<&str> = commands[1].split(' ').collect();
-            let text = enums::InputMessageContent::InputMessageText(
-                InputMessageText {
-                    text: FormattedText {
-                        text: commands[2].into(),
-                        entities: Vec::new(),
-                    },
-                    disable_web_page_preview: false,
-                    clear_draft: true,
+            let text = enums::InputMessageContent::InputMessageText(InputMessageText {
+                text: FormattedText {
+                    text: commands[2].into(),
+                    entities: Vec::new(),
                 },
-            );
+                disable_web_page_preview: false,
+                clear_draft: true,
+            });
             match functions::send_message(
                 commands[1].parse().unwrap(),
                 0,
@@ -224,10 +212,8 @@ async fn handle_authorization_state(
             }
             AuthorizationState::WaitPhoneNumber => loop {
                 let input = ask_user("Enter your phone number (include the country calling code):");
-                let response = functions::set_authentication_phone_number(
-                    input, None, client_id,
-                )
-                .await;
+                let response =
+                    functions::set_authentication_phone_number(input, None, client_id).await;
                 match response {
                     Ok(_) => break,
                     Err(e) => println!("{}", e.message),
@@ -242,9 +228,7 @@ async fn handle_authorization_state(
             AuthorizationState::WaitCode(_x) => loop {
                 // x contains info about verification code
                 let input = ask_user("Enter the verification code:");
-                let response =
-                    functions::check_authentication_code(input, client_id)
-                        .await;
+                let response = functions::check_authentication_code(input, client_id).await;
                 match response {
                     Ok(_) => break,
                     Err(e) => println!("{}", e.message),
@@ -281,9 +265,7 @@ async fn handle_authorization_state(
                 run_flag.store(false, Ordering::Release);
                 break;
             }
-            _ => eprintln!(
-                "[HANDLE AUTH] Unsupported authorization state: {state:?}"
-            ),
+            _ => eprintln!("[HANDLE AUTH] Unsupported authorization state: {state:?}"),
         }
     }
 
@@ -328,17 +310,14 @@ async fn main() {
     };
 
     // Set log stream to file
-    if let Err(error) =
-        functions::set_log_stream(LogStream::File(log_stream_file), client_id)
-            .await
+    if let Err(error) = functions::set_log_stream(LogStream::File(log_stream_file), client_id).await
     {
         eprintln!("[ERROR] \"Write access to the current directory is required\": {error:?}")
     }
 
     // Test get_text_entities
     match functions::get_text_entities(
-        "@telegram /test_command https://telegram.org telegram.me @gif @test"
-            .into(),
+        "@telegram /test_command https://telegram.org telegram.me @gif @test".into(),
         client_id,
     )
     .await
@@ -350,8 +329,7 @@ async fn main() {
     }
 
     // Handle the authorization state to authenticate the client
-    let auth_rx =
-        handle_authorization_state(client_id, auth_rx, run_flag.clone()).await;
+    let auth_rx = handle_authorization_state(client_id, auth_rx, run_flag.clone()).await;
 
     // // Run the get_me() method to get user information
     // let User::User(me) = functions::get_me(client_id).await.unwrap();

@@ -4,8 +4,7 @@ use {
         configs::config_theme::{
             style_status_bar, style_status_bar_message_quit_key,
             style_status_bar_message_quit_text, style_status_bar_press_key_key,
-            style_status_bar_press_key_text,
-            style_status_bar_size_info_numbers,
+            style_status_bar_press_key_text, style_status_bar_size_info_numbers,
             style_status_bar_size_info_text,
         },
         enums::{action::Action, event::Event},
@@ -106,10 +105,7 @@ impl HandleSmallArea for StatusBar {
 
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for StatusBar {
-    fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.command_tx = Some(tx);
         Ok(())
     }
@@ -126,11 +122,7 @@ impl Component for StatusBar {
         }
     }
 
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame<'_>,
-        area: Rect,
-    ) -> std::io::Result<()> {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
         let text = vec![Line::from(vec![
             Span::styled("Press ", style_status_bar_message_quit_text()),
             Span::styled("q ", style_status_bar_message_quit_key()),
@@ -140,10 +132,7 @@ impl Component for StatusBar {
             //
             Span::raw("     "),
             Span::styled("Press key: ", style_status_bar_press_key_text()),
-            Span::styled(
-                self.last_key.to_string(),
-                style_status_bar_press_key_key(),
-            ),
+            Span::styled(self.last_key.to_string(), style_status_bar_press_key_key()),
             //
             Span::raw("     "),
             Span::styled("Size: ", style_status_bar_size_info_text()),

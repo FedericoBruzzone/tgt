@@ -6,8 +6,8 @@ use {
     crate::{
         app_error::AppError,
         configs::{
-            self, config_file::ConfigFile, config_theme::ThemeStyle,
-            config_type::ConfigType, raw::palette_raw::PaletteRaw,
+            self, config_file::ConfigFile, config_theme::ThemeStyle, config_type::ConfigType,
+            raw::palette_raw::PaletteRaw,
         },
     },
     ratatui::style::Color,
@@ -112,16 +112,14 @@ mod tests {
     use {
         crate::configs::{
             config_file::ConfigFile, config_type::ConfigType,
-            custom::palette_custom::PaletteConfig,
-            raw::palette_raw::PaletteRaw,
+            custom::palette_custom::PaletteConfig, raw::palette_raw::PaletteRaw,
         },
         std::collections::HashMap,
     };
 
     #[test]
     fn test_palette_config_default() {
-        let palette_config =
-            crate::configs::custom::palette_custom::PaletteConfig::default();
+        let palette_config = crate::configs::custom::palette_custom::PaletteConfig::default();
         assert_eq!(palette_config.palette.len(), 16);
     }
 
@@ -162,8 +160,7 @@ mod tests {
         let raw = PaletteRaw {
             palette: Some(palette),
         };
-        let palette_config =
-            crate::configs::custom::palette_custom::PaletteConfig::from(raw);
+        let palette_config = crate::configs::custom::palette_custom::PaletteConfig::from(raw);
         assert_eq!(palette_config.palette.len(), 2);
         assert_eq!(
             palette_config.palette.get("black").unwrap(),

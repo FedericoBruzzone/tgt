@@ -1,7 +1,7 @@
 use {
     crate::{
-        app_error::AppError, configs::raw::theme_raw::ThemeEntry, APP_CONFIG,
-        PALETTE_CONFIG, THEME_CONFIG,
+        app_error::AppError, configs::raw::theme_raw::ThemeEntry, APP_CONFIG, PALETTE_CONFIG,
+        THEME_CONFIG,
     },
     ratatui::style::{Color, Modifier, Style},
 };
@@ -115,9 +115,7 @@ impl ThemeStyle {
                     .as_slice()
                 {
                     match (r.parse::<u8>(), g.parse::<u8>(), b.parse::<u8>()) {
-                        (Ok(r), Ok(g), Ok(b)) => {
-                            return Ok(Color::Rgb(r, g, b))
-                        }
+                        (Ok(r), Ok(g), Ok(b)) => return Ok(Color::Rgb(r, g, b)),
                         _ => return Err(AppError::InvalidColor(s.to_string())),
                     }
                 }
@@ -151,12 +149,8 @@ impl ThemeStyle {
 /// config.
 impl From<ThemeEntry> for ThemeStyle {
     fn from(entry: ThemeEntry) -> Self {
-        let fg = Self::str_to_color_with_palette(
-            &entry.fg.unwrap_or("black".to_string()),
-        );
-        let bg = Self::str_to_color_with_palette(
-            &entry.bg.unwrap_or("white".to_string()),
-        );
+        let fg = Self::str_to_color_with_palette(&entry.fg.unwrap_or("black".to_string()));
+        let bg = Self::str_to_color_with_palette(&entry.bg.unwrap_or("white".to_string()));
         let mut modifier = Modifier::empty();
         modifier.insert(match entry.italic {
             Some(true) => Modifier::ITALIC,
@@ -308,9 +302,7 @@ pub fn style_title_bar_title3() -> Style {
 #[cfg(test)]
 mod tests {
     use {
-        crate::configs::{
-            config_theme::ThemeStyle, raw::theme_raw::ThemeEntry,
-        },
+        crate::configs::{config_theme::ThemeStyle, raw::theme_raw::ThemeEntry},
         ratatui::style::{Color, Modifier},
     };
 
@@ -341,10 +333,8 @@ mod tests {
             bold: Some(true),
             underline: Some(true),
         };
-        let colored_entry_fg =
-            ThemeStyle::str_to_color(&entry.fg.unwrap()).unwrap();
-        let colored_entry_bg =
-            ThemeStyle::str_to_color(&entry.bg.unwrap()).unwrap();
+        let colored_entry_fg = ThemeStyle::str_to_color(&entry.fg.unwrap()).unwrap();
+        let colored_entry_bg = ThemeStyle::str_to_color(&entry.bg.unwrap()).unwrap();
         let mut modifier = Modifier::empty();
         modifier.insert(match entry.italic {
             Some(true) => Modifier::ITALIC,
@@ -380,10 +370,8 @@ mod tests {
             bold: Some(true),
             underline: Some(true),
         };
-        let colored_entry_fg =
-            ThemeStyle::str_to_color_with_palette(&entry.fg.unwrap()).unwrap();
-        let colored_entry_bg =
-            ThemeStyle::str_to_color_with_palette(&entry.bg.unwrap()).unwrap();
+        let colored_entry_fg = ThemeStyle::str_to_color_with_palette(&entry.fg.unwrap()).unwrap();
+        let colored_entry_bg = ThemeStyle::str_to_color_with_palette(&entry.bg.unwrap()).unwrap();
         let mut modifier = Modifier::empty();
         modifier.insert(match entry.italic {
             Some(true) => Modifier::ITALIC,

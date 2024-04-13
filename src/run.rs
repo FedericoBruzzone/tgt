@@ -61,9 +61,7 @@ async fn handle_tui_backend_events(
 ) -> Result<(), AppError> {
     if let Some(event) = tui_backend.next().await {
         match event {
-            Event::Render => {
-                app_context.action_tx_ref().send(Action::Render)?
-            }
+            Event::Render => app_context.action_tx_ref().send(Action::Render)?,
             Event::Resize(width, height) => app_context
                 .action_tx_ref()
                 .send(Action::Resize(width, height))?,
@@ -133,9 +131,7 @@ async fn consume_until_single_action(
     let start = Instant::now();
     loop {
         if let Some(event) = tui_backend.next().await {
-            if let Some(ActionBinding::Single { action, .. }) =
-                map_event_action.get(&event)
-            {
+            if let Some(ActionBinding::Single { action, .. }) = map_event_action.get(&event) {
                 action_tx.send(action.clone()).unwrap();
                 break;
             }

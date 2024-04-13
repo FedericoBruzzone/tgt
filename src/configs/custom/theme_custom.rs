@@ -2,8 +2,8 @@ use {
     crate::{
         app_error::AppError,
         configs::{
-            self, config_file::ConfigFile, config_theme::ThemeStyle,
-            config_type::ConfigType, raw::theme_raw::ThemeRaw,
+            self, config_file::ConfigFile, config_theme::ThemeStyle, config_type::ConfigType,
+            raw::theme_raw::ThemeRaw,
         },
         APP_CONFIG,
     },
@@ -178,8 +178,7 @@ mod tests {
 
     #[test]
     fn test_theme_config_default() {
-        let theme_config =
-            crate::configs::custom::theme_custom::ThemeConfig::default();
+        let theme_config = crate::configs::custom::theme_custom::ThemeConfig::default();
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 1);
         assert_eq!(theme_config.chat.len(), 3);

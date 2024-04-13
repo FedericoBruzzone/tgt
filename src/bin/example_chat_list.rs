@@ -1,14 +1,8 @@
 use {
     crossterm::{
-        event::{
-            self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode,
-            KeyEventKind,
-        },
+        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
         execute,
-        terminal::{
-            disable_raw_mode, enable_raw_mode, EnterAlternateScreen,
-            LeaveAlternateScreen,
-        },
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
     ratatui::{prelude::*, widgets::*},
     std::{
@@ -212,13 +206,9 @@ fn run_app<B: Backend>(
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Left | KeyCode::Char('h') => {
-                            app.items.unselect()
-                        }
+                        KeyCode::Left | KeyCode::Char('h') => app.items.unselect(),
                         KeyCode::Down | KeyCode::Char('j') => app.items.next(),
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            app.items.previous()
-                        }
+                        KeyCode::Up | KeyCode::Char('k') => app.items.previous(),
                         _ => {}
                     }
                 }
@@ -253,8 +243,7 @@ fn ui(f: &mut Frame, app: &mut App) {
                         .into(),
                 );
             }
-            ListItem::new(lines)
-                .style(Style::default().fg(Color::Black).bg(Color::White))
+            ListItem::new(lines).style(Style::default().fg(Color::Black).bg(Color::White))
         })
         .collect();
 

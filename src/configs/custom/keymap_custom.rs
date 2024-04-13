@@ -75,13 +75,13 @@ impl KeymapConfig {
     /// * `v` - A vector of strings that represents the unrecognized settings.
     fn print_config_file_error(s: &str, v: Vec<String>) {
         eprintln!(
-        "\n\
+            "\n\
          [TGT] ConfigFileError: Some setting were not recognized, the {} filed is {:?}\n    \
          Please check the {} configuration file in the config directory or\n    \
          the default config file in the GitHub repository.",
-         s,
-        v,
-        ConfigType::Keymap.as_default_filename()
+            s,
+            v,
+            ConfigType::Keymap.as_default_filename()
         );
     }
     /// Convert a vector of keymap entries to a hashmap of event and action
@@ -141,22 +141,15 @@ impl KeymapConfig {
                     kind,
                     keymap.command
                 );
-                Self::print_config_file_error(
-                    "command",
-                    Vec::from([keymap.command]),
-                );
+                Self::print_config_file_error("command", Vec::from([keymap.command]));
                 std::process::exit(1);
             }
 
             let description = keymap.description.clone();
 
-            if let Err(AppError::AlreadyBound) = Self::insert_keymap(
-                &mut hashmap,
-                event,
-                action,
-                description,
-                kind.clone(),
-            ) {
+            if let Err(AppError::AlreadyBound) =
+                Self::insert_keymap(&mut hashmap, event, action, description, kind.clone())
+            {
                 tracing::warn!(
                     "Keymap entry {:?} is already present in the {:?} section",
                     keymap
@@ -220,13 +213,7 @@ impl KeymapConfig {
             _ => match keymap.entry(event[0].clone()) {
                 Entry::Occupied(mut entry) => match entry.get_mut() {
                     ActionBinding::Multiple(ref mut map) => {
-                        Self::insert_keymap(
-                            map,
-                            event[1..].to_vec(),
-                            action,
-                            description,
-                            kind,
-                        )
+                        Self::insert_keymap(map, event[1..].to_vec(), action, description, kind)
                     }
                     _ => {
                         tracing::error!(
@@ -332,10 +319,7 @@ impl ConfigFile for KeymapConfig {
                 // The other keymaps can override the default keymap, but the
                 // default keymap can not override the other keymaps.
                 if let Some(default) = other.default {
-                    for (k, v) in Self::keymaps_vec_to_map(
-                        default.keymap,
-                        KeymapKind::Default,
-                    ) {
+                    for (k, v) in Self::keymaps_vec_to_map(default.keymap, KeymapKind::Default) {
                         if self.default.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the default section, you are overriding it",
@@ -345,10 +329,7 @@ impl ConfigFile for KeymapConfig {
                     }
                 }
                 if let Some(chat_list) = other.chat_list {
-                    for (k, v) in Self::keymaps_vec_to_map(
-                        chat_list.keymap,
-                        KeymapKind::ChatList,
-                    ) {
+                    for (k, v) in Self::keymaps_vec_to_map(chat_list.keymap, KeymapKind::ChatList) {
                         if self.chat_list.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the chat list section, you are overriding it",
@@ -358,9 +339,7 @@ impl ConfigFile for KeymapConfig {
                     }
                 }
                 if let Some(chat) = other.chat {
-                    for (k, v) in
-                        Self::keymaps_vec_to_map(chat.keymap, KeymapKind::Chat)
-                    {
+                    for (k, v) in Self::keymaps_vec_to_map(chat.keymap, KeymapKind::Chat) {
                         if self.chat.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the chat section, you are overriding it",
@@ -370,10 +349,7 @@ impl ConfigFile for KeymapConfig {
                     }
                 }
                 if let Some(prompt) = other.prompt {
-                    for (k, v) in Self::keymaps_vec_to_map(
-                        prompt.keymap,
-                        KeymapKind::Prompt,
-                    ) {
+                    for (k, v) in Self::keymaps_vec_to_map(prompt.keymap, KeymapKind::Prompt) {
                         if self.prompt.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the prompt section, you are overriding it",
@@ -382,12 +358,7 @@ impl ConfigFile for KeymapConfig {
                         }
                     }
                 }
-                Self::check_duplicates(
-                    &self.default,
-                    &self.chat_list,
-                    &self.chat,
-                    &self.prompt,
-                );
+                Self::check_duplicates(&self.default, &self.chat_list, &self.chat, &self.prompt);
                 self.clone()
             }
         }
@@ -403,22 +374,11 @@ impl Default for KeymapConfig {
 /// configuration.
 impl From<KeymapRaw> for KeymapConfig {
     fn from(raw: KeymapRaw) -> Self {
-        let default = Self::keymaps_vec_to_map(
-            raw.default.unwrap().keymap,
-            KeymapKind::Default,
-        );
-        let chat_list = Self::keymaps_vec_to_map(
-            raw.chat_list.unwrap().keymap,
-            KeymapKind::ChatList,
-        );
-        let chat = Self::keymaps_vec_to_map(
-            raw.chat.unwrap().keymap,
-            KeymapKind::Chat,
-        );
-        let prompt = Self::keymaps_vec_to_map(
-            raw.prompt.unwrap().keymap,
-            KeymapKind::Prompt,
-        );
+        let default = Self::keymaps_vec_to_map(raw.default.unwrap().keymap, KeymapKind::Default);
+        let chat_list =
+            Self::keymaps_vec_to_map(raw.chat_list.unwrap().keymap, KeymapKind::ChatList);
+        let chat = Self::keymaps_vec_to_map(raw.chat.unwrap().keymap, KeymapKind::Chat);
+        let prompt = Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap, KeymapKind::Prompt);
         Self::check_duplicates(&default, &chat_list, &chat, &prompt);
         Self {
             default,

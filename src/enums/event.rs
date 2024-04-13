@@ -33,10 +33,7 @@ pub enum Event {
 }
 /// Implement the `Event` enum.
 impl Event {
-    pub fn event_with_modifiers(
-        s: &str,
-        modifiers: KeyModifiers,
-    ) -> Result<Event, AppError> {
+    pub fn event_with_modifiers(s: &str, modifiers: KeyModifiers) -> Result<Event, AppError> {
         match s {
             "backspace" => Ok(Event::Key(KeyCode::Backspace, modifiers)),
             "enter" => Ok(Event::Key(KeyCode::Enter, modifiers)),
