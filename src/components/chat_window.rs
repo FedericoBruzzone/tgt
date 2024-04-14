@@ -1,20 +1,18 @@
-use {
-    crate::{
-        components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{
-            style_border_component_focused, style_chat, style_chat_list, style_chat_message_myself,
-            style_chat_message_other, style_item_selected,
-        },
-        enums::action::Action,
+use crate::{
+    components::component::{Component, HandleFocus, HandleSmallArea},
+    configs::config_theme::{
+        style_border_component_focused, style_chat, style_chat_list, style_chat_message_myself,
+        style_chat_message_other, style_item_selected,
     },
-    ratatui::{
-        layout::{Alignment, Rect},
-        symbols::{border, line},
-        text::Line,
-        widgets::{Block, Borders, List, ListDirection, ListItem, ListState},
-    },
-    tokio::sync::mpsc::UnboundedSender,
+    enums::action::Action,
 };
+use ratatui::{
+    layout::{Alignment, Rect},
+    symbols::{border, line},
+    text::Line,
+    widgets::{Block, Borders, List, ListDirection, ListItem, ListState},
+};
+use tokio::sync::mpsc::UnboundedSender;
 
 /// `ChatWindow` is a struct that represents a window for displaying a chat.
 /// It is responsible for managing the layout and rendering of the chat window.

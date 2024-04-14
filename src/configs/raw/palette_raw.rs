@@ -1,4 +1,5 @@
-use {serde::Deserialize, std::collections::HashMap};
+use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize)]
 /// The raw palette configuration.

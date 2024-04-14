@@ -1,19 +1,17 @@
-use {
-    crate::{
-        app_error::AppError,
-        configs::{
-            self,
-            config_file::ConfigFile,
-            config_type::ConfigType,
-            raw::keymap_raw::{KeymapEntry, KeymapRaw},
-        },
-        enums::{action::Action, component_name::ComponentName, event::Event},
+use crate::{
+    app_error::AppError,
+    configs::{
+        self,
+        config_file::ConfigFile,
+        config_type::ConfigType,
+        raw::keymap_raw::{KeymapEntry, KeymapRaw},
     },
-    std::{
-        collections::{hash_map::Entry, HashMap, HashSet},
-        path::Path,
-        str::FromStr,
-    },
+    enums::{action::Action, component_name::ComponentName, event::Event},
+};
+use std::{
+    collections::{hash_map::Entry, HashMap, HashSet},
+    path::Path,
+    str::FromStr,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

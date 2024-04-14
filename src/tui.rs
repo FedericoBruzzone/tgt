@@ -1,17 +1,15 @@
-use {
-    crate::{
-        app_error::AppError,
-        components::{
-            component::Component, core_window::CoreWindow, status_bar::StatusBar,
-            title_bar::TitleBar, SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
-        },
-        configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
-        enums::{action::Action, component_name::ComponentName, event::Event},
+use crate::{
+    app_error::AppError,
+    components::{
+        component::Component, core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar,
+        SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
     },
-    ratatui::layout::{Constraint, Direction, Layout, Rect},
-    std::collections::HashMap,
-    tokio::sync::mpsc::UnboundedSender,
+    configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
+    enums::{action::Action, component_name::ComponentName, event::Event},
 };
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use std::collections::HashMap;
+use tokio::sync::mpsc::UnboundedSender;
 
 /// `Tui` is a struct that represents the main user interface for the
 /// application. It is responsible for managing the layout and rendering of all

@@ -10,10 +10,6 @@ pub mod configs;
 pub mod enums;
 pub mod run;
 
-use std::panic::{set_hook, take_hook};
-
-use lazy_static::lazy_static;
-
 use crate::{
     app_context::AppContext,
     app_error::AppError,
@@ -27,6 +23,8 @@ use crate::{
     logger::Logger,
     tui_backend::TuiBackend,
 };
+use lazy_static::lazy_static;
+use std::panic::{set_hook, take_hook};
 
 lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();

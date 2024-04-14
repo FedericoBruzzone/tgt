@@ -1,10 +1,8 @@
-use {
-    crate::{
-        app_error::AppError,
-        configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::app_raw::AppRaw},
-    },
-    std::path::Path,
+use crate::{
+    app_error::AppError,
+    configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::app_raw::AppRaw},
 };
+use std::path::Path;
 
 #[derive(Clone, Debug)]
 /// The application configuration.

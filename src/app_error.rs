@@ -1,9 +1,7 @@
-use {
-    crate::enums::action::Action,
-    config::ConfigError,
-    std::{fmt::Display, io},
-    tokio::sync::mpsc::error::SendError,
-};
+use crate::enums::action::Action;
+use config::ConfigError;
+use std::{fmt::Display, io};
+use tokio::sync::mpsc::error::SendError;
 
 #[derive(Debug)]
 /// An error type for the application.

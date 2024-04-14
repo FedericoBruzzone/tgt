@@ -1,13 +1,11 @@
-use {
-    crate::{
-        app_error::AppError,
-        configs::{
-            self, config_file::ConfigFile, config_type::ConfigType, project_dir,
-            raw::logger_raw::LoggerRaw,
-        },
+use crate::{
+    app_error::AppError,
+    configs::{
+        self, config_file::ConfigFile, config_type::ConfigType, project_dir,
+        raw::logger_raw::LoggerRaw,
     },
-    std::path::Path,
 };
+use std::path::Path;
 
 #[derive(Clone, Debug)]
 /// The logger configuration.

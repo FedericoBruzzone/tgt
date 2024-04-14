@@ -1,17 +1,13 @@
-use std::{collections::HashMap, path::Path};
-
-use crate::APP_CONFIG;
-
-use {
-    crate::{
-        app_error::AppError,
-        configs::{
-            self, config_file::ConfigFile, config_theme::ThemeStyle, config_type::ConfigType,
-            raw::palette_raw::PaletteRaw,
-        },
+use crate::{
+    app_error::AppError,
+    configs::{
+        self, config_file::ConfigFile, config_theme::ThemeStyle, config_type::ConfigType,
+        raw::palette_raw::PaletteRaw,
     },
-    ratatui::style::Color,
+    APP_CONFIG,
 };
+use ratatui::style::Color;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Clone, Debug)]
 /// The palette configuration.

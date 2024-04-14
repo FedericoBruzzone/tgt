@@ -1,11 +1,9 @@
-use {
-    crate::{
-        configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
-        enums::action::Action,
-        tui::Tui,
-    },
-    tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender},
+use crate::{
+    configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
+    enums::action::Action,
+    tui::Tui,
 };
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 /// `App` is a struct that represents the main application.
 /// It is responsible for managing the user interface and the backend.
