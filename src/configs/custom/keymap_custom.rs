@@ -37,7 +37,7 @@ pub enum ActionBinding {
 /// If a keymap entry is present in multiple keymaps, it is considered a
 /// conflict
 enum KeymapKind {
-    Default,
+    CoreWindow,
     ChatList,
     Chat,
     Prompt,
@@ -48,7 +48,7 @@ enum KeymapKind {
 pub struct KeymapConfig {
     /// The default keymap configuration.
     /// They can be used in any component.
-    pub default: HashMap<Event, ActionBinding>,
+    pub core_window: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the chats list component.
     pub chat_list: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the chat component.
@@ -66,6 +66,28 @@ impl KeymapConfig {
         configs::deserialize_to_config_into::<KeymapRaw, Self>(Path::new(
             &configs::custom::default_config_keymap_file_path()?,
         ))
+    }
+    /// Get the key of a single action.
+    ///
+    /// # Arguments
+    /// * `map` - A hashmap of event and action binding.
+    /// * `value` - An action.
+    ///
+    /// # Returns
+    /// The key of the single action.
+    pub fn get_key_of_single_action(
+        &self,
+        component_name: ComponentName,
+        value: Action,
+    ) -> Option<&Event> {
+        let map = self.get_map_of(Some(component_name));
+        for (k, v) in map.iter() {
+            match v {
+                ActionBinding::Single { action, .. } if *action == value => return Some(k),
+                _ => {}
+            }
+        }
+        None
     }
     /// Print the configuration file error.
     /// It is used to print the error when the configuration file is not
@@ -291,9 +313,9 @@ impl KeymapConfig {
                 ComponentName::ChatList => &self.chat_list,
                 ComponentName::Chat => &self.chat,
                 ComponentName::Prompt => &self.prompt,
-                _ => &self.default,
+                _ => &self.core_window,
             },
-            None => &self.default,
+            None => &self.core_window,
         }
     }
 }
@@ -318,9 +340,9 @@ impl ConfigFile for KeymapConfig {
                 // It is important that the default keymap is merged first.
                 // The other keymaps can override the default keymap, but the
                 // default keymap can not override the other keymaps.
-                if let Some(default) = other.default {
-                    for (k, v) in Self::keymaps_vec_to_map(default.keymap, KeymapKind::Default) {
-                        if self.default.insert(k.clone(), v).is_some() {
+                if let Some(default) = other.core_window {
+                    for (k, v) in Self::keymaps_vec_to_map(default.keymap, KeymapKind::CoreWindow) {
+                        if self.core_window.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the default section, you are overriding it",
                                     k.to_string()
@@ -358,7 +380,12 @@ impl ConfigFile for KeymapConfig {
                         }
                     }
                 }
-                Self::check_duplicates(&self.default, &self.chat_list, &self.chat, &self.prompt);
+                Self::check_duplicates(
+                    &self.core_window,
+                    &self.chat_list,
+                    &self.chat,
+                    &self.prompt,
+                );
                 self.clone()
             }
         }
@@ -374,14 +401,15 @@ impl Default for KeymapConfig {
 /// configuration.
 impl From<KeymapRaw> for KeymapConfig {
     fn from(raw: KeymapRaw) -> Self {
-        let default = Self::keymaps_vec_to_map(raw.default.unwrap().keymap, KeymapKind::Default);
+        let core_window =
+            Self::keymaps_vec_to_map(raw.core_window.unwrap().keymap, KeymapKind::CoreWindow);
         let chat_list =
             Self::keymaps_vec_to_map(raw.chat_list.unwrap().keymap, KeymapKind::ChatList);
         let chat = Self::keymaps_vec_to_map(raw.chat.unwrap().keymap, KeymapKind::Chat);
         let prompt = Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap, KeymapKind::Prompt);
-        Self::check_duplicates(&default, &chat_list, &chat, &prompt);
+        Self::check_duplicates(&core_window, &chat_list, &chat, &prompt);
         Self {
-            default,
+            core_window,
             chat_list,
             chat,
             prompt,
@@ -406,7 +434,7 @@ mod tests {
     #[test]
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
-        assert_eq!(keymap_config.default.len(), 10);
+        assert_eq!(keymap_config.core_window.len(), 10);
         assert_eq!(keymap_config.chat_list.len(), 3);
         assert_eq!(keymap_config.chat.len(), 3);
         assert_eq!(keymap_config.prompt.len(), 0);
@@ -415,13 +443,13 @@ mod tests {
     #[test]
     fn test_keymap_config_from_raw_empty() {
         let keymap_raw = KeymapRaw {
-            default: Some(KeymapMode { keymap: vec![] }),
+            core_window: Some(KeymapMode { keymap: vec![] }),
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
-        assert_eq!(keymap_config.default.len(), 0);
+        assert_eq!(keymap_config.core_window.len(), 0);
         assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
@@ -430,7 +458,7 @@ mod tests {
     #[test]
     fn test_keymap_config_from_raw() {
         let keymap_raw = KeymapRaw {
-            default: Some(KeymapMode {
+            core_window: Some(KeymapMode {
                 keymap: vec![KeymapEntry {
                     keys: vec!["q".to_string()],
                     command: "quit".to_string(),
@@ -442,7 +470,7 @@ mod tests {
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
-        assert_eq!(keymap_config.default.len(), 1);
+        assert_eq!(keymap_config.core_window.len(), 1);
         assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
@@ -451,7 +479,7 @@ mod tests {
     #[test]
     fn test_keymap_config_merge() {
         let keymap_raw = KeymapRaw {
-            default: Some(KeymapMode {
+            core_window: Some(KeymapMode {
                 keymap: vec![KeymapEntry {
                     keys: vec!["q".to_string()],
                     command: "quit".to_string(),
@@ -464,7 +492,7 @@ mod tests {
         };
         let mut keymap_config = KeymapConfig::from(keymap_raw);
         let keymap_raw = KeymapRaw {
-            default: Some(KeymapMode {
+            core_window: Some(KeymapMode {
                 keymap: vec![KeymapEntry {
                     keys: vec!["q".to_string()],
                     command: "render".to_string(),
@@ -476,13 +504,13 @@ mod tests {
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
-        assert_eq!(keymap_config.default.len(), 1);
+        assert_eq!(keymap_config.core_window.len(), 1);
         assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
         assert_eq!(
             keymap_config
-                .default
+                .core_window
                 .get(&Event::from_str("q").unwrap())
                 .unwrap()
                 .clone(),
@@ -502,13 +530,13 @@ mod tests {
     fn test_merge_all_fields() {
         let mut keymap_config = KeymapConfig::default();
         let keymap_raw = KeymapRaw {
-            default: Some(KeymapMode { keymap: vec![] }),
+            core_window: Some(KeymapMode { keymap: vec![] }),
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
-        assert_eq!(keymap_config.default.len(), 10);
+        assert_eq!(keymap_config.core_window.len(), 10);
         assert_eq!(keymap_config.chat_list.len(), 3);
         assert_eq!(keymap_config.chat.len(), 3);
         assert_eq!(keymap_config.prompt.len(), 0);

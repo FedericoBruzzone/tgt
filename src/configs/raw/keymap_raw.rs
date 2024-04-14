@@ -24,8 +24,8 @@ pub struct KeymapMode {
 #[derive(Clone, Debug, Deserialize)]
 /// The raw keymap configuration.
 pub struct KeymapRaw {
-    /// The keymap for the default mode.
-    pub default: Option<KeymapMode>,
+    /// The keymap for the core window mode, they are used in all components.
+    pub core_window: Option<KeymapMode>,
     /// The keymap for the chat list mode.
     pub chat_list: Option<KeymapMode>,
     /// The keymap for the chat mode.

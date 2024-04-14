@@ -70,10 +70,10 @@ async fn handle_tui_backend_events(
                     .action_tx_ref()
                     .send(Action::Key(key, modifiers))?;
 
-                // Handle default key bindings.
+                // Handle core_window key bindings.
                 if let Some(action_binding) = app_context
                     .keymap_config_ref()
-                    .default
+                    .core_window
                     .get(&Event::Key(key, modifiers))
                 {
                     match action_binding {

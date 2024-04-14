@@ -4,7 +4,7 @@ use {
         configs::config_theme::{
             style_border_component_focused, style_prompt, style_prompt_message_preview_text,
         },
-        enums::action::Action,
+        enums::{action::Action, event::Event},
     },
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::{
@@ -212,6 +212,8 @@ pub struct PromptWindow {
     small_area: bool,
     /// Indicates whether the `PromptWindow` is focused or not.
     focused: bool,
+    /// The key that allows the `PromptWindow` to be focused.
+    focused_key: String,
     /// The current input mode of the `PromptWindow`.
     /// Usually, when the `PromptWindow` is focused, the input mode is set to
     /// `Input`. Otherwise, it is set to `Normal`.
@@ -236,6 +238,7 @@ impl PromptWindow {
         let command_tx = None;
         let small_area = false;
         let focused = false;
+        let focused_key = "".to_string();
         let input_mode = InputMode::Normal;
         let input = Input::default();
 
@@ -244,6 +247,7 @@ impl PromptWindow {
             action_tx: command_tx,
             small_area,
             focused,
+            focused_key,
             input_mode,
             input,
         }
@@ -259,7 +263,26 @@ impl PromptWindow {
         self.name = name.as_ref().to_string();
         self
     }
-
+    /// Set the focused key of the `PromptWindow`.
+    /// It is the key that allows the `PromptWindow` to be focused.
+    ///
+    /// # Arguments
+    /// * `event` - An optional event that contains the focused key.
+    ///
+    /// # Returns
+    /// * `Self` - The modified instance of the `PromptWindow`.
+    pub fn with_focused_key(mut self, event: Option<&Event>) -> Self {
+        if let Some(event) = event {
+            self.focused_key = event.to_string();
+        }
+        self
+    }
+    /// Update the input area of the `PromptWindow`.
+    /// It is used to update the input area of the `PromptWindow` when a new
+    /// line is inserted or deleted.
+    ///
+    /// # Arguments
+    /// * `area_input` - The new input area of the `PromptWindow`.
     pub fn update_input(&mut self, area_input: Rect) {
         if self.input.area_input != area_input {
             self.input.area_input = area_input;
@@ -376,7 +399,7 @@ impl Component for PromptWindow {
             )
         } else {
             (
-                "Press <X> to send a message".to_string(),
+                format!("Press {} to send a message", self.focused_key),
                 style_prompt_message_preview_text(),
                 style_prompt(),
             )

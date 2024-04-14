@@ -59,7 +59,13 @@ impl CoreWindow {
             ),
             (
                 ComponentName::Prompt,
-                PromptWindow::new().with_name("Prompt").new_boxed(),
+                PromptWindow::new()
+                    .with_name("Prompt")
+                    .with_focused_key(keymap_config.get_key_of_single_action(
+                        ComponentName::CoreWindow,
+                        Action::FocusComponent(ComponentName::Prompt),
+                    ))
+                    .new_boxed(),
             ),
         ];
 
