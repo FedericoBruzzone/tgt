@@ -1,9 +1,6 @@
 use {
     crate::{app_error::AppError, configs::custom::logger_custom::LoggerConfig},
-    std::{
-        fs::{self, File},
-        path::PathBuf,
-    },
+    std::fs,
     tracing_error::ErrorLayer,
     tracing_subscriber::{
         filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt, registry::Registry,
@@ -16,9 +13,11 @@ use {
 /// This struct is used to initialize the logger for the application.
 pub struct Logger {
     /// The log folder.
-    log_folder: PathBuf,
+    log_folder: String,
     /// The log file.
     log_file: String,
+    rotation_frequency: tracing_appender::rolling::Rotation,
+    max_old_log_files: usize,
     /// The log level.
     log_level: String,
 }
@@ -48,19 +47,22 @@ impl Logger {
     /// - writer: the log file
     /// - filter: the `RUST_LOG` environment variable
     /// The error layer is initialized with the default settings.
-    ///
-    /// # Returns
-    /// * `Result<&Self, AppError>` - The result of the operation.
     pub fn init(&self) {
         self.set_rust_log_variable();
-        let file = self.create_log_file().unwrap();
+        let _ = self.delete_old_log_files();
+
+        let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+            self.rotation_frequency.clone(),
+            self.log_folder.clone(),
+            self.log_file.clone(),
+        );
 
         let file_subscriber = tracing_subscriber::fmt::layer()
             .with_file(true)
             .with_line_number(true)
             .with_target(true)
             .with_ansi(false)
-            .with_writer(file)
+            .with_writer(file_appender)
             // Parsing an EnvFilter from the default environment variable
             // (RUST_LOG)
             .with_filter(EnvFilter::from_default_env()); //tracing_subscriber::filter::LevelFilter::TRACE
@@ -70,18 +72,34 @@ impl Logger {
             .with(ErrorLayer::default())
             .init();
     }
-
-    /// Create the log file for the application.
-    /// By default, the log file is `tgt.log` in the `.data` directory of the
-    /// current working directory.
+    /// Deletes old log files from the specified log folder.
+    ///
+    /// This function iterates through the log files in the specified log folder, filters out files
+    /// whose filenames match the provided prefix, sorts the remaining log files, and deletes the oldest ones
+    /// if the number of log files exceeds a certain threshold.
     ///
     /// # Returns
     /// * `Result<(), AppError>` - The result of the operation.
-    fn create_log_file(&self) -> Result<File, AppError> {
-        let folder = self.log_folder.clone();
-        fs::create_dir_all(folder.clone())?;
-        let file = File::create(folder.join(self.log_file.clone()))?;
-        Ok(file)
+    fn delete_old_log_files(&self) -> Result<(), AppError> {
+        let mut logs: Vec<_> = fs::read_dir(&self.log_folder)?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.file_name()
+                    .and_then(|filename| filename.to_str())
+                    .map(|name| name.starts_with(&self.log_file))
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        logs.sort();
+
+        let logs_to_delete = logs.len().saturating_sub(self.max_old_log_files);
+
+        for log in logs.iter().take(logs_to_delete) {
+            fs::remove_file(log)?;
+        }
+        Ok(())
     }
     /// Set the `RUST_LOG` environment variable.
     /// This function try to set the `RUST_LOG` environment variable to:
@@ -102,8 +120,15 @@ impl Logger {
 impl From<LoggerConfig> for Logger {
     fn from(config: LoggerConfig) -> Self {
         Self {
-            log_folder: PathBuf::from(config.log_folder),
+            log_folder: config.log_folder,
             log_file: config.log_file,
+            rotation_frequency: match config.rotation_frequency.as_str() {
+                "minutely" => tracing_appender::rolling::Rotation::MINUTELY,
+                "hourly" => tracing_appender::rolling::Rotation::HOURLY,
+                "daily" => tracing_appender::rolling::Rotation::DAILY,
+                _ => tracing_appender::rolling::Rotation::NEVER,
+            },
+            max_old_log_files: config.max_old_log_files,
             log_level: config.log_level,
         }
     }

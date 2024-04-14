@@ -14,6 +14,8 @@ use {
 pub struct LoggerConfig {
     pub log_folder: String,
     pub log_file: String,
+    pub rotation_frequency: String,
+    pub max_old_log_files: usize,
     pub log_level: String,
 }
 /// The logger configuration implementation.
@@ -76,6 +78,8 @@ impl From<LoggerRaw> for LoggerConfig {
                 .to_string_lossy()
                 .to_string(),
             log_file: raw.log_file.unwrap(),
+            rotation_frequency: raw.rotation_frequency.unwrap(),
+            max_old_log_files: raw.max_old_log_files.unwrap(),
             log_level: raw.log_level.unwrap(),
         }
     }
@@ -108,6 +112,8 @@ mod tests {
         let logger_raw = LoggerRaw {
             log_folder: Some(".data_raw".to_string()),
             log_file: Some("tgt_raw.log".to_string()),
+            rotation_frequency: Some("hourly".to_string()),
+            max_old_log_files: Some(3),
             log_level: Some("debug".to_string()),
         };
         let logger_config = LoggerConfig::from(logger_raw);
@@ -120,6 +126,8 @@ mod tests {
                 .to_string()
         );
         assert_eq!(logger_config.log_file, "tgt_raw.log");
+        assert_eq!(logger_config.rotation_frequency, "hourly");
+        assert_eq!(logger_config.max_old_log_files, 3);
         assert_eq!(logger_config.log_level, "debug");
     }
 
@@ -128,11 +136,15 @@ mod tests {
         let mut logger_config = LoggerConfig::from(LoggerRaw {
             log_folder: Some(".data_raw".to_string()),
             log_file: Some("tgt_raw.log".to_string()),
+            rotation_frequency: Some("never".to_string()),
+            max_old_log_files: Some(5),
             log_level: Some("info".to_string()),
         });
         let logger_raw = LoggerRaw {
             log_folder: None,
             log_file: None,
+            rotation_frequency: None,
+            max_old_log_files: None,
             log_level: Some("debug".to_string()),
         };
         logger_config = logger_config.merge(Some(logger_raw));
@@ -145,6 +157,8 @@ mod tests {
                 .to_string()
         );
         assert_eq!(logger_config.log_file, "tgt_raw.log");
+        assert_eq!(logger_config.rotation_frequency, "never");
+        assert_eq!(logger_config.max_old_log_files, 5);
         assert_eq!(logger_config.log_level, "debug");
     }
 
@@ -159,6 +173,8 @@ mod tests {
         let logger_raw = LoggerRaw {
             log_folder: None,
             log_file: None,
+            rotation_frequency: None,
+            max_old_log_files: None,
             log_level: None,
         };
         logger_config = logger_config.merge(Some(logger_raw));
@@ -171,6 +187,8 @@ mod tests {
                 .to_string()
         );
         assert_eq!(logger_config.log_file, "tgt.log");
+        assert_eq!(logger_config.rotation_frequency, "daily");
+        assert_eq!(logger_config.max_old_log_files, 7);
         assert_eq!(logger_config.log_level, "info");
     }
 
