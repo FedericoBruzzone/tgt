@@ -21,10 +21,14 @@ use crate::{
         },
     },
     logger::Logger,
+    tui::Tui,
     tui_backend::TuiBackend,
 };
 use lazy_static::lazy_static;
-use std::panic::{set_hook, take_hook};
+use std::{
+    panic::{set_hook, take_hook},
+    sync::Arc,
+};
 
 lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
@@ -40,37 +44,35 @@ lazy_static! {
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn tokio_main() -> Result<(), AppError> {
+    tracing::info!("Starting tokio main");
+
     let logger = Logger::from_config(LOGGER_CONFIG.clone());
     logger.init();
     tracing::info!("Logger initialized with config: {:#?}", logger);
-    // println!("{:#?}", logger);
 
     let keymap_config = KEYMAP_CONFIG.clone();
     tracing::info!("Keymap config: {:#?}", keymap_config);
-    // println!("{:#?}", keymap_config);
 
     let app_config = APP_CONFIG.clone();
     tracing::info!("App config: {:#?}", app_config);
-    // println!("{:#?}", app_config);
 
     let palette_config = PALETTE_CONFIG.clone();
     tracing::info!("Palette config: {:#?}", palette_config);
-    // println!("{:#?}", palette_config);
 
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:#?}", theme_config);
-    // println!("{:#?}", theme_config);
 
-    let mut app_context = AppContext::new(app_config, keymap_config)?;
-    let mut tui_backend = TuiBackend::new(
-        app_context.app_config_ref().frame_rate,
-        app_context.app_config_ref().mouse_support,
-        app_context.app_config_ref().paste_support,
-    )?;
+    let app_context = Arc::new(AppContext::new(
+        app_config,
+        keymap_config,
+        theme_config,
+        palette_config,
+    )?);
+    let mut tui_backend = TuiBackend::new(app_context.clone())?;
+    let mut tui = Tui::new(app_context.clone());
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
 
-    tracing::info!("Starting main");
-    run::run_app(&mut app_context, &mut tui_backend).await?;
+    run::run_app(app_context.clone(), &mut tui, &mut tui_backend).await?;
     Ok(())
 }
 

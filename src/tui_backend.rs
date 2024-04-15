@@ -1,5 +1,5 @@
 use {
-    crate::enums::event::Event,
+    crate::{app_context::AppContext, enums::event::Event},
     crossterm::{
         cursor,
         event::{
@@ -10,7 +10,7 @@ use {
     },
     futures::{future::Fuse, stream::Next, FutureExt, StreamExt},
     ratatui::{backend::CrosstermBackend, Terminal},
-    std::{io::Stderr, time::Duration},
+    std::{io::Stderr, sync::Arc, time::Duration},
     tokio::{
         sync::mpsc::{error::SendError, UnboundedReceiver, UnboundedSender},
         task::JoinHandle,
@@ -41,10 +41,16 @@ pub struct TuiBackend {
 impl TuiBackend {
     /// Create a new instance of the `TuiBackend` struct.
     ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    ///
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `TuiBackend` struct or an error.
-    pub fn new(frame_rate: f64, mouse: bool, paste: bool) -> Result<Self, std::io::Error> {
+    pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
+        let frame_rate = app_context.app_config().frame_rate;
+        let mouse = app_context.app_config().mouse_support;
+        let paste = app_context.app_config().paste_support;
         let terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
         let task: JoinHandle<Result<(), SendError<Event>>> =
             tokio::spawn(async { Err(SendError(Event::Init)) });

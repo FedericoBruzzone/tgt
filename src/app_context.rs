@@ -1,26 +1,40 @@
+use std::sync::{atomic::AtomicBool, Mutex, MutexGuard};
+
 use crate::{
-    configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
+    configs::custom::{
+        app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
+        theme_custom::ThemeConfig,
+    },
     enums::action::Action,
-    tui::Tui,
 };
+use std::io;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-/// `App` is a struct that represents the main application.
-/// It is responsible for managing the user interface and the backend.
+/// `AppContext` is a struct that represents the main application.
+/// It contains the application configuration, keymap configuration, theme
+/// configuration, palette configuration, and an unbounded sender and receiver
+/// for sending and receiving actions.
+/// It also contains a boolean flag that represents whether the application
+/// should quit or not.
+/// The `AppContext` struct is used to pass the application context around the
+/// application.
+/// The `AppContext` struct is thread-safe and can be shared across threads.
 pub struct AppContext {
-    /// The user interface for the application.
-    tui: Tui,
-    /// The keymap configuration.
-    keymap_config: KeymapConfig,
     /// The application configuration.
-    app_config: AppConfig,
+    app_config: Mutex<AppConfig>,
+    /// The keymap configuration.
+    keymap_config: Mutex<KeymapConfig>,
+    /// The theme configuration.
+    theme_config: Mutex<ThemeConfig>,
+    /// The palette configuration.
+    palette_config: Mutex<PaletteConfig>,
     /// An unbounded sender that send action for processing.
-    action_rx: UnboundedReceiver<Action>,
+    action_rx: Mutex<UnboundedReceiver<Action>>,
     /// An unbounded receiver that receives action for processing.
-    action_tx: UnboundedSender<Action>,
+    action_tx: Mutex<UnboundedSender<Action>>,
     /// A boolean flag that represents whether the application should quit or
     /// not.
-    pub quit: bool,
+    pub quit: AtomicBool,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -29,103 +43,98 @@ impl AppContext {
     /// # Arguments
     /// * `app_config` - The application configuration.
     /// * `keymap_config` - The keymap configuration.
+    /// * `theme_config` - The theme configuration.
+    /// * `palette_config` - The palette configuration.
     ///
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `App` struct or an error.
-    pub fn new(app_config: AppConfig, keymap_config: KeymapConfig) -> Result<Self, std::io::Error> {
-        let tui = Tui::new(app_config.clone(), keymap_config.clone());
+    pub fn new(
+        app_config: AppConfig,
+        keymap_config: KeymapConfig,
+        theme_config: ThemeConfig,
+        palette_config: PaletteConfig,
+    ) -> Result<Self, io::Error> {
         let (action_tx, action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
         let quit = false;
         Ok(Self {
-            tui,
-            keymap_config,
-            app_config,
-            action_rx,
-            action_tx,
-            quit,
+            app_config: Mutex::new(app_config),
+            keymap_config: Mutex::new(keymap_config),
+            palette_config: Mutex::new(palette_config),
+            theme_config: Mutex::new(theme_config),
+            action_rx: Mutex::new(action_rx),
+            action_tx: Mutex::new(action_tx),
+            quit: AtomicBool::new(quit),
         })
     }
-    /// Get the user interface for the application.
+    /// Get the application configuration.
+    /// This function takes the lock on the application configuration and returns
+    /// the application configuration.
+    /// The application configuration is a shared resource and is protected by a
+    /// mutex.
     ///
     /// # Returns
-    /// * `&Tui` - A reference to the user interface for the application.
-    pub fn tui_ref(&self) -> &Tui {
-        &self.tui
-    }
-    /// Get the user interface for the application.
-    ///
-    /// # Returns
-    /// * `&mut Tui` - A mutable reference to the user interface for the
-    ///  application.
-    pub fn tui_mut_ref(&mut self) -> &mut Tui {
-        &mut self.tui
+    /// * `MutexGuard<'_, AppConfig>` - The application configuration.
+    pub fn app_config(&self) -> MutexGuard<'_, AppConfig> {
+        self.app_config.lock().unwrap()
     }
     /// Get the keymap configuration.
+    /// This function takes the lock on the keymap configuration and returns the
+    /// keymap configuration.
+    /// The keymap configuration is a shared resource and is protected by a mutex.
     ///
     /// # Returns
-    /// * `&KeymapConfig` - A reference to the keymap configuration.
-    pub fn keymap_config_ref(&self) -> &KeymapConfig {
-        &self.keymap_config
+    /// * `MutexGuard<'_, KeymapConfig>` - The keymap configuration.
+    pub fn keymap_config(&self) -> MutexGuard<'_, KeymapConfig> {
+        self.keymap_config.lock().unwrap()
     }
-    /// Get the keymap configuration.
+    /// Get the theme configuration.
+    /// This function takes the lock on the theme configuration and returns the
+    /// theme configuration.
+    /// The theme configuration is a shared resource and is protected by a mutex.
     ///
     /// # Returns
-    /// * `&mut KeymapConfig` - A mutable reference to the keymap configuration.
-    pub fn keymap_config_mut_ref(&mut self) -> &mut KeymapConfig {
-        &mut self.keymap_config
+    /// * `MutexGuard<'_, ThemeConfig>` - The theme configuration.
+    pub fn theme_config(&self) -> MutexGuard<'_, ThemeConfig> {
+        self.theme_config.lock().unwrap()
     }
-    /// Get the application configuration.
+    /// Get the palette configuration.
+    /// This function takes the lock on the palette configuration and returns the
+    /// palette configuration.
+    /// The palette configuration is a shared resource and is protected by a mutex.
     ///
     /// # Returns
-    /// * `&AppConfig` - A reference to the application configuration.
-    pub fn app_config_ref(&self) -> &AppConfig {
-        &self.app_config
+    /// * `MutexGuard<'_, PaletteConfig>` - The palette configuration.
+    pub fn palette_config(&self) -> MutexGuard<'_, PaletteConfig> {
+        self.palette_config.lock().unwrap()
     }
-    /// Get the application configuration.
+    /// Get the action receiver.
+    /// This function takes the lock on the action receiver and returns the action
+    /// receiver.
+    /// The action receiver is a shared resource and is protected by a mutex.
     ///
     /// # Returns
-    /// * `&mut AppConfig` - A mutable reference to the application
-    ///   configuration.
-    pub fn app_config_mut_ref(&mut self) -> &mut AppConfig {
-        &mut self.app_config
+    /// * `MutexGuard<'_, UnboundedReceiver<Action>>` - The action receiver.
+    pub fn action_rx(&self) -> MutexGuard<'_, UnboundedReceiver<Action>> {
+        self.action_rx.lock().unwrap()
     }
-    /// Get the unbounded receiver that receives action for processing.
+    /// Get the action sender.
+    /// This function takes the lock on the action sender and returns the action
+    /// sender.
+    /// The action sender is a shared resource and is protected by a mutex.
     ///
     /// # Returns
-    /// * `&UnboundedReceiver<Action>` - A reference to the unbounded receiver
-    /// that receives action for processing.
-    pub fn action_rx_ref(&self) -> &UnboundedReceiver<Action> {
-        &self.action_rx
+    /// * `MutexGuard<'_, UnboundedSender<Action>>` - The action sender.
+    pub fn action_tx(&self) -> MutexGuard<'_, UnboundedSender<Action>> {
+        self.action_tx.lock().unwrap()
     }
-    /// Get the unbounded receiver that receives action for processing.
+    /// Get the quit flag.
+    /// This function returns the value of the quit flag.
+    /// The quit flag is a shared resource and is protected by an atomic boolean.
     ///
     /// # Returns
-    /// * `&mut UnboundedReceiver<Action>` - A mutable reference to the
-    ///   unbounded receiver that receives action for processing.
-    pub fn action_rx_mut_ref(&mut self) -> &mut UnboundedReceiver<Action> {
-        &mut self.action_rx
-    }
-    /// Get the unbounded sender that send action for processing.
-    ///
-    /// # Returns
-    /// * `&UnboundedSender<Action>` - A reference to the unbounded sender that
-    pub fn action_tx_ref(&self) -> &UnboundedSender<Action> {
-        &self.action_tx
-    }
-    /// Get the unbounded sender that send action for processing.
-    ///
-    /// # Returns
-    /// * `&mut UnboundedSender<Action>` - A mutable reference to the unbounded
-    pub fn action_tx_mut_ref(&mut self) -> &mut UnboundedSender<Action> {
-        &mut self.action_tx
-    }
-    /// Get a clone of the unbounded sender that send action for processing.
-    /// This is useful for sending action from other components.
-    ///
-    /// # Returns
-    /// * `UnboundedSender<Action>` - A clone of the unbounded sender that send
-    pub fn action_tx_clone(&self) -> UnboundedSender<Action> {
-        self.action_tx.clone()
+    /// * `bool` - The value of the quit flag.
+    pub fn quit(&self) -> bool {
+        self.quit.load(std::sync::atomic::Ordering::Acquire)
     }
 }

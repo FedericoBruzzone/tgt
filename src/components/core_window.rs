@@ -1,24 +1,25 @@
-use {
-    super::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
-    crate::{
-        app_error::AppError,
-        components::{
-            chat_list_window::ChatListWindow,
-            chat_window::ChatWindow,
-            component::{Component, HandleFocus, HandleSmallArea},
-            prompt_window::PromptWindow,
-        },
-        configs::custom::keymap_custom::{ActionBinding, KeymapConfig},
-        enums::{action::Action, component_name::ComponentName, event::Event},
+use crate::{
+    app_context::AppContext,
+    app_error::AppError,
+    components::{
+        chat_list_window::ChatListWindow,
+        chat_window::ChatWindow,
+        component::{Component, HandleFocus, HandleSmallArea},
+        prompt_window::PromptWindow,
     },
-    ratatui::layout::{Constraint, Direction, Layout, Rect},
-    std::{collections::HashMap, io},
-    tokio::sync::mpsc::UnboundedSender,
+    components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
+    configs::custom::keymap_custom::ActionBinding,
+    enums::{action::Action, component_name::ComponentName, event::Event},
 };
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use std::{collections::HashMap, io, sync::Arc};
+use tokio::sync::mpsc::UnboundedSender;
 
 /// `CoreWindow` is a struct that represents the core window of the application.
 /// It is responsible for managing the layout and rendering of the core window.
 pub struct CoreWindow {
+    /// The application context.
+    app_context: Arc<AppContext>,
     /// The name of the `CoreWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -32,8 +33,6 @@ pub struct CoreWindow {
     size_prompt: u16,
     /// The size of the chat list component.
     size_chat_list: u16,
-    /// The keymap configuration.
-    keymap_config: KeymapConfig,
     /// The name of the component that currently has focus. It is an optional
     /// value because no component may have focus. The focus is a component
     /// inside the `CoreWindow`.
@@ -45,9 +44,12 @@ pub struct CoreWindow {
 impl CoreWindow {
     /// Create a new instance of the `CoreWindow` struct.
     ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    ///
     /// # Returns
     /// * `Self` - The new instance of the `CoreWindow` struct.
-    pub fn new(keymap_config: KeymapConfig) -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::ChatList,
@@ -61,7 +63,7 @@ impl CoreWindow {
                 ComponentName::Prompt,
                 PromptWindow::new()
                     .with_name("Prompt")
-                    .with_focused_key(keymap_config.get_key_of_single_action(
+                    .with_focused_key(app_context.keymap_config().get_key_of_single_action(
                         ComponentName::CoreWindow,
                         Action::FocusComponent(ComponentName::Prompt),
                     ))
@@ -69,6 +71,7 @@ impl CoreWindow {
             ),
         ];
 
+        let app_context = app_context;
         let name = "".to_string();
         let action_tx = None;
         let components: HashMap<ComponentName, Box<dyn Component>> =
@@ -80,13 +83,13 @@ impl CoreWindow {
         let focused = true;
 
         CoreWindow {
+            app_context,
             name,
             action_tx,
             components,
             size_chat_list,
             size_prompt,
             small_area,
-            keymap_config,
             component_focused,
             focused,
         }
@@ -172,7 +175,8 @@ impl Component for CoreWindow {
     }
 
     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
-        let map = self.keymap_config.get_map_of(self.component_focused);
+        let binding = self.app_context.keymap_config();
+        let map = binding.get_map_of(self.component_focused);
         if let Some(action_binding) = map.get(&event.unwrap()) {
             match action_binding {
                 ActionBinding::Single { action, .. } => {

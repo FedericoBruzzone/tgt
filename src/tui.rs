@@ -1,14 +1,14 @@
 use crate::{
+    app_context::AppContext,
     app_error::AppError,
     components::{
         component::Component, core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar,
         SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
     },
-    configs::custom::{app_custom::AppConfig, keymap_custom::KeymapConfig},
     enums::{action::Action, component_name::ComponentName, event::Event},
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// `Tui` is a struct that represents the main user interface for the
@@ -21,28 +21,18 @@ pub struct Tui {
     /// A hashmap of components that make up the user interface.
     components: HashMap<ComponentName, Box<dyn Component>>,
     /// The application configuration.
-    app_config: AppConfig,
-    #[allow(dead_code)]
-    /// The keymap configuration.
-    keymap_config: KeymapConfig,
-}
-/// Implement the `Default` trait for the `Tui` struct.
-impl Default for Tui {
-    fn default() -> Self {
-        Self::new(AppConfig::default(), KeymapConfig::default())
-    }
+    app_context: Arc<AppContext>,
 }
 /// Implement the `Tui` struct.
 impl Tui {
     /// Create a new instance of the `Tui` struct.
     ///
     /// # Arguments
-    /// * `app_config` - The application configuration.
-    /// * `keymap_config` - The keymap configuration.
+    /// * `app_context` - An Arc wrapped AppContext struct.
     ///
     /// # Returns
     /// * `Self` - The new instance of the `Tui` struct.
-    pub fn new(app_config: AppConfig, keymap_config: KeymapConfig) -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::TitleBar,
@@ -50,7 +40,7 @@ impl Tui {
             ),
             (
                 ComponentName::CoreWindow,
-                CoreWindow::new(keymap_config.clone())
+                CoreWindow::new(app_context.clone())
                     .with_name("CoreWindow")
                     .new_boxed(),
             ),
@@ -66,15 +56,13 @@ impl Tui {
         Tui {
             action_tx,
             components,
-            keymap_config,
-            app_config,
+            app_context,
         }
     }
     /// Register an action handler that can send actions for processing if
     /// necessary.
     ///
     /// # Arguments
-    ///
     /// * `tx` - An unbounded sender that can send actions.
     ///
     /// # Returns
@@ -90,7 +78,6 @@ impl Tui {
     /// Handle incoming events and produce actions if necessary.
     ///
     /// # Arguments
-    ///
     /// * `event` - An optional event to be processed.
     ///
     /// # Returns
@@ -133,10 +120,11 @@ impl Tui {
             .unwrap()
             .with_small_area(area.width < SMALL_AREA_WIDTH);
 
+        tracing::info!("Drawing Tui");
         let main_layout = Layout::new(
             Direction::Vertical,
             [
-                Constraint::Length(if self.app_config.show_title_bar {
+                Constraint::Length(if self.app_context.app_config().show_title_bar {
                     if area.height > SMALL_AREA_HEIGHT + 5 {
                         3
                     } else {
@@ -146,7 +134,7 @@ impl Tui {
                     0
                 }),
                 Constraint::Min(SMALL_AREA_HEIGHT),
-                Constraint::Length(if self.app_config.show_status_bar {
+                Constraint::Length(if self.app_context.app_config().show_status_bar {
                     if area.height > SMALL_AREA_HEIGHT + 5 {
                         3
                     } else {
