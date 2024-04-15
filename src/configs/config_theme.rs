@@ -1,8 +1,5 @@
 use {
-    crate::{
-        app_error::AppError, configs::raw::theme_raw::ThemeEntry, APP_CONFIG, PALETTE_CONFIG,
-        THEME_CONFIG,
-    },
+    crate::{app_error::AppError, configs::raw::theme_raw::ThemeEntry, PALETTE_CONFIG},
     ratatui::style::{Color, Modifier, Style},
 };
 #[derive(Clone, Debug)]
@@ -200,103 +197,6 @@ impl From<&ThemeStyle> for Style {
             .bg(style.bg)
             .add_modifier(style.modifier)
     }
-}
-
-/// `theme_style!` is a macro that is used to get the style from the theme
-/// config. If the theme is enabled, it will return the style from the theme
-/// config. If the theme is disabled, it will return the default style.
-///
-/// # Arguments
-/// * `$style` - The style to get from the theme config (THEME_CONFIG).
-macro_rules! theme_style {
-    ($style: expr) => {
-        if APP_CONFIG.theme_enable {
-            $style.as_style()
-        } else {
-            Style::default()
-        }
-    };
-}
-
-// ========= COMMON =========
-pub fn style_border_component_focused() -> Style {
-    theme_style!(THEME_CONFIG.common.get("border_component_focused").unwrap())
-}
-
-pub fn style_item_selected() -> Style {
-    theme_style!(THEME_CONFIG.common.get("item_selected").unwrap())
-}
-
-// ========= CHAT LIST =========
-pub fn style_chat_list() -> Style {
-    theme_style!(THEME_CONFIG.chat_list.get("self").unwrap())
-}
-
-// ========= CHAT =========
-pub fn style_chat() -> Style {
-    theme_style!(THEME_CONFIG.chat.get("self").unwrap())
-}
-
-pub fn style_chat_message_myself() -> Style {
-    theme_style!(THEME_CONFIG.chat.get("message_myself").unwrap())
-}
-
-pub fn style_chat_message_other() -> Style {
-    theme_style!(THEME_CONFIG.chat.get("message_other").unwrap())
-}
-
-// ========= PROMPT =========
-pub fn style_prompt() -> Style {
-    theme_style!(THEME_CONFIG.prompt.get("self").unwrap())
-}
-
-pub fn style_prompt_message_preview_text() -> Style {
-    theme_style!(THEME_CONFIG.prompt.get("message_preview_text").unwrap())
-}
-
-// ========= STATUS BAR =========
-pub fn style_status_bar() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("self").unwrap())
-}
-
-pub fn style_status_bar_size_info_text() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("size_info_text").unwrap())
-}
-
-pub fn style_status_bar_size_info_numbers() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("size_info_numbers").unwrap())
-}
-
-pub fn style_status_bar_press_key_text() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("press_key_text").unwrap())
-}
-
-pub fn style_status_bar_press_key_key() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("press_key_key").unwrap())
-}
-pub fn style_status_bar_message_quit_text() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("message_quit_text").unwrap())
-}
-
-pub fn style_status_bar_message_quit_key() -> Style {
-    theme_style!(THEME_CONFIG.status_bar.get("message_quit_key").unwrap())
-}
-
-// ========= TITLE BAR =========
-pub fn style_title_bar() -> Style {
-    theme_style!(THEME_CONFIG.title_bar.get("self").unwrap())
-}
-
-pub fn style_title_bar_title1() -> Style {
-    theme_style!(THEME_CONFIG.title_bar.get("title1").unwrap())
-}
-
-pub fn style_title_bar_title2() -> Style {
-    theme_style!(THEME_CONFIG.title_bar.get("title2").unwrap())
-}
-
-pub fn style_title_bar_title3() -> Style {
-    theme_style!(THEME_CONFIG.title_bar.get("title3").unwrap())
 }
 
 #[cfg(test)]

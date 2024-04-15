@@ -16,12 +16,12 @@ use tokio::sync::mpsc::UnboundedSender;
 /// the components. It also handles the distribution of events and actions to
 /// the appropriate components.
 pub struct Tui {
+    /// The application configuration.
+    app_context: Arc<AppContext>,
     /// An optional unbounded sender that can send actions to be processed.
     action_tx: Option<UnboundedSender<Action>>,
     /// A hashmap of components that make up the user interface.
     components: HashMap<ComponentName, Box<dyn Component>>,
-    /// The application configuration.
-    app_context: Arc<AppContext>,
 }
 /// Implement the `Tui` struct.
 impl Tui {
@@ -36,7 +36,9 @@ impl Tui {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::TitleBar,
-                TitleBar::new().with_name("Tgt").new_boxed(),
+                TitleBar::new(app_context.clone())
+                    .with_name("Tgt")
+                    .new_boxed(),
             ),
             (
                 ComponentName::CoreWindow,
@@ -46,7 +48,9 @@ impl Tui {
             ),
             (
                 ComponentName::StatusBar,
-                StatusBar::new().with_name("Status Bar").new_boxed(),
+                StatusBar::new(app_context.clone())
+                    .with_name("Status Bar")
+                    .new_boxed(),
             ),
         ];
         let action_tx = None;

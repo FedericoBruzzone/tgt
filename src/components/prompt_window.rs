@@ -1,8 +1,8 @@
+use std::sync::Arc;
+
 use crate::{
+    app_context::AppContext,
     components::component::{Component, HandleFocus, HandleSmallArea},
-    configs::config_theme::{
-        style_border_component_focused, style_prompt, style_prompt_message_preview_text,
-    },
     enums::{action::Action, event::Event},
 };
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -201,6 +201,8 @@ impl Default for Input {
 /// It is responsible for managing the layout and rendering of the prompt
 /// window.
 pub struct PromptWindow {
+    /// The application context.
+    app_context: Arc<AppContext>,
     /// The name of the `PromptWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -219,19 +221,16 @@ pub struct PromptWindow {
     /// The current input of the `PromptWindow`.
     input: Input,
 }
-/// The default implementation of the `PromptWindow` struct.
-impl Default for PromptWindow {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 /// Implement the `PromptWindow` struct.
 impl PromptWindow {
     /// Create a new instance of the `PromptWindow` struct.
     ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    ///
     /// # Returns
     /// * `Self` - The new instance of the `PromptWindow` struct.
-    pub fn new() -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
         let command_tx = None;
         let small_area = false;
@@ -241,6 +240,7 @@ impl PromptWindow {
         let input = Input::default();
 
         PromptWindow {
+            app_context,
             name,
             action_tx: command_tx,
             small_area,
@@ -392,14 +392,14 @@ impl Component for PromptWindow {
         let (text, style_text, style_border_focused) = if self.focused {
             (
                 self.input.text().clone(),
-                style_prompt(),
-                style_border_component_focused(),
+                self.app_context.style_prompt(),
+                self.app_context.style_border_component_focused(),
             )
         } else {
             (
                 format!("Press {} to send a message", self.focused_key),
-                style_prompt_message_preview_text(),
-                style_prompt(),
+                self.app_context.style_prompt_message_preview_text(),
+                self.app_context.style_prompt(),
             )
         };
 

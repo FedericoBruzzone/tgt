@@ -1,9 +1,7 @@
 use {
     crate::{
+        app_context::AppContext,
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{
-            style_title_bar, style_title_bar_title1, style_title_bar_title2, style_title_bar_title3,
-        },
         enums::action::Action,
     },
     ratatui::{
@@ -11,13 +9,15 @@ use {
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
-    std::io,
+    std::{io, sync::Arc},
     tokio::sync::mpsc,
 };
 
 /// `TitleBar` is a struct that represents a title bar.
 /// It is responsible for managing the layout and rendering of the title bar.
 pub struct TitleBar {
+    /// The application configuration.
+    app_context: Arc<AppContext>,
     /// The name of the `TitleBar`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -28,20 +28,15 @@ pub struct TitleBar {
     /// Indicates whether the `TitleBar` is focused or not.
     focused: bool,
 }
-
-impl Default for TitleBar {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
+/// Implementation of `TitleBar` struct.
 impl TitleBar {
-    pub fn new() -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
         let small_area = false;
         let focused = false;
         TitleBar {
+            app_context,
             command_tx,
             name,
             small_area,
@@ -87,7 +82,6 @@ impl HandleSmallArea for TitleBar {
         self.small_area = small;
     }
 }
-
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for TitleBar {
     fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
@@ -99,29 +93,38 @@ impl Component for TitleBar {
         let name: Vec<char> = self.name.chars().collect::<Vec<char>>();
         // Span::raw(" - A TUI for Telegram"),
         let text = vec![Line::from(vec![
-            Span::styled(name[0].to_string(), style_title_bar_title1()),
-            Span::styled(name[1].to_string(), style_title_bar_title2()),
-            Span::styled(name[2].to_string(), style_title_bar_title3()),
-            Span::styled(" - ", style_title_bar_title1()),
-            Span::styled("A", style_title_bar_title2()),
-            Span::styled(" T", style_title_bar_title3()),
-            Span::styled("U", style_title_bar_title1()),
-            Span::styled("I", style_title_bar_title2()),
-            Span::styled(" f", style_title_bar_title3()),
-            Span::styled("o", style_title_bar_title1()),
-            Span::styled("r", style_title_bar_title2()),
-            Span::styled(" T", style_title_bar_title3()),
-            Span::styled("e", style_title_bar_title1()),
-            Span::styled("l", style_title_bar_title2()),
-            Span::styled("e", style_title_bar_title3()),
-            Span::styled("g", style_title_bar_title1()),
-            Span::styled("r", style_title_bar_title2()),
-            Span::styled("a", style_title_bar_title3()),
-            Span::styled("m", style_title_bar_title1()),
+            Span::styled(
+                name[0].to_string(),
+                self.app_context.style_title_bar_title1(),
+            ),
+            Span::styled(
+                name[1].to_string(),
+                self.app_context.style_title_bar_title2(),
+            ),
+            Span::styled(
+                name[2].to_string(),
+                self.app_context.style_title_bar_title3(),
+            ),
+            Span::styled(" - ", self.app_context.style_title_bar_title1()),
+            Span::styled("A", self.app_context.style_title_bar_title2()),
+            Span::styled(" T", self.app_context.style_title_bar_title3()),
+            Span::styled("U", self.app_context.style_title_bar_title1()),
+            Span::styled("I", self.app_context.style_title_bar_title2()),
+            Span::styled(" f", self.app_context.style_title_bar_title3()),
+            Span::styled("o", self.app_context.style_title_bar_title1()),
+            Span::styled("r", self.app_context.style_title_bar_title2()),
+            Span::styled(" T", self.app_context.style_title_bar_title3()),
+            Span::styled("e", self.app_context.style_title_bar_title1()),
+            Span::styled("l", self.app_context.style_title_bar_title2()),
+            Span::styled("e", self.app_context.style_title_bar_title3()),
+            Span::styled("g", self.app_context.style_title_bar_title1()),
+            Span::styled("r", self.app_context.style_title_bar_title2()),
+            Span::styled("a", self.app_context.style_title_bar_title3()),
+            Span::styled("m", self.app_context.style_title_bar_title1()),
         ])];
         let paragraph = Paragraph::new(text)
             .block(Block::new().borders(Borders::ALL))
-            .style(style_title_bar())
+            .style(self.app_context.style_title_bar())
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });
 

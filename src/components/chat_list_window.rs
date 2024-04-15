@@ -1,9 +1,7 @@
 use {
     crate::{
+        app_context::AppContext,
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{
-            style_border_component_focused, style_chat_list, style_item_selected,
-        },
         enums::action::Action,
     },
     ratatui::{
@@ -14,6 +12,7 @@ use {
             Borders, List, ListDirection, ListState,
         },
     },
+    std::sync::Arc,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -21,6 +20,8 @@ use {
 /// of chat items. It is responsible for managing the layout and rendering of
 /// the chat list.
 pub struct ChatListWindow {
+    /// The application context.
+    app_context: Arc<AppContext>,
     /// The name of the `ChatListWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -35,19 +36,16 @@ pub struct ChatListWindow {
     /// Indicates whether the `ChatListWindow` is focused or not.
     focused: bool,
 }
-
-impl Default for ChatListWindow {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
+/// Implementation of the `ChatListWindow` struct.
 impl ChatListWindow {
     /// Create a new instance of the `ChatListWindow` struct.
     ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    ///
     /// # Returns
     /// * `Self` - The new instance of the `ChatListWindow` struct.
-    pub fn new() -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
         let command_tx = None;
         let small_area = false;
@@ -63,6 +61,7 @@ impl ChatListWindow {
         let focused = false;
 
         ChatListWindow {
+            app_context,
             name,
             command_tx,
             small_area,
@@ -82,7 +81,6 @@ impl ChatListWindow {
         self.name = name.as_ref().to_string();
         self
     }
-
     /// Select the next chat item in the list.
     fn next(&mut self) {
         let i = match self.chat_list_state.selected() {
@@ -97,7 +95,6 @@ impl ChatListWindow {
         };
         self.chat_list_state.select(Some(i));
     }
-
     /// Select the previous chat item in the list.
     fn previous(&mut self) {
         let i = match self.chat_list_state.selected() {
@@ -112,7 +109,6 @@ impl ChatListWindow {
         };
         self.chat_list_state.select(Some(i));
     }
-
     /// Unselect the chat item in the list.
     fn unselect(&mut self) {
         self.chat_list_state.select(None);
@@ -164,9 +160,9 @@ impl Component for ChatListWindow {
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
         let style_border_focused = if self.focused {
-            style_border_component_focused()
+            self.app_context.style_border_component_focused()
         } else {
-            style_chat_list()
+            self.app_context.style_chat_list()
         };
 
         let items = self.chat_list.iter().map(|item| item.as_str());
@@ -178,8 +174,8 @@ impl Component for ChatListWindow {
 
         let list = List::new(items)
             .block(block)
-            .style(style_chat_list())
-            .highlight_style(style_item_selected())
+            .style(self.app_context.style_chat_list())
+            .highlight_style(self.app_context.style_item_selected())
             .highlight_symbol("➤ ")
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);

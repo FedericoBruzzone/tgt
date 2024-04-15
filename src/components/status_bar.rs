@@ -1,12 +1,7 @@
 use {
     crate::{
+        app_context::AppContext,
         components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{
-            style_status_bar, style_status_bar_message_quit_key,
-            style_status_bar_message_quit_text, style_status_bar_press_key_key,
-            style_status_bar_press_key_text, style_status_bar_size_info_numbers,
-            style_status_bar_size_info_text,
-        },
         enums::{action::Action, event::Event},
     },
     ratatui::{
@@ -14,12 +9,15 @@ use {
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
+    std::sync::Arc,
     tokio::sync::mpsc::UnboundedSender,
 };
 
 /// `StatusBar` is a struct that represents a status bar.
 /// It is responsible for managing the layout and rendering of the status bar.
 pub struct StatusBar {
+    /// The application configuration.
+    app_context: Arc<AppContext>,
     /// The name of the `StatusBar`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -34,19 +32,16 @@ pub struct StatusBar {
     /// The last key pressed.
     last_key: Event,
 }
-/// Default implementation for `StatusBar`.
-impl Default for StatusBar {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-/// Implementation of `StatusBar`.
+/// Implementation of `StatusBar` struct.
 impl StatusBar {
     /// Create a new instance of the `StatusBar` struct.
     ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    ///
     /// # Returns
     /// * `Self` - The new instance of the `StatusBar` struct.
-    pub fn new() -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
         let small_area = false;
@@ -55,6 +50,7 @@ impl StatusBar {
         let focused = false;
 
         StatusBar {
+            app_context,
             command_tx,
             name,
             small_area,
@@ -124,32 +120,47 @@ impl Component for StatusBar {
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
         let text = vec![Line::from(vec![
-            Span::styled("Press ", style_status_bar_message_quit_text()),
-            Span::styled("q ", style_status_bar_message_quit_key()),
-            Span::styled("or ", style_status_bar_message_quit_text()),
-            Span::styled("ctrl+c ", style_status_bar_message_quit_key()),
-            Span::styled("to quit", style_status_bar_message_quit_text()),
+            Span::styled(
+                "Press ",
+                self.app_context.style_status_bar_message_quit_text(),
+            ),
+            Span::styled("q ", self.app_context.style_status_bar_message_quit_key()),
+            Span::styled("or ", self.app_context.style_status_bar_message_quit_text()),
+            Span::styled(
+                "ctrl+c ",
+                self.app_context.style_status_bar_message_quit_key(),
+            ),
+            Span::styled(
+                "to quit",
+                self.app_context.style_status_bar_message_quit_text(),
+            ),
             //
             Span::raw("     "),
-            Span::styled("Press key: ", style_status_bar_press_key_text()),
-            Span::styled(self.last_key.to_string(), style_status_bar_press_key_key()),
+            Span::styled(
+                "Press key: ",
+                self.app_context.style_status_bar_press_key_text(),
+            ),
+            Span::styled(
+                self.last_key.to_string(),
+                self.app_context.style_status_bar_press_key_key(),
+            ),
             //
             Span::raw("     "),
-            Span::styled("Size: ", style_status_bar_size_info_text()),
+            Span::styled("Size: ", self.app_context.style_status_bar_size_info_text()),
             Span::styled(
                 self.terminal_area.width.to_string(),
-                style_status_bar_size_info_numbers(),
+                self.app_context.style_status_bar_size_info_numbers(),
             ),
-            Span::styled(" x ", style_status_bar_size_info_text()),
+            Span::styled(" x ", self.app_context.style_status_bar_size_info_text()),
             Span::styled(
                 self.terminal_area.height.to_string(),
-                style_status_bar_size_info_numbers(),
+                self.app_context.style_status_bar_size_info_numbers(),
             ),
         ])];
 
         let paragraph = Paragraph::new(text)
             .block(Block::new().title(self.name.as_str()).borders(Borders::ALL))
-            .style(style_status_bar())
+            .style(self.app_context.style_status_bar())
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });
 

@@ -46,6 +46,12 @@ lazy_static! {
 async fn tokio_main() -> Result<(), AppError> {
     tracing::info!("Starting tokio main");
 
+    lazy_static::initialize(&LOGGER_CONFIG);
+    lazy_static::initialize(&KEYMAP_CONFIG);
+    lazy_static::initialize(&APP_CONFIG);
+    lazy_static::initialize(&PALETTE_CONFIG);
+    lazy_static::initialize(&THEME_CONFIG);
+
     let logger = Logger::from_config(LOGGER_CONFIG.clone());
     logger.init();
     tracing::info!("Logger initialized with config: {:#?}", logger);

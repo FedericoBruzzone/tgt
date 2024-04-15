@@ -1,9 +1,8 @@
+use std::sync::Arc;
+
 use crate::{
+    app_context::AppContext,
     components::component::{Component, HandleFocus, HandleSmallArea},
-    configs::config_theme::{
-        style_border_component_focused, style_chat, style_chat_list, style_chat_message_myself,
-        style_chat_message_other, style_item_selected,
-    },
     enums::action::Action,
 };
 use ratatui::{
@@ -17,10 +16,12 @@ use tokio::sync::mpsc::UnboundedSender;
 /// `ChatWindow` is a struct that represents a window for displaying a chat.
 /// It is responsible for managing the layout and rendering of the chat window.
 pub struct ChatWindow {
+    /// The application context.
+    app_context: Arc<AppContext>,
     /// The name of the `ChatWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
-    command_tx: Option<UnboundedSender<Action>>,
+    action_tx: Option<UnboundedSender<Action>>,
     /// A flag indicating whether the `ChatWindow` should be displayed as a
     /// smaller version of itself.
     small_area: bool,
@@ -31,21 +32,18 @@ pub struct ChatWindow {
     /// Indicates whether the `ChatWindow` is focused or not.
     focused: bool,
 }
-
-impl Default for ChatWindow {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
+/// Implementation of the `ChatWindow` struct.
 impl ChatWindow {
     /// Create a new instance of the `ChatWindow` struct.
     ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    ///
     /// # Returns
     /// * `Self` - The new instance of the `ChatWindow` struct.
-    pub fn new() -> Self {
+    pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
-        let command_tx = None;
+        let action_tx = None;
         let small_area = false;
         let message_list = vec![
             "My message".to_string(),
@@ -60,8 +58,9 @@ impl ChatWindow {
         let message_list_state = ListState::default();
         let focused = false;
         ChatWindow {
+            app_context,
             name,
-            command_tx,
+            action_tx,
             small_area,
             message_list,
             message_list_state,
@@ -146,7 +145,7 @@ impl HandleSmallArea for ChatWindow {
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatWindow {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
-        self.command_tx = Some(tx);
+        self.action_tx = Some(tx);
         Ok(())
     }
 
@@ -170,9 +169,9 @@ impl Component for ChatWindow {
             }
         };
         let style_border_focused = if self.focused {
-            style_border_component_focused()
+            self.app_context.style_border_component_focused()
         } else {
-            style_chat()
+            self.app_context.style_chat()
         };
 
         let items = self.message_list.iter().enumerate().map(|(i, item)| {
@@ -182,9 +181,9 @@ impl Component for ChatWindow {
                 Alignment::Left
             };
             let style = if i % 2 == 0 {
-                style_chat_message_myself()
+                self.app_context.style_chat_message_myself()
             } else {
-                style_chat_message_other()
+                self.app_context.style_chat_message_other()
             };
 
             // ListItem::new(Text::from(item.as_str()).alignment(alignment))
@@ -202,13 +201,13 @@ impl Component for ChatWindow {
             .border_set(border)
             .border_style(style_border_focused)
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .style(style_chat())
+            .style(self.app_context.style_chat())
             .title(self.name.as_str());
 
         let list = List::new(items)
             .block(block)
-            .style(style_chat_list())
-            .highlight_style(style_item_selected())
+            .style(self.app_context.style_chat_list())
+            .highlight_style(self.app_context.style_item_selected())
             .repeat_highlight_symbol(true)
             .direction(ListDirection::BottomToTop);
 

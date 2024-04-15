@@ -1,5 +1,3 @@
-use std::sync::{atomic::AtomicBool, Mutex, MutexGuard};
-
 use crate::{
     configs::custom::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
@@ -7,8 +5,50 @@ use crate::{
     },
     enums::action::Action,
 };
+use ratatui::style::Style;
 use std::io;
+use std::sync::{atomic::AtomicBool, Mutex, MutexGuard};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+
+/// Generate a function that returns a style based on the theme configuration.
+/// This macro generates a function that returns a style based on the theme
+/// configuration. The function takes the lock on the theme configuration and
+/// returns the style for the specified attribute.
+/// The macro takes the function name, the map name, and the attribute name as
+/// arguments.
+/// The function checks if the theme is enabled in the application configuration.
+/// If the theme is enabled, it returns the style for the specified attribute in
+/// the specified map in the theme configuration. If the theme is disabled, it
+/// returns the default style.
+///
+/// # Arguments
+/// * `fn_name` - The name of the function.
+/// * `map` - The name of the map in the theme configuration.
+/// * `attr_name` - The name of the attribute in the map.
+///
+/// # Example
+/// ```rust
+/// theme_style_generate!(style_border_component_focused, common, border_component_focused);
+/// ```
+/// This will generate a function called `style_border_component_focused` that
+/// returns a style based on the `border_component_focused` attribute in the
+/// `common` map in the theme configuration.
+macro_rules! theme_style_generate {
+    ($fn_name: ident, $map: ident, $attr_name: ident) => {
+        #[inline]
+        pub fn $fn_name(&self) -> Style {
+            if self.app_config().theme_enable {
+                self.theme_config()
+                    .$map
+                    .get(stringify!($attr_name))
+                    .unwrap()
+                    .as_style()
+            } else {
+                Style::default()
+            }
+        }
+    };
+}
 
 /// `AppContext` is a struct that represents the main application.
 /// It contains the application configuration, keymap configuration, theme
@@ -137,4 +177,56 @@ impl AppContext {
     pub fn quit(&self) -> bool {
         self.quit.load(std::sync::atomic::Ordering::Acquire)
     }
+
+    // ===== COMMON ======
+    theme_style_generate!(
+        style_border_component_focused,
+        common,
+        border_component_focused
+    );
+
+    theme_style_generate!(style_item_selected, common, item_selected);
+
+    // ===== CHAT LIST =====
+    theme_style_generate!(style_chat_list, chat_list, self);
+
+    // ===== CHAT =====
+    theme_style_generate!(style_chat, chat, self);
+    theme_style_generate!(style_chat_message_myself, chat, message_myself);
+    theme_style_generate!(style_chat_message_other, chat, message_other);
+
+    // ===== PROMPT =====
+    theme_style_generate!(style_prompt, prompt, self);
+    theme_style_generate!(
+        style_prompt_message_preview_text,
+        prompt,
+        message_preview_text
+    );
+
+    // ===== STATUS BAR =====
+    theme_style_generate!(style_status_bar, status_bar, self);
+    theme_style_generate!(style_status_bar_size_info_text, status_bar, size_info_text);
+    theme_style_generate!(
+        style_status_bar_size_info_numbers,
+        status_bar,
+        size_info_numbers
+    );
+    theme_style_generate!(style_status_bar_press_key_text, status_bar, press_key_text);
+    theme_style_generate!(style_status_bar_press_key_key, status_bar, press_key_key);
+    theme_style_generate!(
+        style_status_bar_message_quit_text,
+        status_bar,
+        message_quit_text
+    );
+    theme_style_generate!(
+        style_status_bar_message_quit_key,
+        status_bar,
+        message_quit_key
+    );
+
+    // ===== TITLE BAR =====
+    theme_style_generate!(style_title_bar, title_bar, self);
+    theme_style_generate!(style_title_bar_title1, title_bar, title1);
+    theme_style_generate!(style_title_bar_title2, title_bar, title2);
+    theme_style_generate!(style_title_bar_title3, title_bar, title3);
 }
