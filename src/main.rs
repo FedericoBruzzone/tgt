@@ -67,13 +67,13 @@ async fn tokio_main() -> Result<(), AppError> {
         app_context.app_config_ref().mouse_support,
         app_context.app_config_ref().paste_support,
     )?;
-
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
 
     tracing::info!("Starting main");
     run::run_app(&mut app_context, &mut tui_backend).await?;
     Ok(())
 }
+
 /// Initialize the panic hook to exit the `TuiBackend` and log the panic stack
 /// backtrace.
 ///
@@ -92,6 +92,7 @@ fn init_panic_hook(mouse: bool, paste: bool) {
         original_hook(panic_info); // comment to hide the stacktrace in stdout
     }));
 }
+
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     if let Err(e) = tokio_main().await {

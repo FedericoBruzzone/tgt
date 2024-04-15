@@ -35,7 +35,12 @@ pub async fn run_app(
 
     loop {
         if app_context.quit {
-            // TODO: tui.stop()?
+            match tui_backend.exit() {
+                Err(e) => {
+                    tracing::error!("Error exiting tui backend: {}", e);
+                }
+                _ => {}
+            }
             break;
         }
         handle_tui_backend_events(app_context, tui_backend).await?;

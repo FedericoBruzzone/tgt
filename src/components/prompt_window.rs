@@ -1,22 +1,20 @@
-use {
-    crate::{
-        components::component::{Component, HandleFocus, HandleSmallArea},
-        configs::config_theme::{
-            style_border_component_focused, style_prompt, style_prompt_message_preview_text,
-        },
-        enums::{action::Action, event::Event},
+use crate::{
+    components::component::{Component, HandleFocus, HandleSmallArea},
+    configs::config_theme::{
+        style_border_component_focused, style_prompt, style_prompt_message_preview_text,
     },
-    crossterm::event::{KeyCode, KeyModifiers},
-    ratatui::{
-        layout::Rect,
-        symbols::{
-            border::{Set, PLAIN},
-            line::NORMAL,
-        },
-        widgets::{block::Block, Borders, Paragraph},
-    },
-    tokio::sync::mpsc::UnboundedSender,
+    enums::{action::Action, event::Event},
 };
+use crossterm::event::{KeyCode, KeyModifiers};
+use ratatui::{
+    layout::Rect,
+    symbols::{
+        border::{Set, PLAIN},
+        line::NORMAL,
+    },
+    widgets::{block::Block, Borders, Paragraph},
+};
+use tokio::sync::mpsc::UnboundedSender;
 
 enum InputMode {
     Normal,
@@ -187,7 +185,7 @@ impl Input {
         }
     }
 }
-
+/// Implement the `Default` trait for the `Input` struct.
 impl Default for Input {
     fn default() -> Self {
         Self {

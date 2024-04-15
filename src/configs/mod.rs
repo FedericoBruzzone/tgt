@@ -1,11 +1,9 @@
-use {
-    crate::app_error::AppError,
-    config::{Config, File, FileFormat},
-    serde::de::DeserializeOwned,
-    std::{
-        env, io,
-        path::{Path, PathBuf},
-    },
+use crate::app_error::AppError;
+use config::{Config, File, FileFormat};
+use serde::de::DeserializeOwned;
+use std::{
+    env, io,
+    path::{Path, PathBuf},
 };
 
 pub mod custom;
@@ -25,7 +23,6 @@ pub const TGT_CONFIG_HOME: &str = "TGT_CONFIG_HOME";
 pub fn project_dir() -> io::Result<PathBuf> {
     env::current_dir()
 }
-
 /// Get the default configuration directory.
 ///
 /// # Returns
