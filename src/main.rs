@@ -24,6 +24,7 @@ use crate::{
     tui::Tui,
     tui_backend::TuiBackend,
 };
+use arboard::Clipboard;
 use lazy_static::lazy_static;
 use std::{
     panic::{set_hook, take_hook},
@@ -96,7 +97,7 @@ async fn tokio_main() -> Result<(), AppError> {
 fn init_panic_hook(mouse: bool, paste: bool) {
     let original_hook = take_hook();
     set_hook(Box::new(move |panic_info| {
-        // intentionally ignore errors here since we're already in a panic
+        // Intentionally ignore errors here since we're already in a panic
         TuiBackend::force_exit(mouse, paste).unwrap();
         let backtrace = std::backtrace::Backtrace::capture();
         tracing::error!("{}\nstack backtrace:\n{}", panic_info, backtrace);
@@ -106,6 +107,13 @@ fn init_panic_hook(mouse: bool, paste: bool) {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
+    let mut clipboard = Clipboard::new().unwrap();
+    println!("Clipboard text was: {}", clipboard.get_text().unwrap());
+
+    let the_string = "Hello, world!";
+    clipboard.set_text(the_string).unwrap();
+    println!("But now the clipboard text should be: \"{}\"", the_string);
+
     if let Err(e) = tokio_main().await {
         tracing::error!("Something went wrong: {}", e);
         Err(e)

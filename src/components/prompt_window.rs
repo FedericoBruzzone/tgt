@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     app_context::AppContext,
     components::component::{Component, HandleFocus, HandleSmallArea},
@@ -13,7 +11,9 @@ use ratatui::{
         line::NORMAL,
     },
     widgets::{block::Block, Borders, Paragraph},
+    Frame,
 };
+use std::{io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
 enum InputMode {
@@ -376,7 +376,7 @@ impl Component for PromptWindow {
         }
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> io::Result<()> {
         self.update_input(area);
 
         let collapsed_top_and_left_border_set = Set {

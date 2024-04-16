@@ -44,6 +44,7 @@ tracing = "0.1.40"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tracing-appender = "0.2"
+arboard = { version = "3.3.2", features = ["wayland-data-control", "wl-clipboard-rs"] }
 
 [profile.dev]
 incremental = true
