@@ -1,6 +1,6 @@
 # keymap.toml
 
-# Default keymap configuration
+## Default keymap configuration
 
 ```toml
 # The default key bindings are usable in any app component.
@@ -45,7 +45,7 @@ keymap = [
 
 ```
 
-# Example of a custom logger configuration
+## Example of a custom logger configuration
 
 This is an example of a custom keymap configuration. This configuration will be merged with the default configuration.
 It means that the default key bindings will be overwritten by the custom key bindings.

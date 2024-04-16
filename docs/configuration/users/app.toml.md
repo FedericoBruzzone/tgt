@@ -1,6 +1,6 @@
 # tgt.toml
 
-# Default application configuration
+## Default application configuration
 
 ```toml
 # `mouse_support` enables mouse support in the terminal.
@@ -20,7 +20,7 @@ show_status_bar = true
 show_title_bar = true
 ```
 
-# Example of a custom application configuration
+## Example of a custom application configuration
 
 This is an example of a custom application configuration. This configuration will be merged with the default configuration.
 It means that the default configuration will be overwritten by the custom configuration.

@@ -1,6 +1,7 @@
 # theme.toml
 
 In the `theme.toml` you can define the `palette` (see palette section in the example below) and the styles for each component:
+
 - `common`: In the common section you can define the styles that are common to all components. For example, the style for the focused border component.
 - `chat_list`: In the chat_list section you can define the styles for the chat list component.
 - `chat`: In the chat section you can define the styles for the chat component.
@@ -11,35 +12,38 @@ In the `theme.toml` you can define the `palette` (see palette section in the exa
 Each component has a `self` style that defines the style of the component itself. The other styles are specific to the component and define the style of the elements inside the component.
 
 ## The Palette
+
 The palette is a section in the theme configuration where you can define the colors that will be used in the theme. The colors defined in the palette can be used in the styles of the components. The palette section is optional, you can define the colors directly in the styles of the components but it is not recommended.
 
 By default, each component of `tgt` use the colors defined in the palette. So, if you want to create a custom theme, you can change the colors in the palette and the components will use the new colors.
 
 ## Color Format
+
 The supported color formats are:
+
 - Hexadecimal: `#RGB` or `#RRGGBB` where `R`, `G`, and `B` are hexadecimal digits (not case-sensitive).
 - RGB: `R, G, B` where `R`, `G`, and `B` are integers between 0 and 255.
 - Palette: The palette colors are defined in the `palette` section of the theme configuration. For example, `primary`, `secondary`, `background`, etc.
 - Default:
-    - `black`: The default black color.
-    - `red`: The default red color.
-    - `green`: The default green color.
-    - `yellow`: The default yellow color.
-    - `blue`: The default blue color.
-    - `magenta`: The default magenta color.
-    - `cyan`: The default cyan color.
-    - `gray`: The default gray color.
-    - `dark_gray`: The default dark gray color.
-    - `light_red`: The default light red color.
-    - `light_green`: The default light green color.
-    - `light_yellow`: The default light yellow color.
-    - `light_blue`: The default light blue color.
-    - `light_magenta`: The default light magenta color.
-    - `light_cyan`: The default light cyan color.
-    - `white`: The default white color.
-    - `reset`: The default reset color.
+  - `black`: The default black color.
+  - `red`: The default red color.
+  - `green`: The default green color.
+  - `yellow`: The default yellow color.
+  - `blue`: The default blue color.
+  - `magenta`: The default magenta color.
+  - `cyan`: The default cyan color.
+  - `gray`: The default gray color.
+  - `dark_gray`: The default dark gray color.
+  - `light_red`: The default light red color.
+  - `light_green`: The default light green color.
+  - `light_yellow`: The default light yellow color.
+  - `light_blue`: The default light blue color.
+  - `light_magenta`: The default light magenta color.
+  - `light_cyan`: The default light cyan color.
+  - `white`: The default white color.
+  - `reset`: The default reset color.
 
-# Default theme configuration
+## Default theme configuration
 
 ```toml
 [palette]
@@ -85,4 +89,3 @@ message_quit_key = { fg = "on_secondary", bg = "surface", bold = false, underlin
 [title_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
 ```
-
