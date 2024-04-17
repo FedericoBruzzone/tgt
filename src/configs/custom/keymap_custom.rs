@@ -1,12 +1,14 @@
 use crate::{
+    action::Action,
     app_error::AppError,
+    component_name::ComponentName,
     configs::{
         self,
         config_file::ConfigFile,
         config_type::ConfigType,
         raw::keymap_raw::{KeymapEntry, KeymapRaw},
     },
-    enums::{action::Action, component_name::ComponentName, event::Event},
+    event::Event,
 };
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
@@ -419,12 +421,13 @@ impl From<KeymapRaw> for KeymapConfig {
 mod tests {
     use {
         crate::{
+            action::Action,
             configs::{
                 config_file::ConfigFile,
                 custom::keymap_custom::{ActionBinding, KeymapConfig},
                 raw::keymap_raw::{KeymapEntry, KeymapMode, KeymapRaw},
             },
-            enums::{action::Action, event::Event},
+            event::Event,
         },
         std::str::FromStr,
     };

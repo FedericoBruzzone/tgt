@@ -1,9 +1,9 @@
 use crate::{
+    action::Action,
     configs::custom::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
         theme_custom::ThemeConfig,
     },
-    enums::action::Action,
 };
 use ratatui::style::Style;
 use std::io;

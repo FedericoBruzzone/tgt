@@ -1,8 +1,9 @@
 use {
     crate::{
+        action::Action,
         app_context::AppContext,
         components::component::{Component, HandleFocus, HandleSmallArea},
-        enums::{action::Action, event::Event},
+        event::Event,
     },
     ratatui::{
         layout::{Alignment, Rect},

@@ -1,8 +1,5 @@
 use {
-    crate::{
-        app_error::AppError,
-        enums::{action::Action, event::Event},
-    },
+    crate::{action::Action, app_error::AppError, event::Event},
     crossterm::event,
     ratatui::layout,
     std::io,

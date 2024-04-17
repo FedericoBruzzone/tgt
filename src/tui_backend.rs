@@ -1,5 +1,5 @@
 use {
-    crate::{app_context::AppContext, enums::event::Event},
+    crate::{app_context::AppContext, event::Event},
     crossterm::{
         cursor,
         event::{

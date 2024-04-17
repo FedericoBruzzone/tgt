@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
+    action::Action,
     app_context::AppContext,
     components::component::{Component, HandleFocus, HandleSmallArea},
-    enums::action::Action,
 };
 use ratatui::{
     layout::{Alignment, Rect},

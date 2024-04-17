@@ -1,4 +1,4 @@
-use crate::enums::action::Action;
+use crate::action::Action;
 use config::ConfigError;
 use std::{fmt::Display, io};
 use tokio::sync::mpsc::error::SendError;

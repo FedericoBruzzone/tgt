@@ -1,6 +1,8 @@
 use crate::{
+    action::Action,
     app_context::AppContext,
     app_error::AppError,
+    component_name::ComponentName,
     components::{
         chat_list_window::ChatListWindow,
         chat_window::ChatWindow,
@@ -9,7 +11,7 @@ use crate::{
     },
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
     configs::custom::keymap_custom::ActionBinding,
-    enums::{action::Action, component_name::ComponentName, event::Event},
+    event::Event,
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, io, sync::Arc};

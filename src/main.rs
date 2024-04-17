@@ -1,5 +1,8 @@
+pub mod action;
 pub mod app_context;
 pub mod app_error;
+pub mod component_name;
+pub mod event;
 pub mod logger;
 pub mod tui;
 pub mod tui_backend;
@@ -7,7 +10,6 @@ pub mod utils;
 
 pub mod components;
 pub mod configs;
-pub mod enums;
 pub mod run;
 
 use crate::{

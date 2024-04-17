@@ -1,11 +1,13 @@
 use crate::{
+    action::Action,
     app_context::AppContext,
     app_error::AppError,
+    component_name::ComponentName,
     components::{
         component::Component, core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar,
         SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
     },
-    enums::{action::Action, component_name::ComponentName, event::Event},
+    event::Event,
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, sync::Arc};

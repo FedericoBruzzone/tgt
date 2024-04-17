@@ -1,10 +1,6 @@
 use crate::{
-    app_context::AppContext,
-    app_error::AppError,
-    configs::custom::keymap_custom::ActionBinding,
-    enums::{action::Action, event::Event},
-    tui::Tui,
-    tui_backend::TuiBackend,
+    action::Action, app_context::AppContext, app_error::AppError,
+    configs::custom::keymap_custom::ActionBinding, event::Event, tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
 use std::{
