@@ -78,11 +78,11 @@ async fn tokio_main() -> Result<(), AppError> {
         theme_config,
         palette_config,
     )?);
-    let mut tui_backend = TuiBackend::new(app_context.clone())?;
-    let mut tui = Tui::new(app_context.clone());
+    let mut tui_backend = TuiBackend::new(Arc::clone(&app_context))?;
+    let mut tui = Tui::new(Arc::clone(&app_context));
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
 
-    run::run_app(app_context.clone(), &mut tui, &mut tui_backend).await?;
+    run::run_app(Arc::clone(&app_context), &mut tui, &mut tui_backend).await?;
     Ok(())
 }
 

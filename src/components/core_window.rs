@@ -53,19 +53,19 @@ impl CoreWindow {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::ChatList,
-                ChatListWindow::new(app_context.clone())
+                ChatListWindow::new(Arc::clone(&app_context))
                     .with_name("Chat list")
                     .new_boxed(),
             ),
             (
                 ComponentName::Chat,
-                ChatWindow::new(app_context.clone())
+                ChatWindow::new(Arc::clone(&app_context))
                     .with_name("Name")
                     .new_boxed(),
             ),
             (
                 ComponentName::Prompt,
-                PromptWindow::new(app_context.clone())
+                PromptWindow::new(Arc::clone(&app_context))
                     .with_name("Prompt")
                     .with_focused_key(app_context.keymap_config().get_key_of_single_action(
                         ComponentName::CoreWindow,

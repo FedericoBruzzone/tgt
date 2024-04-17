@@ -10,7 +10,11 @@ use {
     },
     futures::{future::Fuse, stream::Next, FutureExt, StreamExt},
     ratatui::{backend::CrosstermBackend, Terminal},
-    std::{io::Stderr, sync::Arc, time::Duration},
+    std::{
+        io::{self, Stderr},
+        sync::Arc,
+        time::Duration,
+    },
     tokio::{
         sync::mpsc::{error::SendError, UnboundedReceiver, UnboundedSender},
         task::JoinHandle,
@@ -25,10 +29,13 @@ pub struct TuiBackend {
     pub terminal: Terminal<CrosstermBackend<Stderr>>,
     /// A join handle that represents the task for processing events.
     pub task: JoinHandle<Result<(), SendError<Event>>>,
-    /// An unbounded receiver that can receive events for processing.
-    pub event_rx: UnboundedReceiver<Event>,
     /// An unbounded sender that can send events for processing.
+    /// This is used to send events from the terminal to the event queue.
     pub event_tx: UnboundedSender<Event>,
+    /// An unbounded receiver that can receive events for processing.
+    /// This is used to receive events from the event queue for processing.
+    /// The main loop consumes events from this queue calling the next method.
+    pub event_rx: UnboundedReceiver<Event>,
     /// The frame rate at which the user interface should be rendered.
     pub frame_rate: f64,
     /// A boolean flag that represents whether the mouse is enabled or not.
@@ -40,7 +47,6 @@ pub struct TuiBackend {
 
 impl TuiBackend {
     /// Create a new instance of the `TuiBackend` struct.
-    ///
     /// # Arguments
     /// * `app_context` - An Arc wrapped AppContext struct.
     ///
@@ -71,7 +77,7 @@ impl TuiBackend {
     ///
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
-    pub fn enter(&mut self) -> Result<(), std::io::Error> {
+    pub fn enter(&mut self) -> Result<(), io::Error> {
         crossterm::terminal::enable_raw_mode()?;
         crossterm::execute!(
             std::io::stderr(),
@@ -208,35 +214,35 @@ impl TuiBackend {
                 let render_tick = render_interval.tick();
 
                 tokio::select! {
-                  maybe_event = crossterm_event => {
-                    match maybe_event {
-                        Some(Ok(event)) => {
-                        match event {
-                          CrosstermEvent::Key(key) => {
-                            // Needed for Windows because without it the keys is sent twice
-                            if key.kind == KeyEventKind::Press {
-                              event_tx.send(Event::Key(key.code, key.modifiers))?;
-                            }
+                    maybe_event = crossterm_event => {
+                        match maybe_event {
+                            Some(Ok(event)) => {
+                                match event {
+                                    CrosstermEvent::Key(key) => {
+                                        // Needed for Windows because without it the keys is sent twice.
+                                        if key.kind == KeyEventKind::Press {
+                                            event_tx.send(Event::Key(key.code, key.modifiers))?;
+                                        }
+                                    },
+                                    CrosstermEvent::Mouse(mouse) => {
+                                        event_tx.send(Event::Mouse(mouse))?;
+                                    },
+                                    CrosstermEvent::Resize(width, height) => {
+                                        event_tx.send(Event::Resize(width, height))?;
+                                    },
+                                    CrosstermEvent::FocusLost => {} // [TODO] handle focus lost
+                                    CrosstermEvent::FocusGained => {} // [TODO] handle focus gained
+                                    CrosstermEvent::Paste(text) => {
+                                        event_tx.send(Event::Paste(text))?;
+                                    },
+                                }
                           },
-                          CrosstermEvent::Mouse(mouse) => {
-                            event_tx.send(Event::Mouse(mouse))?;
-                          },
-                          CrosstermEvent::Resize(width, height) => {
-                            event_tx.send(Event::Resize(width, height))?;
-                          },
-                          CrosstermEvent::FocusLost => {} // [TODO] handle focus lost
-                          CrosstermEvent::FocusGained => {} // [TODO] handle focus gained
-                          CrosstermEvent::Paste(text) => {
-                            event_tx.send(Event::Paste(text))?;
-                          },
+                          _ => unimplemented!()
                         }
-                      },
-                      _ => unimplemented!()
+                    },
+                    _ = render_tick => {
+                        event_tx.send(Event::Render)?;
                     }
-                  },
-                  _ = render_tick => {
-                    event_tx.send(Event::Render)?;
-                  }
                 }
             }
         });

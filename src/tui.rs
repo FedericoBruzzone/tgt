@@ -36,19 +36,19 @@ impl Tui {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::TitleBar,
-                TitleBar::new(app_context.clone())
+                TitleBar::new(Arc::clone(&app_context))
                     .with_name("Tgt")
                     .new_boxed(),
             ),
             (
                 ComponentName::CoreWindow,
-                CoreWindow::new(app_context.clone())
+                CoreWindow::new(Arc::clone(&app_context))
                     .with_name("CoreWindow")
                     .new_boxed(),
             ),
             (
                 ComponentName::StatusBar,
-                StatusBar::new(app_context.clone())
+                StatusBar::new(Arc::clone(&app_context))
                     .with_name("Status Bar")
                     .new_boxed(),
             ),
@@ -124,7 +124,6 @@ impl Tui {
             .unwrap()
             .with_small_area(area.width < SMALL_AREA_WIDTH);
 
-        tracing::info!("Drawing Tui");
         let main_layout = Layout::new(
             Direction::Vertical,
             [

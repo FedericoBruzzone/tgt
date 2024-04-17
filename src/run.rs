@@ -34,6 +34,7 @@ pub async fn run_app(
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
 
+    // Main loop
     loop {
         if app_context.quit.load(Ordering::Acquire) {
             if let Err(e) = tui_backend.exit() {
@@ -41,8 +42,8 @@ pub async fn run_app(
             }
             break;
         }
-        handle_tui_backend_events(app_context.clone(), tui, tui_backend).await?;
-        handle_app_actions(app_context.clone(), tui, tui_backend)?;
+        handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
+        handle_app_actions(Arc::clone(&app_context), tui, tui_backend)?;
     }
 
     tui_backend.exit()?;

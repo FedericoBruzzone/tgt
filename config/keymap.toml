@@ -8,7 +8,7 @@ keymap = [
   # Note that when the prompt is focused, the "q" key will be used to type the letter "q".
   { keys = ["q"], command = "try_quit", description = "Quit the application"},
   # Quit the application
-  { keys = ["ctrl+c"], command = "quit", description = "Quit the application"},
+  # { keys = ["ctrl+c"], command = "quit", description = "Quit the application"},
   # Focus the chat list
   { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
   # Focus the chat

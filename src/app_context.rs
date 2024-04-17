@@ -68,10 +68,14 @@ pub struct AppContext {
     theme_config: Mutex<ThemeConfig>,
     /// The palette configuration.
     palette_config: Mutex<PaletteConfig>,
-    /// An unbounded sender that send action for processing.
-    action_rx: Mutex<UnboundedReceiver<Action>>,
     /// An unbounded receiver that receives action for processing.
+    /// This is used to send actions from the main loop to the main loop.
+    /// A copy of this receiver is passed to all components.
     action_tx: Mutex<UnboundedSender<Action>>,
+    /// An unbounded sender that send action for processing.
+    /// This is used to receive events from the action queue for processing.
+    /// The main loop consumes actions from this receiver.
+    action_rx: Mutex<UnboundedReceiver<Action>>,
     /// A boolean flag that represents whether the application should quit or
     /// not.
     pub quit: AtomicBool,
