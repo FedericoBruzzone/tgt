@@ -16,11 +16,8 @@ fn ask_user(string: &str) -> String {
 }
 
 async fn handle_update(update: Update, auth_tx: &Sender<AuthorizationState>) {
-    match update {
-        Update::AuthorizationState(update) => {
-            auth_tx.send(update.authorization_state).await.unwrap();
-        }
-        _ => (),
+    if let Update::AuthorizationState(update) = update {
+        auth_tx.send(update.authorization_state).await.unwrap();
     }
 }
 
@@ -28,7 +25,7 @@ async fn handle_authorization_state(
     client_id: i32,
     mut auth_rx: Receiver<AuthorizationState>,
     run_flag: Arc<AtomicBool>,
-) -> Receiver<AuthorizationState> {
+) -> Option<Receiver<AuthorizationState>> {
     while let Some(state) = auth_rx.recv().await {
         match state {
             AuthorizationState::WaitTdlibParameters => {
@@ -81,13 +78,14 @@ async fn handle_authorization_state(
                 // Set the flag to false to stop receiving updates from the
                 // spawned task
                 run_flag.store(false, Ordering::Release);
-                break;
+                return None;
+                // break;
             }
             _ => (),
         }
     }
 
-    auth_rx
+    Some(auth_rx)
 }
 
 #[tokio::main]
@@ -105,7 +103,11 @@ async fn main() {
 
     // Spawn a task to receive updates/responses
     let handle = tokio::spawn(async move {
-        while run_flag_clone.load(Ordering::Acquire) {
+        loop {
+            if !run_flag_clone.load(Ordering::Acquire) {
+                break;
+            }
+
             if let Some((update, _client_id)) = tdlib::receive() {
                 handle_update(update, &auth_tx).await;
             }
@@ -120,7 +122,9 @@ async fn main() {
         .unwrap();
 
     // Handle the authorization state to authenticate the client
-    let auth_rx = handle_authorization_state(client_id, auth_rx, run_flag.clone()).await;
+    let auth_rx = handle_authorization_state(client_id, auth_rx, run_flag.clone())
+        .await
+        .unwrap();
 
     // Run the get_me() method to get user information
     let User::User(me) = functions::get_me(client_id).await.unwrap();
@@ -130,11 +134,17 @@ async fn main() {
     functions::close(client_id).await.unwrap();
 
     // Handle the authorization state to wait for the "Closed" state
-    handle_authorization_state(client_id, auth_rx, run_flag.clone()).await;
+    match handle_authorization_state(client_id, auth_rx, run_flag.clone()).await {
+        None => std::process::exit(0),
+        Some(_) => (),
+    }
 
     println!("BEFORE");
     // Wait for the previously spawned task to end the execution
-    handle.await.unwrap();
+    match handle.await {
+        Ok(_) => (),
+        Err(e) => println!("Error: {:?}", e),
+    }
 
     println!("AFTER");
 }

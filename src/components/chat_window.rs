@@ -7,7 +7,10 @@ use crate::{
 };
 use ratatui::{
     layout::{Alignment, Rect},
-    symbols::{border, line},
+    symbols::{
+        border::{self, Set},
+        line,
+    },
     text::Line,
     widgets::{Block, Borders, List, ListDirection, ListItem, ListState},
 };
@@ -159,14 +162,10 @@ impl Component for ChatWindow {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
-        let border = if self.small_area {
-            border::PLAIN
-        } else {
-            border::Set {
-                top_left: line::NORMAL.horizontal_down,
-                bottom_left: line::NORMAL.horizontal_up,
-                ..border::PLAIN
-            }
+        let border = Set {
+            top_left: line::NORMAL.horizontal_down,
+            bottom_left: line::NORMAL.horizontal_up,
+            ..border::PLAIN
         };
         let style_border_focused = if self.focused {
             self.app_context.style_border_component_focused()

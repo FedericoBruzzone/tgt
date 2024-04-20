@@ -1,6 +1,7 @@
 use crate::{
     action::Action, app_context::AppContext, app_error::AppError,
-    configs::custom::keymap_custom::ActionBinding, event::Event, tui::Tui, tui_backend::TuiBackend,
+    configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
+    tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
 use std::{
@@ -17,6 +18,7 @@ use tokio::sync::mpsc::UnboundedSender;
 /// * `app_context` - An Arc wrapped AppContext struct.
 /// * `tui` - A mutable reference to the Tui struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
+/// * `tg_backend` - A mutable reference to the TgBackend struct.
 ///
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
@@ -24,27 +26,49 @@ pub async fn run_app(
     app_context: Arc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
+    tg_backend: &mut TgBackend,
 ) -> Result<(), AppError> {
     tracing::info!("Starting run_app");
+
+    // Clear the terminal
+    std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[2J").unwrap();
+    // Move the cursor to the top left corner
+    std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[1;1H").unwrap();
+
+    tg_backend.start();
+    tg_backend.set_logging().await;
+    tg_backend.handle_authorization_state().await;
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
 
     // Main loop
     loop {
-        if app_context.quit.load(Ordering::Acquire) {
-            if let Err(e) = tui_backend.exit() {
-                tracing::error!("Error exiting tui backend: {}", e);
+        while tg_backend.have_authorization {
+            handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
+            handle_app_actions(Arc::clone(&app_context), tui, tui_backend)?;
+
+            if app_context.quit.load(Ordering::Acquire) {
+                tg_backend.need_quit = true;
+                tg_backend.have_authorization = false;
+                match tdlib::functions::close(tg_backend.client_id).await {
+                    Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
+                    Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
+                }
+                if let Err(e) = tui_backend.exit() {
+                    tracing::error!("Error exiting tui backend: {}", e);
+                }
+                tg_backend.handle_authorization_state().await;
+
+                // Clear the terminal
+                std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[2J").unwrap();
+                // Move the cursor to the top left corner
+                std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[1;1H").unwrap();
+
+                return Ok(());
             }
-            break;
         }
-        handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
-        handle_app_actions(Arc::clone(&app_context), tui, tui_backend)?;
     }
-
-    tui_backend.exit()?;
-
-    Ok(())
 }
 #[allow(clippy::await_holding_lock)]
 /// Handle incoming events from the TUI backend and produce actions if

@@ -8,9 +8,11 @@ pub mod tui;
 pub mod tui_backend;
 pub mod utils;
 
+// Folders
 pub mod components;
 pub mod configs;
 pub mod run;
+pub mod tg;
 
 use crate::{
     app_context::AppContext,
@@ -23,6 +25,7 @@ use crate::{
         },
     },
     logger::Logger,
+    tg::tg_backend::TgBackend,
     tui::Tui,
     tui_backend::TuiBackend,
 };
@@ -60,19 +63,19 @@ async fn tokio_main() -> Result<(), AppError> {
 
     let logger = Logger::from_config(LOGGER_CONFIG.clone());
     logger.init();
-    tracing::info!("Logger initialized with config: {:#?}", logger);
+    tracing::info!("Logger initialized with config: {:?}", logger);
 
     let keymap_config = KEYMAP_CONFIG.clone();
-    tracing::info!("Keymap config: {:#?}", keymap_config);
+    tracing::info!("Keymap config: {:?}", keymap_config);
 
     let app_config = APP_CONFIG.clone();
-    tracing::info!("App config: {:#?}", app_config);
+    tracing::info!("App config: {:?}", app_config);
 
     let palette_config = PALETTE_CONFIG.clone();
-    tracing::info!("Palette config: {:#?}", palette_config);
+    tracing::info!("Palette config: {:?}", palette_config);
 
     let theme_config = THEME_CONFIG.clone();
-    tracing::info!("Theme config: {:#?}", theme_config);
+    tracing::info!("Theme config: {:?}", theme_config);
 
     let app_context = Arc::new(AppContext::new(
         app_config,
@@ -83,9 +86,25 @@ async fn tokio_main() -> Result<(), AppError> {
     let mut tui_backend = TuiBackend::new(Arc::clone(&app_context))?;
     let mut tui = Tui::new(Arc::clone(&app_context));
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
+    let mut tg_backend = TgBackend::new().unwrap();
 
-    run::run_app(Arc::clone(&app_context), &mut tui, &mut tui_backend).await?;
-    Ok(())
+    match run::run_app(
+        Arc::clone(&app_context),
+        &mut tui,
+        &mut tui_backend,
+        &mut tg_backend,
+    )
+    .await
+    {
+        Ok(_) => {
+            tracing::info!("Application exited successfully");
+            std::process::exit(0);
+        }
+        Err(e) => {
+            tracing::error!("Application exited with error: {}", e);
+            std::process::exit(1);
+        }
+    }
 }
 
 /// Initialize the panic hook to exit the `TuiBackend` and log the panic stack

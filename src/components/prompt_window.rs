@@ -383,11 +383,7 @@ impl Component for PromptWindow {
         let collapsed_top_and_left_border_set = Set {
             top_left: NORMAL.vertical_right,
             top_right: NORMAL.vertical_left,
-            bottom_left: if self.small_area {
-                NORMAL.bottom_left
-            } else {
-                NORMAL.horizontal_up
-            },
+            bottom_left: NORMAL.horizontal_up,
             ..PLAIN
         };
         let (text, style_text, style_border_focused) = if self.focused {
