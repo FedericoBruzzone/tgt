@@ -4,10 +4,11 @@ use crate::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
         theme_custom::ThemeConfig,
     },
+    tg::tg_backend::TgContext,
 };
 use ratatui::style::Style;
-use std::io;
-use std::sync::{atomic::AtomicBool, Mutex, MutexGuard};
+use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard};
+use std::{io, sync::atomic::Ordering};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 /// Generate a function that returns a style based on the theme configuration.
@@ -78,7 +79,9 @@ pub struct AppContext {
     action_rx: Mutex<UnboundedReceiver<Action>>,
     /// A boolean flag that represents whether the application should quit or
     /// not.
-    pub quit: AtomicBool,
+    quit: AtomicBool,
+    /// The Telegram context.
+    tg_context: Arc<TgContext>,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -89,6 +92,7 @@ impl AppContext {
     /// * `keymap_config` - The keymap configuration.
     /// * `theme_config` - The theme configuration.
     /// * `palette_config` - The palette configuration.
+    /// * `tg_context` - The Telegram context.
     ///
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
@@ -98,6 +102,7 @@ impl AppContext {
         keymap_config: KeymapConfig,
         theme_config: ThemeConfig,
         palette_config: PaletteConfig,
+        tg_context: TgContext,
     ) -> Result<Self, io::Error> {
         let (action_tx, action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
         let quit = false;
@@ -109,6 +114,7 @@ impl AppContext {
             action_rx: Mutex::new(action_rx),
             action_tx: Mutex::new(action_tx),
             quit: AtomicBool::new(quit),
+            tg_context: Arc::new(tg_context),
         })
     }
     /// Get the application configuration.
@@ -178,8 +184,21 @@ impl AppContext {
     ///
     /// # Returns
     /// * `bool` - The value of the quit flag.
-    pub fn quit(&self) -> bool {
-        self.quit.load(std::sync::atomic::Ordering::Acquire)
+    pub fn quit_acquire(&self) -> bool {
+        self.quit.load(Ordering::Acquire)
+    }
+    /// Set the quit flag.
+    /// This function sets the value of the quit flag.
+    /// The quit flag is a shared resource and is protected by an atomic boolean.
+    pub fn quit_store(&self, value: bool) {
+        self.quit.store(value, Ordering::Release);
+    }
+    /// Get the Telegram context.
+    /// This function returns the Telegram context.
+    /// The Telegram context is a shared resource and the contained variables are
+    /// protected by a Mutex.
+    pub fn tg_context(&self) -> Arc<TgContext> {
+        Arc::clone(&self.tg_context)
     }
 
     // ===== COMMON ======

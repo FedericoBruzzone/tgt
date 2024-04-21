@@ -1,10 +1,10 @@
 use {
-    crate::tg::ordered_chat::OrderedChat,
+    crate::{app_context::AppContext, tg::ordered_chat::OrderedChat},
     std::{
         collections::{BTreeSet, HashMap, VecDeque},
         sync::{
             atomic::{AtomicBool, Ordering},
-            Arc, Mutex,
+            Arc, Mutex, MutexGuard,
         },
     },
     tdlib::{
@@ -21,6 +21,51 @@ use {
     },
 };
 
+#[derive(Debug, Default)]
+pub struct TgContext {
+    pub users: Mutex<HashMap<i64, User>>,
+    pub basic_groups: Mutex<HashMap<i64, BasicGroup>>,
+    pub supergroups: Mutex<HashMap<i64, Supergroup>>,
+    pub secret_chats: Mutex<HashMap<i32, SecretChat>>,
+
+    pub chats: Mutex<HashMap<i64, Chat>>,
+    pub main_chat_list: Mutex<BTreeSet<OrderedChat>>,
+    pub have_full_main_chat_list: bool,
+
+    pub users_full_info: Mutex<HashMap<i64, UserFullInfo>>,
+    pub basic_groups_full_info: Mutex<HashMap<i64, BasicGroupFullInfo>>,
+    pub supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
+}
+impl TgContext {
+    pub fn users(&self) -> MutexGuard<'_, HashMap<i64, User>> {
+        self.users.lock().unwrap()
+    }
+    pub fn basic_groups(&self) -> MutexGuard<'_, HashMap<i64, BasicGroup>> {
+        self.basic_groups.lock().unwrap()
+    }
+    pub fn supergroups(&self) -> MutexGuard<'_, HashMap<i64, Supergroup>> {
+        self.supergroups.lock().unwrap()
+    }
+    pub fn secret_chats(&self) -> MutexGuard<'_, HashMap<i32, SecretChat>> {
+        self.secret_chats.lock().unwrap()
+    }
+    pub fn chats(&self) -> MutexGuard<'_, HashMap<i64, Chat>> {
+        self.chats.lock().unwrap()
+    }
+    pub fn main_chat_list(&self) -> MutexGuard<'_, BTreeSet<OrderedChat>> {
+        self.main_chat_list.lock().unwrap()
+    }
+    pub fn users_full_info(&self) -> MutexGuard<'_, HashMap<i64, UserFullInfo>> {
+        self.users_full_info.lock().unwrap()
+    }
+    pub fn basic_groups_full_info(&self) -> MutexGuard<'_, HashMap<i64, BasicGroupFullInfo>> {
+        self.basic_groups_full_info.lock().unwrap()
+    }
+    pub fn supergroups_full_info(&self) -> MutexGuard<'_, HashMap<i64, SupergroupFullInfo>> {
+        self.supergroups_full_info.lock().unwrap()
+    }
+}
+
 pub struct TgBackend {
     // thread for receiving updates from tdlib
     pub handle_updates: JoinHandle<()>,
@@ -36,18 +81,7 @@ pub struct TgBackend {
     pub need_quit: bool,
     pub can_quit: Arc<AtomicBool>,
 
-    pub users: Arc<Mutex<HashMap<i64, User>>>,
-    pub basic_groups: Arc<Mutex<HashMap<i64, BasicGroup>>>,
-    pub supergroups: Arc<Mutex<HashMap<i64, Supergroup>>>,
-    pub secret_chats: Arc<Mutex<HashMap<i32, SecretChat>>>,
-
-    pub chats: Arc<Mutex<HashMap<i64, Chat>>>,
-    pub main_chat_list: Arc<Mutex<BTreeSet<OrderedChat>>>,
-    pub have_full_main_chat_list: bool,
-
-    pub users_full_info: Arc<Mutex<HashMap<i64, UserFullInfo>>>,
-    pub basic_groups_full_info: Arc<Mutex<HashMap<i64, BasicGroupFullInfo>>>,
-    pub supergroups_full_info: Arc<Mutex<HashMap<i64, SupergroupFullInfo>>>,
+    pub app_context: Arc<AppContext>,
 }
 
 impl TgBackend {
@@ -166,7 +200,7 @@ impl TgBackend {
     //     }
     // }
 
-    pub fn new() -> Result<Self, std::io::Error> {
+    pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
         let handle_updates = tokio::spawn(async {});
 
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
@@ -180,27 +214,6 @@ impl TgBackend {
         // probably useless in real app
         let can_quit = Arc::new(AtomicBool::new(false));
 
-        // maybe all datastructures needs to be thread safe
-        let users: Arc<Mutex<HashMap<i64, User>>> = Arc::new(Mutex::new(HashMap::new()));
-        let basic_groups: Arc<Mutex<HashMap<i64, BasicGroup>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-        let supergroups: Arc<Mutex<HashMap<i64, Supergroup>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-        let secret_chats: Arc<Mutex<HashMap<i32, SecretChat>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-
-        let chats: Arc<Mutex<HashMap<i64, Chat>>> = Arc::new(Mutex::new(HashMap::new()));
-        let main_chat_list: Arc<Mutex<BTreeSet<OrderedChat>>> =
-            Arc::new(Mutex::new(BTreeSet::new()));
-        let have_full_main_chat_list = false;
-
-        let users_full_info: Arc<Mutex<HashMap<i64, UserFullInfo>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-        let basic_groups_full_info: Arc<Mutex<HashMap<i64, BasicGroupFullInfo>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-        let supergroups_full_info: Arc<Mutex<HashMap<i64, SupergroupFullInfo>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-
         Ok(Self {
             handle_updates,
             auth_tx,
@@ -209,16 +222,7 @@ impl TgBackend {
             have_authorization,
             need_quit,
             can_quit,
-            users,
-            basic_groups,
-            supergroups,
-            secret_chats,
-            chats,
-            main_chat_list,
-            have_full_main_chat_list,
-            users_full_info,
-            basic_groups_full_info,
-            supergroups_full_info,
+            app_context,
         })
     }
 
@@ -227,17 +231,7 @@ impl TgBackend {
 
         let can_quit = self.can_quit.clone();
 
-        let users = self.users.clone();
-        let basic_groups = self.basic_groups.clone();
-        let supergroups = self.supergroups.clone();
-        let secret_chats = self.secret_chats.clone();
-
-        let chats = self.chats.clone();
-        let main_chat_list = self.main_chat_list.clone();
-
-        let users_full_info = self.users_full_info.clone();
-        let basic_groups_full_info = self.basic_groups_full_info.clone();
-        let supergroups_full_info = self.supergroups_full_info.clone();
+        let tg_context = self.app_context.tg_context();
 
         self.handle_updates = tokio::spawn(async move {
             while !can_quit.load(Ordering::Acquire) {
@@ -251,20 +245,12 @@ impl TgBackend {
                             auth_tx.send(update.authorization_state).unwrap();
                         }
                         Update::User(update_user) => {
-                            // eprintln!(
-                            //     "[USER UPDATE]: {:?} {:?}",
-                            //     update_user.user.usernames,
-                            // update_user.user.id
-                            // );
-
-                            users
-                                .lock()
-                                .unwrap()
+                            tg_context
+                                .users()
                                 .insert(update_user.user.id, update_user.user);
                         }
                         Update::UserStatus(update_user) => {
-                            let mut _users = users.lock().unwrap();
-                            match _users.get_mut(&update_user.user_id) {
+                            match tg_context.users().get_mut(&update_user.user_id) {
                                 Some(user) => {
                                     user.status = update_user.status;
                                 }
@@ -272,19 +258,19 @@ impl TgBackend {
                             }
                         }
                         Update::BasicGroup(update_basic_group) => {
-                            basic_groups.lock().unwrap().insert(
+                            tg_context.basic_groups().insert(
                                 update_basic_group.basic_group.id,
                                 update_basic_group.basic_group,
                             );
                         }
                         Update::Supergroup(update_supergroup) => {
-                            supergroups.lock().unwrap().insert(
+                            tg_context.supergroups().insert(
                                 update_supergroup.supergroup.id,
                                 update_supergroup.supergroup,
                             );
                         }
                         Update::SecretChat(update_secret_chat) => {
-                            secret_chats.lock().unwrap().insert(
+                            tg_context.secret_chats().insert(
                                 update_secret_chat.secret_chat.id,
                                 update_secret_chat.secret_chat,
                             );
@@ -292,44 +278,43 @@ impl TgBackend {
                         Update::NewChat(update_new_chat) => {
                             let mut chat = update_new_chat.chat;
 
-                            let mut _chats = chats.lock().unwrap();
-                            _chats.insert(chat.id, chat.clone());
+                            tg_context.chats().insert(chat.id, chat.clone());
 
                             let positions = chat.positions;
 
                             chat.positions = Vec::new();
 
-                            Self::set_chat_positions(main_chat_list.clone(), &mut chat, positions);
+                            Self::set_chat_positions(
+                                tg_context.main_chat_list(),
+                                &mut chat,
+                                positions,
+                            );
                         }
                         Update::ChatTitle(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => chat.title = update_chat.title,
                                 None => update_dequeue.push_back(update),
                             }
                         }
                         Update::ChatPhoto(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => chat.photo = update_chat.photo,
                                 None => update_dequeue.push_back(update),
                             }
                         }
                         Update::ChatPermissions(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => chat.permissions = update_chat.permissions,
                                 None => update_dequeue.push_back(update),
                             }
                         }
                         Update::ChatLastMessage(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.last_message = update_chat.last_message;
 
                                     Self::set_chat_positions(
-                                        main_chat_list.clone(),
+                                        tg_context.main_chat_list(),
                                         chat,
                                         update_chat.positions,
                                     );
@@ -339,9 +324,7 @@ impl TgBackend {
                         }
                         Update::ChatPosition(update_chat) => {
                             if let enums::ChatList::Main = update_chat.position.list {
-                                let mut _chats = chats.lock().unwrap();
-
-                                match _chats.get_mut(&update_chat.chat_id) {
+                                match tg_context.chats().get_mut(&update_chat.chat_id) {
                                     Some(chat) => {
                                         let mut i = 0;
 
@@ -366,7 +349,7 @@ impl TgBackend {
                                         assert!(pos == new_position.len());
 
                                         Self::set_chat_positions(
-                                            main_chat_list.clone(),
+                                            tg_context.main_chat_list(),
                                             chat,
                                             new_position,
                                         );
@@ -376,9 +359,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatReadInbox(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.last_read_inbox_message_id =
                                         update_chat.last_read_inbox_message_id;
@@ -388,8 +369,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatReadOutbox(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.last_read_outbox_message_id =
                                         update_chat.last_read_outbox_message_id;
@@ -398,8 +378,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatActionBar(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.action_bar = update_chat.action_bar;
                                 }
@@ -407,8 +386,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatAvailableReactions(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.available_reactions = update_chat.available_reactions;
                                 }
@@ -416,8 +394,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatUnreadMentionCount(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.unread_mention_count = update_chat.unread_mention_count;
                                 }
@@ -425,8 +402,7 @@ impl TgBackend {
                             }
                         }
                         Update::MessageMentionRead(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.unread_mention_count = update_chat.unread_mention_count;
                                 }
@@ -434,8 +410,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatReplyMarkup(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.reply_markup_message_id =
                                         update_chat.reply_markup_message_id;
@@ -444,12 +419,11 @@ impl TgBackend {
                             }
                         }
                         Update::ChatDraftMessage(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.draft_message = update_chat.draft_message;
                                     Self::set_chat_positions(
-                                        main_chat_list.clone(),
+                                        tg_context.main_chat_list(),
                                         chat,
                                         update_chat.positions,
                                     );
@@ -458,8 +432,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatMessageSender(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.message_sender_id = update_chat.message_sender_id;
                                 }
@@ -467,8 +440,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatMessageAutoDeleteTime(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.message_auto_delete_time =
                                         update_chat.message_auto_delete_time;
@@ -477,8 +449,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatNotificationSettings(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.notification_settings = update_chat.notification_settings;
                                 }
@@ -486,8 +457,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatPendingJoinRequests(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.pending_join_requests = update_chat.pending_join_requests;
                                 }
@@ -495,8 +465,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatBackground(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.background = update_chat.background;
                                 }
@@ -504,8 +473,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatTheme(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.theme_name = update_chat.theme_name;
                                 }
@@ -513,8 +481,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatUnreadReactionCount(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.unread_reaction_count = update_chat.unread_reaction_count;
                                 }
@@ -522,8 +489,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatDefaultDisableNotification(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.default_disable_notification =
                                         update_chat.default_disable_notification;
@@ -532,8 +498,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatIsMarkedAsUnread(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.is_marked_as_unread = update_chat.is_marked_as_unread;
                                 }
@@ -541,15 +506,13 @@ impl TgBackend {
                             }
                         }
                         Update::ChatBlockList(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => chat.block_list = update_chat.block_list,
                                 None => update_dequeue.push_back(update),
                             }
                         }
                         Update::ChatHasScheduledMessages(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.has_scheduled_messages =
                                         update_chat.has_scheduled_messages;
@@ -558,8 +521,7 @@ impl TgBackend {
                             }
                         }
                         Update::MessageUnreadReactions(update_chat) => {
-                            let mut _chats = chats.lock().unwrap();
-                            match _chats.get_mut(&update_chat.chat_id) {
+                            match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.unread_mention_count = update_chat.unread_reaction_count;
                                 }
@@ -567,19 +529,19 @@ impl TgBackend {
                             }
                         }
                         Update::UserFullInfo(update_user_full_info) => {
-                            users_full_info.lock().unwrap().insert(
+                            tg_context.users_full_info().insert(
                                 update_user_full_info.user_id,
                                 update_user_full_info.user_full_info,
                             );
                         }
                         Update::BasicGroupFullInfo(update_basic_group_full_info) => {
-                            basic_groups_full_info.lock().unwrap().insert(
+                            tg_context.basic_groups_full_info().insert(
                                 update_basic_group_full_info.basic_group_id,
                                 update_basic_group_full_info.basic_group_full_info,
                             );
                         }
                         Update::SupergroupFullInfo(update_supergroup_full_info) => {
-                            supergroups_full_info.lock().unwrap().insert(
+                            tg_context.supergroups_full_info().insert(
                                 update_supergroup_full_info.supergroup_id,
                                 update_supergroup_full_info.supergroup_full_info,
                             );
@@ -716,12 +678,10 @@ impl TgBackend {
     }
 
     fn set_chat_positions(
-        main_chat_list: Arc<Mutex<BTreeSet<OrderedChat>>>,
+        mut main_chat_list: MutexGuard<'_, BTreeSet<OrderedChat>>,
         chat: &mut Chat,
         positions: Vec<ChatPosition>,
     ) {
-        let mut main_chat_list = main_chat_list.lock().unwrap();
-
         for position in &chat.positions {
             if let enums::ChatList::Main = position.list {
                 let is_removed = main_chat_list.remove(&OrderedChat {

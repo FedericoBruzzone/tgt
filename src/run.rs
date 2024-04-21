@@ -4,11 +4,7 @@ use crate::{
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
-use std::{
-    collections::HashMap,
-    sync::{atomic::Ordering, Arc},
-    time::Instant,
-};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Run the main event loop for the application.
@@ -48,7 +44,7 @@ pub async fn run_app(
             handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
             handle_app_actions(Arc::clone(&app_context), tui, tui_backend)?;
 
-            if app_context.quit.load(Ordering::Acquire) {
+            if app_context.quit_acquire() {
                 tg_backend.need_quit = true;
                 tg_backend.have_authorization = false;
                 match tdlib::functions::close(tg_backend.client_id).await {
@@ -191,7 +187,7 @@ pub fn handle_app_actions(
                 })?;
             }
             Action::Quit => {
-                app_context.quit.store(true, Ordering::Release);
+                app_context.quit_store(true);
             }
             _ => {}
         }

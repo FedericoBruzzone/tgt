@@ -25,7 +25,7 @@ use crate::{
         },
     },
     logger::Logger,
-    tg::tg_backend::TgBackend,
+    tg::tg_backend::{TgBackend, TgContext},
     tui::Tui,
     tui_backend::TuiBackend,
 };
@@ -77,16 +77,20 @@ async fn tokio_main() -> Result<(), AppError> {
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:?}", theme_config);
 
+    let tg_context = TgContext::default();
+
     let app_context = Arc::new(AppContext::new(
         app_config,
         keymap_config,
         theme_config,
         palette_config,
+        tg_context,
     )?);
+
     let mut tui_backend = TuiBackend::new(Arc::clone(&app_context))?;
     let mut tui = Tui::new(Arc::clone(&app_context));
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
-    let mut tg_backend = TgBackend::new().unwrap();
+    let mut tg_backend = TgBackend::new(Arc::clone(&app_context)).unwrap();
 
     match run::run_app(
         Arc::clone(&app_context),
