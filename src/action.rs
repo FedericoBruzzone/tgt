@@ -59,7 +59,7 @@ pub enum Action {
     MessageListUnselect,
 }
 
-/// Implement the `FormStr` trait for `Action`.
+/// Implement the `FromStr` trait for `Action`.
 impl FromStr for Action {
     type Err = AppError;
 
