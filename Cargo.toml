@@ -36,7 +36,7 @@ dirs = "5.0.1"
 futures = "0.3.30"
 lazy_static = "1.4.0"
 ratatui = "0.26.1"
-serde = "1.0.197"
+serde = "1.0.198"
 signal-hook = "0.3.17"
 tdlib = "0.10.0"
 tokio = { version = "1.37.0", features = ["full"] }
