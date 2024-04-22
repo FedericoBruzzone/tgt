@@ -1,16 +1,18 @@
 use crate::{
-    action::Action,
+    action::{Action, Modifiers},
     app_context::AppContext,
     components::component::{Component, HandleFocus, HandleSmallArea},
     event::Event,
 };
-use crossterm::event::{KeyCode, KeyModifiers};
+use arboard::Clipboard;
+use crossterm::event::KeyCode;
 use ratatui::{
     layout::Rect,
     symbols::{
         border::{Set, PLAIN},
         line::NORMAL,
     },
+    text::{Line, Span},
     widgets::{block::Block, Borders, Paragraph},
     Frame,
 };
@@ -22,11 +24,20 @@ enum InputMode {
     Input,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct InputCell {
+    c: char,
+    selected: bool,
+}
+
 struct Input {
-    text: Vec<Vec<char>>,
+    text: Vec<Vec<InputCell>>,
     cursor: (usize, usize),
     area_input: Rect,
     command_tx: Option<UnboundedSender<Action>>,
+    is_selecting: bool,
+    correct_prompt_size: usize,
+    is_restored: bool,
 }
 
 impl Input {
@@ -42,12 +53,8 @@ impl Input {
         self.cursor.1
     }
 
-    fn text(&mut self) -> String {
-        self.text
-            .iter()
-            .map(|line| line.iter().collect::<String>())
-            .collect::<Vec<String>>()
-            .join("\n")
+    fn text(&mut self) -> Vec<Vec<InputCell>> {
+        self.text.clone()
     }
 
     fn insert(&mut self, c: char) {
@@ -55,7 +62,7 @@ impl Input {
         if self.cursor.0 + 1 == (self.area_input.width - 2) as usize {
             self.insert_newline();
         }
-        self.text[self.cursor.1].insert(self.cursor.0, c);
+        self.text[self.cursor.1].insert(self.cursor.0, InputCell { c, selected: false });
         self.cursor.0 += 1;
     }
 
@@ -67,13 +74,51 @@ impl Input {
         self.cursor.0 = 0;
         self.cursor.1 += 1;
         if let Some(tx) = self.command_tx.as_ref() {
+            self.correct_prompt_size += 1;
             tx.send(Action::IncreasePromptSize).unwrap()
         }
+    }
+
+    fn restore_prompt_size(&mut self) {
+        if !self.is_restored {
+            if let Some(tx) = self.command_tx.as_ref() {
+                for _ in 0..self.correct_prompt_size {
+                    tx.send(Action::IncreasePromptSize).unwrap();
+                }
+            }
+            self.is_restored = true;
+        }
+    }
+
+    fn set_prompt_size_to_one(&mut self) {
+        if let Some(tx) = self.command_tx.as_ref() {
+            for _ in 0..self.correct_prompt_size {
+                tx.send(Action::DecreasePromptSize).unwrap();
+            }
+        }
+        self.is_restored = false;
+    }
+
+    fn copy_selected(&self) {
+        let mut clipboard = Clipboard::new().unwrap();
+        let mut text = String::new();
+        for (i, line) in self.text.iter().enumerate() {
+            for cell in line {
+                if cell.selected {
+                    text.push(cell.c);
+                }
+            }
+            if i < self.text.len() - 1 {
+                text.push('\n');
+            }
+        }
+        clipboard.set_text(text).unwrap();
     }
 
     fn backspace(&mut self) {
         if self.text[self.cursor.1].is_empty() && self.cursor.1 > 0 {
             if let Some(tx) = self.command_tx.as_ref() {
+                self.correct_prompt_size -= 1;
                 tx.send(Action::DecreasePromptSize).unwrap();
             }
         }
@@ -113,6 +158,71 @@ impl Input {
         }
     }
 
+    fn move_cursor_left_and_toggle_selection(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.0 > 0 {
+            self.cursor.0 -= 1;
+            self.text[self.cursor.1][self.cursor.0].selected =
+                !self.text[self.cursor.1][self.cursor.0].selected;
+        }
+    }
+
+    fn move_cursor_right_and_toggle_selection(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.0 < self.text[self.cursor.1].len() {
+            self.text[self.cursor.1][self.cursor.0].selected =
+                !self.text[self.cursor.1][self.cursor.0].selected;
+            self.cursor.0 += 1;
+        }
+    }
+
+    fn select_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1] {
+            cell.selected = true;
+        }
+    }
+
+    fn select_until_end_of_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1][self.cursor.0..] {
+            cell.selected = true;
+        }
+    }
+
+    fn select_until_start_of_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1][..self.cursor.0] {
+            cell.selected = true;
+        }
+    }
+
+    fn move_cursor_up_and_select_or_unselect(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.1 > 0 {
+            self.select_until_start_of_line();
+            self.move_cursor_up();
+            self.select_line();
+        }
+    }
+
+    fn move_cursor_down_and_select_or_unselect(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.1 < self.text.len() - 1 {
+            self.select_until_end_of_line();
+            self.move_cursor_down();
+            self.select_line();
+        }
+    }
+
+    fn unselect_all(&mut self) {
+        if self.is_selecting {
+            for line in &mut self.text {
+                for cell in line {
+                    cell.selected = false;
+                }
+            }
+            self.is_selecting = false;
+        }
+    }
+
     fn move_cursor_up(&mut self) {
         if self.cursor.1 > 0 {
             // Handle moving cursor to the left if the current line is shorter
@@ -138,10 +248,10 @@ impl Input {
     fn move_cursor_to_previous_word(&mut self) {
         let line = &self.text[self.cursor.1];
         let mut i = self.cursor.0;
-        while i > 0 && line[i - 1].is_whitespace() {
+        while i > 0 && line[i - 1].c.is_whitespace() {
             i -= 1;
         }
-        while i > 0 && !line[i - 1].is_whitespace() {
+        while i > 0 && !line[i - 1].c.is_whitespace() {
             i -= 1;
         }
         self.cursor.0 = i;
@@ -150,10 +260,10 @@ impl Input {
     fn move_cursor_to_next_word(&mut self) {
         let line = &self.text[self.cursor.1];
         let mut i = self.cursor.0;
-        while i < line.len() && line[i].is_whitespace() {
+        while i < line.len() && line[i].c.is_whitespace() {
             i += 1;
         }
-        while i < line.len() && !line[i].is_whitespace() {
+        while i < line.len() && !line[i].c.is_whitespace() {
             i += 1;
         }
         self.cursor.0 = i;
@@ -170,10 +280,10 @@ impl Input {
     fn delete_previous_word(&mut self) {
         let line = &mut self.text[self.cursor.1];
         let mut i = self.cursor.0;
-        while i > 0 && line[i - 1].is_whitespace() {
+        while i > 0 && line[i - 1].c.is_whitespace() {
             i -= 1;
         }
-        while i > 0 && !line[i - 1].is_whitespace() {
+        while i > 0 && !line[i - 1].c.is_whitespace() {
             i -= 1;
         }
         line.drain(i..self.cursor.0);
@@ -182,7 +292,11 @@ impl Input {
 
     fn paste(&mut self, text: String) {
         for c in text.chars() {
-            self.insert(c);
+            if c == '\n' {
+                self.insert_newline();
+            } else {
+                self.insert(c);
+            }
         }
     }
 }
@@ -194,6 +308,9 @@ impl Default for Input {
             cursor: (0, 0),
             area_input: Rect::default(),
             command_tx: None,
+            is_selecting: false,
+            correct_prompt_size: 0,
+            is_restored: true,
         }
     }
 }
@@ -328,49 +445,155 @@ impl Component for PromptWindow {
 
     fn update(&mut self, action: Action) {
         match action {
-            Action::Key(key_code, key_modifiers) => match (key_code, key_modifiers) {
-                (KeyCode::Left, KeyModifiers::ALT) => {
-                    self.input.move_cursor_to_previous_word();
-                }
-                (KeyCode::Right, KeyModifiers::ALT) => {
-                    self.input.move_cursor_to_next_word();
-                }
-                (KeyCode::Backspace, KeyModifiers::ALT) => {
-                    self.input.delete_previous_word();
-                }
-                (KeyCode::Left, KeyModifiers::SHIFT) => {
+            Action::Key(key_code, modifiers) => match (key_code, modifiers) {
+                // Move cursor to the start of the line.
+                (KeyCode::Home, ..)
+                | (
+                    KeyCode::Left | KeyCode::Char('b'),
+                    Modifiers {
+                        shift: true,
+                        super_: true,
+                        ..
+                    },
+                )
+                | (
+                    KeyCode::Left | KeyCode::Char('b'),
+                    Modifiers {
+                        control: true,
+                        alt: true,
+                        ..
+                    },
+                )
+                | (KeyCode::Char('a'), Modifiers { control: true, .. }) => {
+                    self.input.unselect_all();
                     self.input.move_cursor_to_start();
                 }
-                (KeyCode::Right, KeyModifiers::SHIFT) => {
+
+                // Move cursor to the end of the line.
+                (KeyCode::End, ..)
+                | (
+                    KeyCode::Right | KeyCode::Char('f'),
+                    Modifiers {
+                        shift: true,
+                        super_: true,
+                        ..
+                    },
+                )
+                | (
+                    KeyCode::Right | KeyCode::Char('f'),
+                    Modifiers {
+                        control: true,
+                        alt: true,
+                        ..
+                    },
+                )
+                | (KeyCode::Char('e'), Modifiers { control: true, .. }) => {
+                    self.input.unselect_all();
                     self.input.move_cursor_to_end();
                 }
+                // Select previous character.
+                (KeyCode::Left, Modifiers { shift: true, .. }) => {
+                    self.input.move_cursor_left_and_toggle_selection();
+                }
+
+                // Select next character.
+                (KeyCode::Right, Modifiers { shift: true, .. }) => {
+                    self.input.move_cursor_right_and_toggle_selection();
+                }
+
+                // Select previous line.
+                (KeyCode::Up, Modifiers { shift: true, .. }) => {
+                    self.input.move_cursor_up_and_select_or_unselect();
+                }
+
+                // Select next line.
+                (KeyCode::Down, Modifiers { shift: true, .. }) => {
+                    self.input.move_cursor_down_and_select_or_unselect();
+                }
+
+                // Copy selected text.
+                (KeyCode::Char('c'), Modifiers { control: true, .. }) => {
+                    self.input.copy_selected();
+                    self.input.unselect_all();
+                }
+
+                // Paste text.
+                (KeyCode::Char('v'), Modifiers { control: true, .. }) => {
+                    let mut clipboard = Clipboard::new().unwrap();
+                    if let Ok(text) = clipboard.get_text() {
+                        self.input.paste(text);
+                    }
+                }
+
+                // Move cursor to the previous word.
+                (KeyCode::Left | KeyCode::Char('b'), Modifiers { alt: true, .. }) => {
+                    self.input.unselect_all();
+                    self.input.move_cursor_to_previous_word();
+                }
+
+                // Move cursor to the next word.
+                (KeyCode::Right | KeyCode::Char('f'), Modifiers { alt: true, .. }) => {
+                    self.input.unselect_all();
+                    self.input.move_cursor_to_next_word();
+                }
+
+                // Delete the previous word.
+                (KeyCode::Backspace, Modifiers { alt: true, .. }) => {
+                    self.input.unselect_all();
+                    self.input.delete_previous_word();
+                }
+
+                // Insert a character.
                 (KeyCode::Char(c), _) => {
+                    self.input.unselect_all();
                     self.input.insert(c);
                 }
-                (KeyCode::Backspace, KeyModifiers::NONE) => {
+
+                // Delete a character.
+                (KeyCode::Backspace, ..) => {
+                    self.input.unselect_all();
                     self.input.backspace();
                 }
-                (KeyCode::Delete, KeyModifiers::NONE) => {
+
+                // Delete a character.
+                (KeyCode::Delete, ..) => {
+                    self.input.unselect_all();
                     self.input.delete();
                 }
-                (KeyCode::Enter, KeyModifiers::NONE) => {
+
+                // Insert a newline.
+                (KeyCode::Enter, ..) => {
+                    self.input.unselect_all();
                     self.input.insert_newline();
                 }
-                (KeyCode::Left, KeyModifiers::NONE) => {
+
+                // Move cursor to the left.
+                (KeyCode::Left, ..) => {
+                    self.input.unselect_all();
                     self.input.move_cursor_left();
                 }
-                (KeyCode::Right, KeyModifiers::NONE) => {
+
+                // Move cursor to the right.
+                (KeyCode::Right, ..) => {
+                    self.input.unselect_all();
                     self.input.move_cursor_right();
                 }
-                (KeyCode::Up, KeyModifiers::NONE) => {
+
+                // Move cursor up.
+                (KeyCode::Up, ..) => {
+                    self.input.unselect_all();
                     self.input.move_cursor_up();
                 }
-                (KeyCode::Down, KeyModifiers::NONE) => {
+
+                // Move cursor down.
+                (KeyCode::Down, ..) => {
+                    self.input.unselect_all();
                     self.input.move_cursor_down();
                 }
                 _ => {}
             },
             Action::Paste(text) => {
+                self.input.unselect_all();
                 self.input.paste(text);
             }
             _ => {}
@@ -386,15 +609,42 @@ impl Component for PromptWindow {
             bottom_left: NORMAL.horizontal_up,
             ..PLAIN
         };
+        let text = self
+            .input
+            .text()
+            .iter()
+            .map(|line| {
+                Line::from(
+                    line.iter()
+                        .map(|cell| {
+                            if cell.selected {
+                                Span::styled(
+                                    cell.c.to_string(),
+                                    self.app_context.style_item_selected(),
+                                )
+                            } else {
+                                Span::raw(cell.c.to_string())
+                            }
+                        })
+                        .collect::<Vec<Span>>(),
+                )
+            })
+            .collect::<Vec<Line>>();
+
         let (text, style_text, style_border_focused) = if self.focused {
+            self.input.restore_prompt_size();
             (
-                self.input.text().clone(),
+                text,
                 self.app_context.style_prompt(),
                 self.app_context.style_border_component_focused(),
             )
         } else {
+            self.input.set_prompt_size_to_one();
             (
-                format!("Press {} to send a message", self.focused_key),
+                vec![Line::from(format!(
+                    "Press {} to send a message",
+                    self.focused_key
+                ))],
                 self.app_context.style_prompt_message_preview_text(),
                 self.app_context.style_prompt(),
             )

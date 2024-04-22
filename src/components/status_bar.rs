@@ -112,9 +112,7 @@ impl Component for StatusBar {
             Action::UpdateArea(area) => {
                 self.terminal_area = area;
             }
-            Action::Key(key, modifiers) => {
-                self.last_key = Event::Key(key, modifiers);
-            }
+            Action::Key(key, modifiers) => self.last_key = Event::Key(key, modifiers.into()),
             _ => {}
         }
     }

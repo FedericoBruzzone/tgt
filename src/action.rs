@@ -7,6 +7,63 @@ use {
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// `Modifiers` is a struct that represents the modifiers of a key event.
+/// It is used to determine the state of the modifiers when a key event is
+/// generated.
+pub struct Modifiers {
+    /// A boolean that represents the shift modifier.
+    pub shift: bool,
+    /// A boolean that represents the control modifier.
+    pub control: bool,
+    /// A boolean that represents the alt modifier.
+    pub alt: bool,
+    /// A boolean that represents the super modifier.
+    pub super_: bool,
+    /// A boolean that represents the hyper modifier.
+    pub hyper: bool,
+    /// A boolean that represents the meta modifier.
+    pub meta: bool,
+}
+/// Implement the `From` trait for `KeyModifiers`
+impl From<KeyModifiers> for Modifiers {
+    fn from(modifiers: KeyModifiers) -> Self {
+        Modifiers {
+            shift: modifiers.contains(KeyModifiers::SHIFT),
+            control: modifiers.contains(KeyModifiers::CONTROL),
+            alt: modifiers.contains(KeyModifiers::ALT),
+            super_: modifiers.contains(KeyModifiers::SUPER),
+            hyper: modifiers.contains(KeyModifiers::HYPER),
+            meta: modifiers.contains(KeyModifiers::META),
+        }
+    }
+}
+/// Implement the `From` trait for `Modifiers`
+impl From<Modifiers> for KeyModifiers {
+    fn from(modifiers: Modifiers) -> Self {
+        let mut key_modifiers = KeyModifiers::empty();
+        if modifiers.shift {
+            key_modifiers.insert(KeyModifiers::SHIFT);
+        }
+        if modifiers.control {
+            key_modifiers.insert(KeyModifiers::CONTROL);
+        }
+        if modifiers.alt {
+            key_modifiers.insert(KeyModifiers::ALT);
+        }
+        if modifiers.super_ {
+            key_modifiers.insert(KeyModifiers::SUPER);
+        }
+        if modifiers.hyper {
+            key_modifiers.insert(KeyModifiers::HYPER);
+        }
+        if modifiers.meta {
+            key_modifiers.insert(KeyModifiers::META);
+        }
+        key_modifiers
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 // Action` is an enum that represents an action that can be handled by the
 /// main application loop and the components of the user interface.
 pub enum Action {
@@ -40,7 +97,7 @@ pub enum Action {
     /// Decrease Prompt size action.
     DecreasePromptSize,
     /// Key action with a key code.
-    Key(KeyCode, KeyModifiers),
+    Key(KeyCode, Modifiers),
     /// Update area action with a rectangular area.
     UpdateArea(Rect),
 
@@ -57,6 +114,20 @@ pub enum Action {
     MessageListPrevious,
     /// MessageListSelect action.
     MessageListUnselect,
+}
+/// Implement the `Action` enum.
+impl Action {
+    /// Create an action from a key event.
+    ///
+    /// # Arguments
+    /// * `key` - A `KeyCode` that represents the key code.
+    /// * `modifiers` - A `KeyModifiers` struct that represents the modifiers.
+    ///
+    /// # Returns
+    /// * `Action` - An action.
+    pub fn from_key_event(key: KeyCode, modifiers: KeyModifiers) -> Self {
+        Action::Key(key, Modifiers::from(modifiers))
+    }
 }
 
 /// Implement the `FromStr` trait for `Action`.

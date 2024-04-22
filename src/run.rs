@@ -4,7 +4,7 @@ use crate::{
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, io, sync::Arc, time::Instant};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Run the main event loop for the application.
@@ -26,10 +26,8 @@ pub async fn run_app(
 ) -> Result<(), AppError> {
     tracing::info!("Starting run_app");
 
-    // Clear the terminal
-    std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[2J").unwrap();
-    // Move the cursor to the top left corner
-    std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[1;1H").unwrap();
+    // Clear the terminal and move the cursor to the top left corner
+    io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
 
     tg_backend.start();
     tg_backend.set_logging().await;
@@ -56,10 +54,8 @@ pub async fn run_app(
                 }
                 tg_backend.handle_authorization_state().await;
 
-                // Clear the terminal
-                std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[2J").unwrap();
-                // Move the cursor to the top left corner
-                std::io::Write::write_all(&mut std::io::stdout().lock(), b"\x1b[1;1H").unwrap();
+                // Clear the terminal and move the cursor to the top left corner
+                io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
 
                 return Ok(());
             }
@@ -89,7 +85,10 @@ async fn handle_tui_backend_events(
                 .action_tx()
                 .send(Action::Resize(width, height))?,
             Event::Key(key, modifiers) => {
-                app_context.action_tx().send(Action::Key(key, modifiers))?;
+                // app_context.action_tx().send(Action::Key(key, modifiers))?;
+                app_context
+                    .action_tx()
+                    .send(Action::from_key_event(key, modifiers))?;
 
                 // Handle core_window key bindings.
                 if let Some(action_binding) = app_context
