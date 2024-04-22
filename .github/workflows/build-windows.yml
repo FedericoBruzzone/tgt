@@ -9,6 +9,7 @@ on:
       - 'Cargo.toml'
       - 'rustfmt.toml'
       - 'config/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -17,6 +18,7 @@ on:
       - 'Cargo.toml'
       - 'rustfmt.toml'
       - 'config/**'
+      - '.github/workflows/**'
 
 env:
   CARGO_TERM_COLOR: always

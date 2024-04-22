@@ -9,6 +9,7 @@ on:
       - 'Cargo.toml'
       - 'rustfmt.toml'
       - 'config/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -17,6 +18,7 @@ on:
       - 'Cargo.toml'
       - 'rustfmt.toml'
       - 'config/**'
+      - '.github/workflows/**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -57,7 +59,9 @@ jobs:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Extract TDLib
-        run: cp -r ./td/tdlib ./
+        run: |
+          cp -r ./td/tdlib ./
+          cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
       - name: Set environment variables
         run: |
           echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV

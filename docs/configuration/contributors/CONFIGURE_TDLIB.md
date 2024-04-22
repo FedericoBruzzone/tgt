@@ -62,12 +62,11 @@ Step 4 (not always necessary):
 
 **!The version of the library may change!**
 
-After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.19.dylib` to the `/usr/local/lib`, `/usr/lib`:
 
 ```bash
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.19.dylib '/usr/local/lib/'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.19.dylib '/usr/lib/'
 ```
 
 ### Windows
@@ -170,12 +169,10 @@ Step 4 (not always necessary):
 
 **!The version of the library may change!**
 
-After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.so.1.8.19` to the `/usr/lib`:
 
 ```bash
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.so.1.8.19 '/usr/lib/'
 ```
 
 ### Linux Other (using clang)
@@ -231,10 +228,8 @@ Step 4 (not always necessary):
 
 **!The version of the library may change!**
 
-After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.25.dylib` to the `/usr/local/lib`, `/usr/lib` or `/Users/NAME/lib`:
+After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.so.1.8.19` to the `/usr/lib`:
 
 ```bash
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/Users/NAME/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib'/usr/local/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.25.dylib '/usr/lib/libtd'
+cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.so.1.8.19 '/usr/lib/'
 ```
