@@ -3,6 +3,7 @@ use {
         action::Action,
         app_context::AppContext,
         components::component::{Component, HandleFocus, HandleSmallArea},
+        tg::tg_backend::{ChatListEntry, Item},
     },
     ratatui::{
         layout::Rect,
@@ -30,7 +31,7 @@ pub struct ChatListWindow {
     /// smaller version of itself.
     small_area: bool,
     /// A list of chat items to be displayed in the `ChatListWindow`.
-    chat_list: Vec<String>, // [TODO] Use chat_item struct
+    chat_list: Vec<ChatListEntry>,
     /// The state of the list.
     chat_list_state: ListState,
     /// Indicates whether the `ChatListWindow` is focused or not.
@@ -49,14 +50,7 @@ impl ChatListWindow {
         let name = "".to_string();
         let command_tx = None;
         let small_area = false;
-        let chat_list = vec![
-            "Chat 1".to_string(),
-            "Chat 2".to_string(),
-            "Chat 2".to_string(),
-            "Chat 2".to_string(),
-            "Chat 2".to_string(),
-            "Chat 2".to_string(),
-        ];
+        let chat_list = vec![];
         let chat_list_state = ListState::default();
         let focused = false;
 
@@ -165,7 +159,11 @@ impl Component for ChatListWindow {
             self.app_context.style_chat_list()
         };
 
-        let items = self.chat_list.iter().map(|item| item.as_str());
+        if let Some(items) = self.app_context.tg_context().get_main_chat_list() {
+            self.chat_list = items;
+        }
+        let items = self.chat_list.iter().map(|item| item.get_text_styled());
+
         let block = Block::default()
             .border_set(PLAIN)
             .border_style(style_border_focused)
@@ -177,7 +175,7 @@ impl Component for ChatListWindow {
             .style(self.app_context.style_chat_list())
             .highlight_style(self.app_context.style_item_selected())
             .highlight_symbol("➤ ")
-            .repeat_highlight_symbol(true)
+            // .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 
         frame.render_stateful_widget(list, area, &mut self.chat_list_state);

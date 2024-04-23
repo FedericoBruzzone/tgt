@@ -544,7 +544,17 @@ impl Component for PromptWindow {
                 }
 
                 // Insert a character.
-                (KeyCode::Char(c), _) => {
+                (
+                    KeyCode::Char(c),
+                    Modifiers {
+                        alt: false,
+                        control: false,
+                        meta: false,
+                        shift: false,
+                        super_: false,
+                        hyper: false,
+                    },
+                ) => {
                     self.input.unselect_all();
                     self.input.insert(c);
                 }

@@ -185,15 +185,7 @@ impl Component for ChatWindow {
                 self.app_context.style_chat_message_other()
             };
 
-            // ListItem::new(Text::from(item.as_str()).alignment(alignment))
-            ListItem::new(
-                Line::from(
-                    item.as_str(), /* .fg(style.fg.unwrap()).bg(style.bg.
-                                    * unwrap()), */
-                )
-                .alignment(alignment)
-                .style(style),
-            )
+            ListItem::new(Line::from(item.as_str()).alignment(alignment).style(style))
         });
 
         let block = Block::new()

@@ -85,7 +85,6 @@ async fn handle_tui_backend_events(
                 .action_tx()
                 .send(Action::Resize(width, height))?,
             Event::Key(key, modifiers) => {
-                // app_context.action_tx().send(Action::Key(key, modifiers))?;
                 app_context
                     .action_tx()
                     .send(Action::from_key_event(key, modifiers))?;
