@@ -8,9 +8,9 @@ use {
 /// It contains the foreground color, background color, and modifier.
 pub struct ThemeStyle {
     /// The foreground color of the style.
-    pub fg: Color,
+    pub fg: Option<Color>,
     /// The background color of the style.
-    pub bg: Color,
+    pub bg: Option<Color>,
     /// The modifier of the style.
     pub modifier: Modifier,
 }
@@ -25,7 +25,7 @@ impl ThemeStyle {
     /// # Returns
     /// * `Self` - The modified instance of the `ThemeStyle`.
     pub fn set_bg(mut self, bg: Color) -> Self {
-        self.bg = bg;
+        self.bg = Some(bg);
         self
     }
     /// Set the foreground color of the `ThemeStyle`.
@@ -36,7 +36,7 @@ impl ThemeStyle {
     /// # Returns
     /// * `Self` - The modified instance of the `ThemeStyle`.
     pub fn set_fg(mut self, fg: Color) -> Self {
-        self.fg = fg;
+        self.fg = Some(fg);
         self
     }
     /// Add a modifier to the `ThemeStyle`.
@@ -134,6 +134,9 @@ impl ThemeStyle {
     /// # Returns
     /// * `Result<Color, AppError>` - The converted `Color`.
     pub fn str_to_color_with_palette(s: &str) -> Result<Color, AppError> {
+        if s.is_empty() {
+            return Err(AppError::InvalidColor(s.to_string()));
+        }
         if let Some(color) = PALETTE_CONFIG.palette.get(s) {
             return Ok(*color);
         }
@@ -146,8 +149,32 @@ impl ThemeStyle {
 /// config.
 impl From<ThemeEntry> for ThemeStyle {
     fn from(entry: ThemeEntry) -> Self {
-        let fg = Self::str_to_color_with_palette(&entry.fg.unwrap_or("black".to_string()));
-        let bg = Self::str_to_color_with_palette(&entry.bg.unwrap_or("white".to_string()));
+        let fg = match entry.fg {
+            Some(fg) => match Self::str_to_color_with_palette(&fg) {
+                Ok(color) => Some(color),
+                Err(e) => {
+                    tracing::error!("Failed to parse foreground color: {}", e);
+                    None
+                }
+            },
+            None => {
+                tracing::info!("Miss foreground color in the theme config");
+                None
+            }
+        };
+        let bg = match entry.bg {
+            Some(bg) => match Self::str_to_color_with_palette(&bg) {
+                Ok(color) => Some(color),
+                Err(e) => {
+                    tracing::error!("Failed to parse background color: {}", e);
+                    None
+                }
+            },
+            None => {
+                tracing::info!("Miss background color in the theme config");
+                None
+            }
+        };
         let mut modifier = Modifier::empty();
         modifier.insert(match entry.italic {
             Some(true) => Modifier::ITALIC,
@@ -161,20 +188,6 @@ impl From<ThemeEntry> for ThemeStyle {
             Some(true) => Modifier::UNDERLINED,
             _ => Modifier::empty(),
         });
-        let fg = match fg {
-            Ok(fg) => fg,
-            Err(e) => {
-                eprintln!("In the theme config: {}", e);
-                std::process::exit(1);
-            }
-        };
-        let bg = match bg {
-            Ok(bg) => bg,
-            Err(e) => {
-                eprintln!("In the theme config: {}", e);
-                std::process::exit(1);
-            }
-        };
         Self { fg, bg, modifier }
     }
 }
@@ -182,8 +195,8 @@ impl From<ThemeEntry> for ThemeStyle {
 impl Default for ThemeStyle {
     fn default() -> Self {
         Self {
-            fg: Color::Reset,
-            bg: Color::Reset,
+            fg: None,
+            bg: None,
             modifier: Modifier::empty(),
         }
     }
@@ -192,10 +205,12 @@ impl Default for ThemeStyle {
 /// It is used to convert a `ThemeStyle` to a `Style`.
 impl From<&ThemeStyle> for Style {
     fn from(style: &ThemeStyle) -> Self {
-        Self::default()
-            .fg(style.fg)
-            .bg(style.bg)
-            .add_modifier(style.modifier)
+        Style {
+            fg: style.fg,
+            bg: style.bg,
+            add_modifier: style.modifier,
+            ..Style::default()
+        }
     }
 }
 
@@ -216,8 +231,8 @@ mod tests {
             underline: Some(true),
         };
         let style = ThemeStyle::from(entry);
-        assert_eq!(style.fg, Color::Rgb(255, 255, 255));
-        assert_eq!(style.bg, Color::Rgb(0, 0, 0));
+        assert_eq!(style.fg, Some(Color::Rgb(255, 255, 255)));
+        assert_eq!(style.bg, Some(Color::Rgb(0, 0, 0)));
         assert_eq!(
             style.modifier,
             Modifier::ITALIC | Modifier::BOLD | Modifier::UNDERLINED
@@ -249,12 +264,12 @@ mod tests {
             _ => Modifier::empty(),
         });
         let style = ThemeStyle {
-            fg: colored_entry_fg,
-            bg: colored_entry_bg,
+            fg: Some(colored_entry_fg),
+            bg: Some(colored_entry_bg),
             modifier,
         };
-        assert_eq!(style.fg, Color::White);
-        assert_eq!(style.bg, Color::Black);
+        assert_eq!(style.fg, Some(Color::White));
+        assert_eq!(style.bg, Some(Color::Black));
         assert_eq!(
             style.modifier,
             Modifier::ITALIC | Modifier::BOLD | Modifier::UNDERLINED
@@ -286,12 +301,12 @@ mod tests {
             _ => Modifier::empty(),
         });
         let style = ThemeStyle {
-            fg: colored_entry_fg,
-            bg: colored_entry_bg,
+            fg: Some(colored_entry_fg),
+            bg: Some(colored_entry_bg),
             modifier,
         };
-        assert_eq!(style.fg, Color::Rgb(0, 0, 0));
-        assert_eq!(style.bg, Color::Rgb(255, 255, 255));
+        assert_eq!(style.fg, Some(Color::Rgb(0, 0, 0)));
+        assert_eq!(style.bg, Some(Color::Rgb(255, 255, 255)));
         assert_eq!(
             style.modifier,
             Modifier::ITALIC | Modifier::BOLD | Modifier::UNDERLINED
@@ -320,8 +335,8 @@ mod tests {
     #[test]
     fn test_theme_style_default() {
         let style = ThemeStyle::default();
-        assert_eq!(style.fg, Color::Reset);
-        assert_eq!(style.bg, Color::Reset);
+        assert_eq!(style.fg, None);
+        assert_eq!(style.bg, None);
         assert_eq!(style.modifier, Modifier::empty());
     }
 

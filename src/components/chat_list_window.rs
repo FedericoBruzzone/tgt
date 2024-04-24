@@ -1,22 +1,184 @@
-use {
-    crate::{
-        action::Action,
-        app_context::AppContext,
-        components::component::{Component, HandleFocus, HandleSmallArea},
-        tg::tg_backend::{ChatListEntry, Item},
-    },
-    ratatui::{
-        layout::Rect,
-        symbols::border::PLAIN,
-        widgets::{
-            block::{Block, Title},
-            Borders, List, ListDirection, ListState,
-        },
-        Frame,
-    },
-    std::{borrow::Cow, sync::Arc},
-    tokio::sync::mpsc::UnboundedSender,
-};
+use super::component::Item;
+use crate::action::Action;
+use crate::app_context::AppContext;
+use crate::components::component::{Component, HandleFocus, HandleSmallArea};
+use chrono::{DateTime, Utc};
+use ratatui::layout::Rect;
+use ratatui::style::{Modifier, Style};
+use ratatui::symbols::border::PLAIN;
+use ratatui::text::{Line, Span, Text};
+use ratatui::widgets::block::{Block, Title};
+use ratatui::widgets::Borders;
+use ratatui::widgets::{List, ListDirection, ListState};
+use ratatui::Frame;
+use std::sync::Arc;
+use std::time::{Duration, UNIX_EPOCH};
+use tdlib::enums::{MessageContent, UserStatus};
+use tokio::sync::mpsc::UnboundedSender;
+
+#[derive(Debug, Default)]
+pub struct DateTimeEntry {
+    pub timestamp: i32,
+}
+impl DateTimeEntry {
+    pub fn convert_time(timestamp: i32) -> String {
+        let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
+        let datetime = DateTime::<Utc>::from(d);
+        datetime.format("%Y-%m-%d").to_string()
+    }
+
+    pub fn get_span_styled(&self, app_context: &AppContext) -> Span {
+        Span::styled(
+            Self::convert_time(self.timestamp),
+            app_context.style_chat_list_item_message_timestamp(),
+        )
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct MessageEntry {
+    _id: i64,
+    content: Line<'static>,
+    timestamp: DateTimeEntry,
+}
+impl MessageEntry {
+    pub fn get_line_styled(&self, app_context: &AppContext) -> Line<'static> {
+        Line::from(Span::styled(
+            format!("{}", self.content),
+            app_context.style_chat_list_item_message_content(),
+        ))
+    }
+
+    fn message_content_line(content: &MessageContent) -> Line<'static> {
+        match content {
+            MessageContent::MessageText(m) => Self::format_message_content(&m.text),
+            _ => Line::from(""),
+        }
+    }
+
+    fn format_message_content(message: &tdlib::types::FormattedText) -> Line<'static> {
+        let text = &message.text;
+        let entities = &message.entities;
+
+        if entities.is_empty() {
+            return Line::from(Span::raw(text.clone()));
+        }
+
+        let mut message_vec = Vec::new();
+        entities.iter().for_each(|e| {
+            let offset = e.offset as usize;
+            let length = e.length as usize;
+            message_vec.push(Span::raw(text.chars().take(offset).collect::<String>()));
+            match &e.r#type {
+                tdlib::enums::TextEntityType::Italic => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::ITALIC),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Bold => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Underline => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
+                _ => {}
+            }
+            message_vec.push(Span::raw(
+                text.chars().skip(offset + length).collect::<String>(),
+            ));
+        });
+        Line::from(message_vec)
+    }
+}
+impl From<&tdlib::types::Message> for MessageEntry {
+    fn from(message: &tdlib::types::Message) -> Self {
+        Self {
+            _id: message.id,
+            content: Self::message_content_line(&message.content),
+            timestamp: DateTimeEntry {
+                timestamp: message.date,
+            },
+        }
+    }
+}
+#[derive(Debug)]
+pub struct ChatListEntry {
+    chat_id: i64,
+    chat_name: String,
+    last_message: Option<MessageEntry>,
+    status: UserStatus,
+    verificated: bool,
+}
+impl Default for ChatListEntry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl ChatListEntry {
+    pub fn new() -> Self {
+        Self {
+            chat_id: 0,
+            chat_name: String::new(),
+            last_message: None,
+            status: tdlib::enums::UserStatus::Empty,
+            verificated: false,
+        }
+    }
+
+    pub fn set_chat_id(&mut self, chat_id: i64) {
+        self.chat_id = chat_id;
+    }
+    pub fn set_chat_name(&mut self, chat_name: String) {
+        self.chat_name = chat_name;
+    }
+    pub fn set_last_message(&mut self, last_message: MessageEntry) {
+        self.last_message = Some(last_message);
+    }
+    pub fn set_status(&mut self, status: tdlib::enums::UserStatus) {
+        self.status = status;
+    }
+    pub fn set_verificated(&mut self, verificated: bool) {
+        self.verificated = verificated;
+    }
+}
+impl Item for ChatListEntry {
+    fn get_text_styled(&self, app_context: &AppContext) -> Text {
+        let online_symbol = match self.status {
+            tdlib::enums::UserStatus::Online(_) => "🟢 ",
+            tdlib::enums::UserStatus::Offline(_) => "",
+            _ => "",
+        };
+        let verificated_symbol = if self.verificated { "✅" } else { "" };
+
+        let mut entry = Text::default();
+        entry.extend(vec![
+            Line::from(vec![
+                Span::raw(online_symbol),
+                Span::styled(
+                    self.chat_name.clone(),
+                    app_context.style_chat_list_item_chat_name(),
+                ),
+                Span::raw(" "),
+                Span::raw(verificated_symbol),
+                Span::raw(" | "),
+                self.last_message
+                    .as_ref()
+                    .map_or_else(Span::default, |e| e.timestamp.get_span_styled(app_context)),
+            ]),
+            self.last_message
+                .as_ref()
+                .map_or_else(Line::default, |e| e.get_line_styled(app_context)),
+        ]);
+        entry
+    }
+}
 
 /// `ChatListWindow` is a struct that represents a window for displaying a list
 /// of chat items. It is responsible for managing the layout and rendering of
@@ -163,24 +325,10 @@ impl Component for ChatListWindow {
         if let Some(items) = self.app_context.tg_context().get_main_chat_list() {
             self.chat_list = items;
         }
-        let items = self.chat_list.iter().map(|item| {
-            // Make all line with max area.width length
-            let mut text = item.get_text_styled();
-            text.lines.iter_mut().for_each(|line| {
-                line.spans.iter_mut().for_each(|span| {
-                    let content = &span.content;
-                    let len = content.chars().count();
-                    if len > area.width as usize {
-                        let new_content = content
-                            .chars()
-                            .take((area.width - 1) as usize)
-                            .collect::<String>();
-                        span.content = Cow::Owned(new_content);
-                    }
-                });
-            });
-            text
-        });
+        let items = self
+            .chat_list
+            .iter()
+            .map(|item| item.get_text_styled(&self.app_context));
         let block = Block::default()
             .border_set(PLAIN)
             .border_style(style_border_focused)
@@ -190,7 +338,7 @@ impl Component for ChatListWindow {
         let list = List::new(items)
             .block(block)
             .style(self.app_context.style_chat_list())
-            .highlight_style(self.app_context.style_item_selected())
+            .highlight_style(self.app_context.style_chat_list_item_selected())
             // .highlight_symbol("➤ ")
             // .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);

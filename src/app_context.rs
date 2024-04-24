@@ -4,7 +4,7 @@ use crate::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
         theme_custom::ThemeConfig,
     },
-    tg::tg_backend::TgContext,
+    tg::tg_context::TgContext,
 };
 use ratatui::style::Style;
 use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard};
@@ -212,6 +212,18 @@ impl AppContext {
 
     // ===== CHAT LIST =====
     theme_style_generate!(style_chat_list, chat_list, self);
+    theme_style_generate!(style_chat_list_item_selected, chat_list, item_selected);
+    theme_style_generate!(style_chat_list_item_chat_name, chat_list, item_chat_name);
+    theme_style_generate!(
+        style_chat_list_item_message_content,
+        chat_list,
+        item_message_content
+    );
+    theme_style_generate!(
+        style_chat_list_item_message_timestamp,
+        chat_list,
+        item_message_timestamp
+    );
 
     // ===== CHAT =====
     theme_style_generate!(style_chat, chat, self);

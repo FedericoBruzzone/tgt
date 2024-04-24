@@ -25,7 +25,7 @@ use crate::{
         },
     },
     logger::Logger,
-    tg::tg_backend::{TgBackend, TgContext},
+    tg::{tg_backend::TgBackend, tg_context::TgContext},
     tui::Tui,
     tui_backend::TuiBackend,
 };

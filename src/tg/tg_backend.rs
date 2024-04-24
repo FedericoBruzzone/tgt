@@ -1,321 +1,12 @@
-use {
-    crate::{app_context::AppContext, tg::ordered_chat::OrderedChat},
-    chrono::{DateTime, Utc},
-    ratatui::{
-        style::{Color, Modifier, Style},
-        text::{Line, Span, Text},
-    },
-    std::{
-        collections::{BTreeSet, HashMap, VecDeque},
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc, Mutex, MutexGuard,
-        },
-        time::{Duration, UNIX_EPOCH},
-    },
-    tdlib::{
-        enums::{self, AuthorizationState, LogStream, Update},
-        functions,
-        types::{
-            BasicGroup, BasicGroupFullInfo, Chat, ChatPosition, LogStreamFile, SecretChat,
-            Supergroup, SupergroupFullInfo, User, UserFullInfo,
-        },
-    },
-    tokio::{
-        sync::mpsc::{UnboundedReceiver, UnboundedSender},
-        task::JoinHandle,
-    },
-};
-
-pub trait Item {
-    fn get_text_styled(&self) -> Text;
-}
-
-#[derive(Debug, Default)]
-pub struct DateTimeEntry {
-    pub timestamp: i32,
-}
-impl DateTimeEntry {
-    pub fn convert_time(timestamp: i32) -> String {
-        let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
-        let datetime = DateTime::<Utc>::from(d);
-        datetime.format("%Y-%m-%d").to_string()
-    }
-}
-impl Item for DateTimeEntry {
-    fn get_text_styled(&self) -> Text {
-        let mut entry = Text::default();
-        entry.extend(vec![Line::from(Span::styled(
-            Self::convert_time(self.timestamp),
-            Style::default(),
-        ))]);
-        entry
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct MessageEntry {
-    _id: i64,
-    content: Line<'static>,
-    timestamp: DateTimeEntry,
-}
-impl Item for MessageEntry {
-    fn get_text_styled(&self) -> Text {
-        let mut entry = Text::default();
-        entry.extend(vec![
-            Line::from(format!("{}", self.content,)).style(Style::default().fg(Color::White))
-        ]);
-        entry
-    }
-}
-impl MessageEntry {
-    fn message_content_line(content: &enums::MessageContent) -> Line<'static> {
-        match content {
-            enums::MessageContent::MessageText(m) => Self::format_message_content(&m.text),
-            _ => Line::from(""),
-        }
-    }
-
-    fn format_message_content(message: &tdlib::types::FormattedText) -> Line<'static> {
-        let text = &message.text;
-        let entities = &message.entities;
-
-        if entities.is_empty() {
-            return Line::from(Span::raw(text.clone()));
-        }
-
-        let mut message_vec = Vec::new();
-        entities.iter().for_each(|e| {
-            let offset = e.offset as usize;
-            let length = e.length as usize;
-            message_vec.push(Span::raw(text.chars().take(offset).collect::<String>()));
-            match &e.r#type {
-                tdlib::enums::TextEntityType::Italic => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::ITALIC),
-                    ));
-                }
-                tdlib::enums::TextEntityType::Bold => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
-                }
-                tdlib::enums::TextEntityType::Underline => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
-                }
-                _ => {}
-            }
-            message_vec.push(Span::raw(
-                text.chars().skip(offset + length).collect::<String>(),
-            ));
-        });
-        Line::from(message_vec)
-    }
-}
-impl From<&tdlib::types::Message> for MessageEntry {
-    fn from(message: &tdlib::types::Message) -> Self {
-        Self {
-            _id: message.id,
-            content: Self::message_content_line(&message.content),
-            timestamp: DateTimeEntry {
-                timestamp: message.date,
-            },
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ChatListEntry {
-    chat_id: i64,
-    chat_name: String,
-    last_message: Option<MessageEntry>,
-    muted: bool,
-    status: tdlib::enums::UserStatus,
-    verificated: bool,
-}
-impl Default for ChatListEntry {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl ChatListEntry {
-    pub fn new() -> Self {
-        Self {
-            chat_id: 0,
-            chat_name: String::new(),
-            last_message: None,
-            muted: false,
-            status: tdlib::enums::UserStatus::Empty,
-            verificated: false,
-        }
-    }
-
-    pub fn set_chat_id(&mut self, chat_id: i64) {
-        self.chat_id = chat_id;
-    }
-    pub fn set_chat_name(&mut self, chat_name: String) {
-        self.chat_name = chat_name;
-    }
-    pub fn set_last_message(&mut self, last_message: MessageEntry) {
-        self.last_message = Some(last_message);
-    }
-    pub fn set_muted(&mut self, muted: bool) {
-        self.muted = muted;
-    }
-    pub fn set_status(&mut self, status: tdlib::enums::UserStatus) {
-        self.status = status;
-    }
-    pub fn set_verificated(&mut self, verificated: bool) {
-        self.verificated = verificated;
-    }
-}
-impl Item for ChatListEntry {
-    fn get_text_styled(&self) -> Text {
-        let online_symbol = match self.status {
-            tdlib::enums::UserStatus::Online(_) => "🟢 ",
-            tdlib::enums::UserStatus::Offline(_) => "",
-            _ => "",
-        };
-        let verificated_symbol = if self.verificated { "✅" } else { "" };
-        let muted_symbol = if self.muted { "🔇" } else { "" };
-
-        let mut entry = Text::default();
-        entry.extend(vec![Line::from(format!(
-            "{}{} {} {} {}",
-            online_symbol,
-            self.chat_name,
-            verificated_symbol,
-            muted_symbol,
-            if let Some(e) = self.last_message.as_ref() {
-                e.timestamp.get_text_styled()
-            } else {
-                Text::default()
-            }
-        ))]);
-        entry.extend(
-            self.last_message
-                .as_ref()
-                .map_or_else(Text::default, |e| e.get_text_styled()),
-        );
-        entry
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct TgContext {
-    pub users: Mutex<HashMap<i64, User>>,
-    pub basic_groups: Mutex<HashMap<i64, BasicGroup>>,
-    pub supergroups: Mutex<HashMap<i64, Supergroup>>,
-    pub secret_chats: Mutex<HashMap<i32, SecretChat>>,
-
-    pub chats: Mutex<HashMap<i64, Chat>>,
-    // Only ordered chats
-    pub main_chat_list: Mutex<BTreeSet<OrderedChat>>,
-    pub have_full_main_chat_list: bool,
-
-    pub users_full_info: Mutex<HashMap<i64, UserFullInfo>>,
-    pub basic_groups_full_info: Mutex<HashMap<i64, BasicGroupFullInfo>>,
-    pub supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
-
-    client_id: Mutex<Option<i32>>,
-}
-
-impl TgContext {
-    // lock_users
-    fn users(&self) -> MutexGuard<'_, HashMap<i64, User>> {
-        self.users.lock().unwrap()
-    }
-    pub fn basic_groups(&self) -> MutexGuard<'_, HashMap<i64, BasicGroup>> {
-        self.basic_groups.lock().unwrap()
-    }
-    pub fn supergroups(&self) -> MutexGuard<'_, HashMap<i64, Supergroup>> {
-        self.supergroups.lock().unwrap()
-    }
-    pub fn secret_chats(&self) -> MutexGuard<'_, HashMap<i32, SecretChat>> {
-        self.secret_chats.lock().unwrap()
-    }
-    pub fn chats(&self) -> MutexGuard<'_, HashMap<i64, Chat>> {
-        self.chats.lock().unwrap()
-    }
-    pub fn main_chat_list(&self) -> MutexGuard<'_, BTreeSet<OrderedChat>> {
-        self.main_chat_list.lock().unwrap()
-    }
-    pub fn users_full_info(&self) -> MutexGuard<'_, HashMap<i64, UserFullInfo>> {
-        self.users_full_info.lock().unwrap()
-    }
-    pub fn basic_groups_full_info(&self) -> MutexGuard<'_, HashMap<i64, BasicGroupFullInfo>> {
-        self.basic_groups_full_info.lock().unwrap()
-    }
-    pub fn supergroups_full_info(&self) -> MutexGuard<'_, HashMap<i64, SupergroupFullInfo>> {
-        self.supergroups_full_info.lock().unwrap()
-    }
-    pub fn client_id(&self) -> MutexGuard<'_, Option<i32>> {
-        self.client_id.lock().unwrap()
-    }
-
-    pub fn insert_user(&self, user_id: i64, user: User) {
-        self.users().insert(user_id, user);
-    }
-
-    pub fn set_client_id(&self, client_id: i32) {
-        self.client_id().replace(client_id);
-    }
-
-    pub fn get_main_chat_list(&self) -> Option<Vec<ChatListEntry>> {
-        let client_id = self.client_id().unwrap();
-        tokio::spawn(async move {
-            functions::load_chats(Some(enums::ChatList::Main), 20, client_id).await
-        });
-
-        let main_chat_list = self.main_chat_list();
-        let chats = self.chats();
-        let mut chat_list: Vec<ChatListEntry> = Vec::new();
-
-        for ord_chat in main_chat_list.iter() {
-            let mut chat_list_item = ChatListEntry::new();
-            chat_list_item.set_chat_id(ord_chat.chat_id);
-
-            if let Some(chat) = chats.get(&ord_chat.chat_id) {
-                if let Some(chat_message) = &chat.last_message {
-                    chat_list_item.set_last_message(MessageEntry::from(chat_message));
-                }
-                match &chat.r#type {
-                    enums::ChatType::Private(p) => {
-                        if let Some(user) = self.users().get(&p.user_id) {
-                            chat_list_item.set_chat_name(chat.title.clone());
-                            chat_list_item.set_verificated(user.is_verified);
-                            chat_list_item.set_status(user.status.clone());
-                        }
-                    }
-                    enums::ChatType::BasicGroup(bg) => {
-                        if let Some(_basic_group) = self.basic_groups().get(&bg.basic_group_id) {
-                            chat_list_item.set_chat_name(chat.title.clone());
-                        }
-                    }
-                    enums::ChatType::Supergroup(sg) => {
-                        if let Some(_supergroup) = self.supergroups().get(&sg.supergroup_id) {
-                            chat_list_item.set_chat_name(chat.title.clone());
-                        }
-                    }
-                    enums::ChatType::Secret(s) => {
-                        if let Some(_secret_chat) = self.secret_chats().get(&s.secret_chat_id) {
-                            chat_list_item.set_chat_name(chat.title.clone());
-                        }
-                    }
-                }
-            }
-
-            chat_list.push(chat_list_item);
-        }
-
-        Some(chat_list)
-    }
-}
+use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
+use std::collections::{BTreeSet, VecDeque};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, MutexGuard};
+use tdlib::enums::{self, AuthorizationState, LogStream, Update};
+use tdlib::functions;
+use tdlib::types::{Chat, ChatPosition, LogStreamFile};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::task::JoinHandle;
 
 pub struct TgBackend {
     pub handle_updates: JoinHandle<()>,
@@ -329,128 +20,13 @@ pub struct TgBackend {
 }
 
 impl TgBackend {
-    // pub async fn get_command(&mut self) {
-    //     let command = ask_user("Enter command (gcs - GetChats, gc <chatId> - GetChat, me - GetMe, sm <chatId> <message> - SendMessage, lo - LogOut, q - Quit, mcl - MainChatList, h <chatId> - GetChatHistory): ");
-    //     let commands: Vec<&str> = command.split(' ').collect();
-    //     match commands[0] {
-    //         "gcs" => {
-    //             let mut limit = 20;
-    //             if commands.len() > 1 {
-    //                 limit = commands[1].parse::<i32>().unwrap();
-    //             }
-    //             match functions::load_chats(Some(enums::ChatList::Main), limit, self.client_id)
-    //                 .await
-    //             {
-    //                 Ok(()) => (),
-    //                 Err(error) => eprintln!("[GET MAIN CHAT LIST]: {error:?}"),
-    //             }
-    //         }
-    //         "gc" => match functions::get_chat(commands[1].parse::<i64>().unwrap(), self.client_id)
-    //             .await
-    //         {
-    //             Ok(chat) => println!("[GET CHAT]: {chat:?}"),
-    //             Err(error) => eprintln!("[GET CHAT]: {error:?}"),
-    //         },
-    //         "me" => match functions::get_me(self.client_id).await {
-    //             Ok(me) => println!("[GET ME]: {me:?}"),
-    //             Err(error) => eprintln!("[GET ME]: {error:?}"),
-    //         },
-    //         "sm" => {
-    //             println!("[DEBUG]: {commands:?}");
-    //             // let args: Vec<&str> = commands[1].split(' ').collect();
-    //             let text = enums::InputMessageContent::InputMessageText(InputMessageText {
-    //                 text: FormattedText {
-    //                     text: commands[2].into(),
-    //                     entities: Vec::new(),
-    //                 },
-    //                 disable_web_page_preview: false,
-    //                 clear_draft: true,
-    //             });
-    //             match functions::send_message(
-    //                 commands[1].parse::<i64>().unwrap(),
-    //                 0,
-    //                 None,
-    //                 None,
-    //                 None,
-    //                 text,
-    //                 self.client_id,
-    //             )
-    //             .await
-    //             {
-    //                 Ok(me) => println!("[SEND MESSAGE]: {me:?}"),
-    //                 Err(error) => eprintln!("[SEND MESSAGE]: {error:?}"),
-    //             };
-    //         }
-    //         "lo" => {
-    //             self.have_authorization = false;
-    //             match functions::log_out(self.client_id).await {
-    //                 Ok(me) => println!("[LOG OUT]: {me:?}"),
-    //                 Err(error) => eprintln!("[LOG OUT]: {error:?}"),
-    //             }
-    //         }
-    //         "q" => {
-    //             self.need_quit = true;
-    //             self.have_authorization = false;
-    //             match functions::close(self.client_id).await {
-    //                 Ok(me) => println!("[CLOSE]: {me:?}"),
-    //                 Err(error) => eprintln!("[CLOSE]: {error:?}"),
-    //             }
-    //         }
-    //         "mcl" => {
-    //             let mcl = self.main_chat_list.lock().unwrap();
-    //             let chats = self.chats.lock().unwrap();
-    //
-    //             for chat in mcl.iter() {
-    //                 let c = chats.get(&chat.chat_id).unwrap();
-    //                 let content = if let enums::MessageContent::MessageText(m) =
-    //                     c.last_message.clone().unwrap().content
-    //                 {
-    //                     m.text.text
-    //                 } else {
-    //                     String::new()
-    //                 };
-    //                 println!(
-    //                     "chat_id: {}, title: {}, last_message: {}",
-    //                     chat.chat_id,
-    //                     c.title,
-    //                     content.split('\n').next().unwrap_or("")
-    //                 );
-    //             }
-    //         }
-    //         "h" => {
-    //             let chat_id = commands[1].parse::<i64>().unwrap();
-    //             match functions::get_chat_history(chat_id, 0, 0, 10, false, self.client_id).await {
-    //                 Ok(enums::Messages::Messages(messages)) => {
-    //                     for message in messages.messages.into_iter().flatten() {
-    //                         let content =
-    //                             if let enums::MessageContent::MessageText(m) = message.content {
-    //                                 m.text.text
-    //                             } else {
-    //                                 String::new()
-    //                             };
-    //                         let sender_id = if let enums::MessageSender::User(u) = message.sender_id
-    //                         {
-    //                             u.user_id
-    //                         } else {
-    //                             0
-    //                         };
-    //                         println!("sender_id: {:?}, content: {:?}", sender_id, content,)
-    //                     }
-    //                 }
-    //                 Err(error) => eprintln!("[GET CHAT HISTORY]: {error:?}"),
-    //             }
-    //         }
-    //         _ => (),
-    //     }
-    // }
-
     pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
         let handle_updates = tokio::spawn(async {});
 
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
 
         let client_id = tdlib::create_client();
-        app_context.tg_context().set_client_id(client_id);
+        app_context.tg_context().client_id().replace(client_id);
 
         // probably useless in real app
         let have_authorization = false;
@@ -473,14 +49,11 @@ impl TgBackend {
 
     pub fn start(&mut self) {
         let auth_tx = self.auth_tx.clone();
-
         let can_quit = self.can_quit.clone();
-
         let tg_context = self.app_context.tg_context();
 
         self.handle_updates = tokio::spawn(async move {
             while !can_quit.load(Ordering::Acquire) {
-                // TODO check that the client_ids are equal
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
                 if let Some((update, _client_id)) = tdlib::receive() {
                     update_dequeue.push_back(update);
@@ -490,7 +63,9 @@ impl TgBackend {
                             auth_tx.send(update.authorization_state).unwrap();
                         }
                         Update::User(update_user) => {
-                            tg_context.insert_user(update_user.user.id, update_user.user);
+                            tg_context
+                                .users()
+                                .insert(update_user.user.id, update_user.user);
                         }
                         Update::UserStatus(update_user) => {
                             match tg_context.users().get_mut(&update_user.user_id) {

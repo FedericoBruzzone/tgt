@@ -180,7 +180,7 @@ mod tests {
     fn test_theme_config_default() {
         let theme_config = crate::configs::custom::theme_custom::ThemeConfig::default();
         assert_eq!(theme_config.common.len(), 2);
-        assert_eq!(theme_config.chat_list.len(), 1);
+        assert_eq!(theme_config.chat_list.len(), 5);
         assert_eq!(theme_config.chat.len(), 3);
         assert_eq!(theme_config.prompt.len(), 2);
         assert_eq!(theme_config.status_bar.len(), 7);
@@ -366,16 +366,22 @@ mod tests {
         assert_eq!(theme_config.prompt.len(), 0);
         assert_eq!(theme_config.status_bar.len(), 0);
         assert_eq!(theme_config.title_bar.len(), 0);
-        assert_eq!(theme_config.common.get("default").unwrap().fg, Color::Blue);
+        assert_eq!(
+            theme_config.common.get("default").unwrap().fg,
+            Some(Color::Blue)
+        );
         assert_eq!(
             theme_config.common.get("default").unwrap().bg,
-            Color::Rgb(255, 255, 255)
+            Some(Color::Rgb(255, 255, 255))
         );
         assert_eq!(
             theme_config.common.get("selected").unwrap().fg,
-            Color::Rgb(0, 0, 0)
+            Some(Color::Rgb(0, 0, 0))
         );
-        assert_eq!(theme_config.common.get("selected").unwrap().bg, Color::Red);
+        assert_eq!(
+            theme_config.common.get("selected").unwrap().bg,
+            Some(Color::Red)
+        );
     }
 
     #[test]
@@ -396,7 +402,7 @@ mod tests {
         };
         theme_config = theme_config.merge(Some(theme_raw));
         assert_eq!(theme_config.common.len(), 2);
-        assert_eq!(theme_config.chat_list.len(), 1);
+        assert_eq!(theme_config.chat_list.len(), 5);
         assert_eq!(theme_config.chat.len(), 3);
         assert_eq!(theme_config.prompt.len(), 2);
         assert_eq!(theme_config.status_bar.len(), 7);

@@ -1,20 +1,3 @@
-# [palette]
-# black = "#000000"
-# white = "#ffffff"
-# primary = "#00548e"
-# primary_variant = "#0073b0"
-# secondary = "#ca2504"
-# secondary_variant = "#e33610"
-# background = "#000000"
-# surface = "#000000"
-# error = "#D50000" # External
-# primary_light = "#b2e3f7"
-# secondary_light = "#ffcbbb"
-# on_background = "#ffffff"
-# on_surface = "#ffffff"
-# on_error = "#FFCDD2" # External
-# # ternary = "#efba5d"
-# # on_ternary = "#f47868"
 [palette]
 black = "#000000"
 white = "#ffffff"
@@ -27,28 +10,31 @@ secondary_variant = "#e33610"
 secondary_light = "#ffcbbb"
 ternary = "#696969"
 ternary_variant = "#808080"
-ternary_light = "#d3d3d3"
+ternary_light = "#6e7e85"
 surface = "#141414"
 on_surface = "#dcdcdc"
 error = "#D50000"
 on_error = "#FFCDD2"
 
-
 [common]
-border_component_focused = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
+border_component_focused = { fg = "secondary", bg = "background", bold = false, underline = false, italic = false }
 item_selected = { fg = "ternary", bg = "ternary_light", bold = false, underline = false, italic = true }
 
 [chat_list]
-self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+item_selected = { fg = "", bg = "primary", bold = false, underline = false, italic = false }
+item_chat_name = { fg = "primary_light", bg = "background", bold = true, underline = false, italic = false }
+item_message_content = { fg = "secondary_light", bg = "background", bold = false, underline = false, italic = true }
+item_message_timestamp = { fg = "ternary_light", bg = "background", bold = false, underline = false, italic = false }
 
 [chat]
-self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
 message_myself = { fg = "primary_light", bg = "ternary", bold = false, underline = false, italic = false }
 message_other = { fg = "secondary_light", bg = "ternary_variant", bold = false, underline = false, italic = false }
 
 [prompt]
-self = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
-message_preview_text = { fg = "ternary_light", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+message_preview_text = { fg = "ternary", bg = "background", bold = false, underline = false, italic = false }
 
 [status_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }

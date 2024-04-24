@@ -550,9 +550,9 @@ impl Component for PromptWindow {
                         alt: false,
                         control: false,
                         meta: false,
-                        shift: false,
                         super_: false,
                         hyper: false,
+                        ..
                     },
                 ) => {
                     self.input.unselect_all();
