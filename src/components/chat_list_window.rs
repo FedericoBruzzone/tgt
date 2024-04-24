@@ -12,8 +12,9 @@ use {
             block::{Block, Title},
             Borders, List, ListDirection, ListState,
         },
+        Frame,
     },
-    std::sync::Arc,
+    std::{borrow::Cow, sync::Arc},
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -152,7 +153,7 @@ impl Component for ChatListWindow {
         }
     }
 
-    fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+    fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> std::io::Result<()> {
         let style_border_focused = if self.focused {
             self.app_context.style_border_component_focused()
         } else {
@@ -162,8 +163,24 @@ impl Component for ChatListWindow {
         if let Some(items) = self.app_context.tg_context().get_main_chat_list() {
             self.chat_list = items;
         }
-        let items = self.chat_list.iter().map(|item| item.get_text_styled());
-
+        let items = self.chat_list.iter().map(|item| {
+            // Make all line with max area.width length
+            let mut text = item.get_text_styled();
+            text.lines.iter_mut().for_each(|line| {
+                line.spans.iter_mut().for_each(|span| {
+                    let content = &span.content;
+                    let len = content.chars().count();
+                    if len > area.width as usize {
+                        let new_content = content
+                            .chars()
+                            .take((area.width - 1) as usize)
+                            .collect::<String>();
+                        span.content = Cow::Owned(new_content);
+                    }
+                });
+            });
+            text
+        });
         let block = Block::default()
             .border_set(PLAIN)
             .border_style(style_border_focused)
@@ -174,7 +191,7 @@ impl Component for ChatListWindow {
             .block(block)
             .style(self.app_context.style_chat_list())
             .highlight_style(self.app_context.style_item_selected())
-            .highlight_symbol("➤ ")
+            // .highlight_symbol("➤ ")
             // .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 

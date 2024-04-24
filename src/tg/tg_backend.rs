@@ -2,7 +2,7 @@ use {
     crate::{app_context::AppContext, tg::ordered_chat::OrderedChat},
     chrono::{DateTime, Utc},
     ratatui::{
-        style::{Modifier, Style},
+        style::{Color, Modifier, Style},
         text::{Line, Span, Text},
     },
     std::{
@@ -35,7 +35,6 @@ pub trait Item {
 pub struct DateTimeEntry {
     pub timestamp: i32,
 }
-
 impl DateTimeEntry {
     pub fn convert_time(timestamp: i32) -> String {
         let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
@@ -63,11 +62,9 @@ pub struct MessageEntry {
 impl Item for MessageEntry {
     fn get_text_styled(&self) -> Text {
         let mut entry = Text::default();
-        entry.extend(vec![Line::from(format!(
-            "{} | {}",
-            self.content,
-            self.timestamp.get_text_styled(),
-        ))]);
+        entry.extend(vec![
+            Line::from(format!("{}", self.content,)).style(Style::default().fg(Color::White))
+        ]);
         entry
     }
 }
@@ -179,22 +176,31 @@ impl ChatListEntry {
 }
 impl Item for ChatListEntry {
     fn get_text_styled(&self) -> Text {
-        let mut entry = Text::default();
         let online_symbol = match self.status {
-            tdlib::enums::UserStatus::Online(_) => "🟢",
-            tdlib::enums::UserStatus::Offline(_) => "🔴",
-            _ => "🔴",
+            tdlib::enums::UserStatus::Online(_) => "🟢 ",
+            tdlib::enums::UserStatus::Offline(_) => "",
+            _ => "",
         };
         let verificated_symbol = if self.verificated { "✅" } else { "" };
         let muted_symbol = if self.muted { "🔇" } else { "" };
+
+        let mut entry = Text::default();
         entry.extend(vec![Line::from(format!(
-            "{} {} {} {}",
-            online_symbol, self.chat_name, verificated_symbol, muted_symbol
+            "{}{} {} {} {}",
+            online_symbol,
+            self.chat_name,
+            verificated_symbol,
+            muted_symbol,
+            if let Some(e) = self.last_message.as_ref() {
+                e.timestamp.get_text_styled()
+            } else {
+                Text::default()
+            }
         ))]);
         entry.extend(
             self.last_message
                 .as_ref()
-                .map_or_else(Text::default, |m| m.get_text_styled()),
+                .map_or_else(Text::default, |e| e.get_text_styled()),
         );
         entry
     }
@@ -281,8 +287,6 @@ impl TgContext {
                 match &chat.r#type {
                     enums::ChatType::Private(p) => {
                         if let Some(user) = self.users().get(&p.user_id) {
-                            // chat_list_item
-                            //     .set_chat_name(format!("{} {}", user.first_name, user.last_name));
                             chat_list_item.set_chat_name(chat.title.clone());
                             chat_list_item.set_verificated(user.is_verified);
                             chat_list_item.set_status(user.status.clone());

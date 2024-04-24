@@ -35,7 +35,8 @@ crossterm = { version = "0.27.0", features = ["event-stream"] }
 dirs = "5.0.1"
 futures = "0.3.30"
 lazy_static = "1.4.0"
-ratatui = "0.26.2"
+# ratatui = "0.26.2"
+ratatui = { git = "https://github.com/Thorongil80/ratatui.git" }
 serde = "1.0.198"
 signal-hook = "0.3.17"
 tdlib = "0.10.0"
