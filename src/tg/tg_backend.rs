@@ -88,13 +88,9 @@ impl TgBackend {
                         }
                         Update::NewChat(update_new_chat) => {
                             let mut chat = update_new_chat.chat;
-
                             tg_context.chats().insert(chat.id, chat.clone());
-
                             let positions = chat.positions;
-
                             chat.positions = Vec::new();
-
                             Self::set_chat_positions(
                                 tg_context.main_chat_list(),
                                 &mut chat,

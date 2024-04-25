@@ -19,44 +19,74 @@ use ratatui::{
 use std::{io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
+/// `InputMode` is an enum that represents the input mode of the prompt.
 enum InputMode {
+    /// The normal mode of the prompt.
     Normal,
+    /// The input mode of the prompt.
     Input,
 }
-
+/// `InputCell` is a struct that represents a cell of the input.
+/// It is responsible for managing the input cell of the prompt.
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct InputCell {
+    /// The character of the input cell.
     c: char,
+    /// A flag indicating whether the input cell is selected or not.
     selected: bool,
 }
-
+/// `Input` is a struct that represents the input of a prompt.
+/// It is responsible for managing the input of the prompt.
 struct Input {
+    /// The text of the input.
     text: Vec<Vec<InputCell>>,
+    /// The cursor position of the input.
     cursor: (usize, usize),
+    /// The area of the component where the input is displayed.
     area_input: Rect,
+    /// An unbounded sender that send action for processing.
+    /// It is used to send actions to the main event loop for processing.
+    /// Basically, it is used to send `IncreasePromptSize` and `DecreasePromptSize`
+    /// actions.
     command_tx: Option<UnboundedSender<Action>>,
+    /// A flag indicating whether the input is in selecting mode or not.
     is_selecting: bool,
+    /// The correct prompt size.
+    /// It is used to keep track of the correct prompt size when the prompt
+    /// window is focused or unfocused.
     correct_prompt_size: usize,
+    /// A flag indicating whether the prompt size is restored or not.
+    /// Basically, it is used to keep track of whether the prompt size is
+    /// equal to the correct prompt size or not.
     is_restored: bool,
 }
-
+/// Implement the `Input` struct.
 impl Input {
+    /// Set the command sender of the `Input` struct.
+    ///
+    /// # Arguments
+    /// * `command_tx` - An unbounded sender that send action for processing.
     fn set_command_tx(&mut self, command_tx: UnboundedSender<Action>) {
         self.command_tx = Some(command_tx);
     }
-
+    /// Get the cursor x position of the `Input` struct.
     fn cursor_x(&self) -> usize {
         self.cursor.0
     }
-
+    /// Get the cursor y position of the `Input` struct.
     fn cursor_y(&self) -> usize {
         self.cursor.1
     }
-
-    fn text(&mut self) -> Vec<Vec<InputCell>> {
-        self.text.clone()
+    /// Get the text of the `Input` struct.
+    fn text(&mut self) -> &Vec<Vec<InputCell>> {
+        &self.text
     }
-
+    /// Insert a character into the `Input` struct.
+    /// The character is inserted at the current cursor position.
+    /// If the cursor is at the end of the line, a new line is inserted.
+    ///
+    /// # Arguments
+    /// * `c` - The character to insert.
     fn insert(&mut self, c: char) {
         // The -2 is to account the cursor at the end of the line.
         if self.cursor.0 + 1 == (self.area_input.width - 2) as usize {
@@ -65,7 +95,9 @@ impl Input {
         self.text[self.cursor.1].insert(self.cursor.0, InputCell { c, selected: false });
         self.cursor.0 += 1;
     }
-
+    /// Insert a newline into the `Input` struct.
+    /// A newline is inserted at the current cursor position.
+    /// The text after the cursor position is moved to the next line.
     fn insert_newline(&mut self) {
         let line = &mut self.text[self.cursor.1];
         let right = line[self.cursor.0..].to_vec();
@@ -78,43 +110,7 @@ impl Input {
             tx.send(Action::IncreasePromptSize).unwrap()
         }
     }
-
-    fn restore_prompt_size(&mut self) {
-        if !self.is_restored {
-            if let Some(tx) = self.command_tx.as_ref() {
-                for _ in 0..self.correct_prompt_size {
-                    tx.send(Action::IncreasePromptSize).unwrap();
-                }
-            }
-            self.is_restored = true;
-        }
-    }
-
-    fn set_prompt_size_to_one(&mut self) {
-        if let Some(tx) = self.command_tx.as_ref() {
-            for _ in 0..self.correct_prompt_size {
-                tx.send(Action::DecreasePromptSize).unwrap();
-            }
-        }
-        self.is_restored = false;
-    }
-
-    fn copy_selected(&self) {
-        let mut clipboard = Clipboard::new().unwrap();
-        let mut text = String::new();
-        for (i, line) in self.text.iter().enumerate() {
-            for cell in line {
-                if cell.selected {
-                    text.push(cell.c);
-                }
-            }
-            if i < self.text.len() - 1 {
-                text.push('\n');
-            }
-        }
-        clipboard.set_text(text).unwrap();
-    }
-
+    /// Delete the character before the cursor position.
     fn backspace(&mut self) {
         if self.text[self.cursor.1].is_empty() && self.cursor.1 > 0 {
             if let Some(tx) = self.command_tx.as_ref() {
@@ -134,7 +130,7 @@ impl Input {
             self.cursor.0 -= 1;
         }
     }
-
+    /// Delete the character next to the cursor position.
     fn delete(&mut self) {
         if self.cursor.0 == self.text[self.cursor.1].len() {
             if self.cursor.1 < self.text.len() - 1 {
@@ -145,84 +141,19 @@ impl Input {
             self.text[self.cursor.1].remove(self.cursor.0);
         }
     }
-
+    /// Move the cursor to the left.
     fn move_cursor_left(&mut self) {
         if self.cursor.0 > 0 {
             self.cursor.0 -= 1;
         }
     }
-
+    /// Move the cursor to the right.
     fn move_cursor_right(&mut self) {
         if self.cursor.0 < self.text[self.cursor.1].len() {
             self.cursor.0 += 1;
         }
     }
-
-    fn move_cursor_left_and_toggle_selection(&mut self) {
-        self.is_selecting = true;
-        if self.cursor.0 > 0 {
-            self.cursor.0 -= 1;
-            self.text[self.cursor.1][self.cursor.0].selected =
-                !self.text[self.cursor.1][self.cursor.0].selected;
-        }
-    }
-
-    fn move_cursor_right_and_toggle_selection(&mut self) {
-        self.is_selecting = true;
-        if self.cursor.0 < self.text[self.cursor.1].len() {
-            self.text[self.cursor.1][self.cursor.0].selected =
-                !self.text[self.cursor.1][self.cursor.0].selected;
-            self.cursor.0 += 1;
-        }
-    }
-
-    fn select_line(&mut self) {
-        for cell in &mut self.text[self.cursor.1] {
-            cell.selected = true;
-        }
-    }
-
-    fn select_until_end_of_line(&mut self) {
-        for cell in &mut self.text[self.cursor.1][self.cursor.0..] {
-            cell.selected = true;
-        }
-    }
-
-    fn select_until_start_of_line(&mut self) {
-        for cell in &mut self.text[self.cursor.1][..self.cursor.0] {
-            cell.selected = true;
-        }
-    }
-
-    fn move_cursor_up_and_select_or_unselect(&mut self) {
-        self.is_selecting = true;
-        if self.cursor.1 > 0 {
-            self.select_until_start_of_line();
-            self.move_cursor_up();
-            self.select_line();
-        }
-    }
-
-    fn move_cursor_down_and_select_or_unselect(&mut self) {
-        self.is_selecting = true;
-        if self.cursor.1 < self.text.len() - 1 {
-            self.select_until_end_of_line();
-            self.move_cursor_down();
-            self.select_line();
-        }
-    }
-
-    fn unselect_all(&mut self) {
-        if self.is_selecting {
-            for line in &mut self.text {
-                for cell in line {
-                    cell.selected = false;
-                }
-            }
-            self.is_selecting = false;
-        }
-    }
-
+    /// Move the cursor up.
     fn move_cursor_up(&mut self) {
         if self.cursor.1 > 0 {
             // Handle moving cursor to the left if the current line is shorter
@@ -233,7 +164,7 @@ impl Input {
             self.cursor.1 -= 1;
         }
     }
-
+    /// Move the cursor down.
     fn move_cursor_down(&mut self) {
         if self.cursor.1 < self.text.len() - 1 {
             // Handle moving cursor to the left if the current line is shorter
@@ -244,7 +175,7 @@ impl Input {
             self.cursor.1 += 1;
         }
     }
-
+    /// Move the cursor to the previous word.
     fn move_cursor_to_previous_word(&mut self) {
         let line = &self.text[self.cursor.1];
         let mut i = self.cursor.0;
@@ -256,7 +187,7 @@ impl Input {
         }
         self.cursor.0 = i;
     }
-
+    /// Move the cursor to the next word.
     fn move_cursor_to_next_word(&mut self) {
         let line = &self.text[self.cursor.1];
         let mut i = self.cursor.0;
@@ -268,15 +199,15 @@ impl Input {
         }
         self.cursor.0 = i;
     }
-
+    /// Move the cursor to the start of the line.
     fn move_cursor_to_end(&mut self) {
         self.cursor.0 = self.text[self.cursor.1].len();
     }
-
+    /// Move the cursor to the end of the line.
     fn move_cursor_to_start(&mut self) {
         self.cursor.0 = 0;
     }
-
+    /// Delete the previous word.
     fn delete_previous_word(&mut self) {
         let line = &mut self.text[self.cursor.1];
         let mut i = self.cursor.0;
@@ -289,7 +220,117 @@ impl Input {
         line.drain(i..self.cursor.0);
         self.cursor.0 = i;
     }
+    /// Restore the prompt size of the `Input` struct.
+    /// It is used to restore the prompt size to the correct prompt size when
+    /// the prompt window is focused.
+    /// It sends `IncreasePromptSize` actions to the main event loop to increase
+    /// the prompt size.
+    fn restore_prompt_size(&mut self) {
+        if !self.is_restored {
+            if let Some(tx) = self.command_tx.as_ref() {
+                for _ in 0..self.correct_prompt_size {
+                    tx.send(Action::IncreasePromptSize).unwrap();
+                }
+            }
+            self.is_restored = true;
+        }
+    }
+    /// Set the prompt size to one.
+    /// It is used to set the prompt size to one when the prompt window is
+    /// unfocused.
+    fn set_prompt_size_to_one(&mut self) {
+        if let Some(tx) = self.command_tx.as_ref() {
+            for _ in 0..self.correct_prompt_size {
+                tx.send(Action::DecreasePromptSize).unwrap();
+            }
+        }
+        self.is_restored = false;
+    }
 
+    /// Move the cursor to the left and toggle the selection.
+    fn move_cursor_left_and_toggle_selection(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.0 > 0 {
+            self.cursor.0 -= 1;
+            self.text[self.cursor.1][self.cursor.0].selected =
+                !self.text[self.cursor.1][self.cursor.0].selected;
+        }
+    }
+    /// Move the cursor to the right and toggle the selection.
+    fn move_cursor_right_and_toggle_selection(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.0 < self.text[self.cursor.1].len() {
+            self.text[self.cursor.1][self.cursor.0].selected =
+                !self.text[self.cursor.1][self.cursor.0].selected;
+            self.cursor.0 += 1;
+        }
+    }
+    /// Select the current line.
+    fn select_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1] {
+            cell.selected = true;
+        }
+    }
+    /// Select until the end of the line.
+    fn select_until_end_of_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1][self.cursor.0..] {
+            cell.selected = true;
+        }
+    }
+    /// Select until the start of the line.
+    fn select_until_start_of_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1][..self.cursor.0] {
+            cell.selected = true;
+        }
+    }
+    /// Move the cursor up and select or unselect the text.
+    fn move_cursor_up_and_select_or_unselect(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.1 > 0 {
+            self.select_until_start_of_line();
+            self.move_cursor_up();
+            self.select_line();
+        }
+    }
+    /// Move the cursor down and select or unselect the text.
+    fn move_cursor_down_and_select_or_unselect(&mut self) {
+        self.is_selecting = true;
+        if self.cursor.1 < self.text.len() - 1 {
+            self.select_until_end_of_line();
+            self.move_cursor_down();
+            self.select_line();
+        }
+    }
+    /// Unselect all the text.
+    fn unselect_all(&mut self) {
+        if self.is_selecting {
+            for line in &mut self.text {
+                for cell in line {
+                    cell.selected = false;
+                }
+            }
+            self.is_selecting = false;
+        }
+    }
+    /// Copy the selected text of the `Input` struct.
+    /// The selected text is copied to the clipboard.
+    fn copy_selected(&self) {
+        let mut clipboard = Clipboard::new().unwrap();
+        let mut text = String::new();
+        for (i, line) in self.text.iter().enumerate() {
+            for cell in line {
+                if cell.selected {
+                    text.push(cell.c);
+                }
+            }
+            if i < self.text.len() - 1 {
+                text.push('\n');
+            }
+        }
+        clipboard.set_text(text).unwrap();
+    }
+    /// Paste text into the `Input` struct.
+    /// The text is pasted at the current cursor position.
     fn paste(&mut self, text: String) {
         for c in text.chars() {
             if c == '\n' {
@@ -314,7 +355,6 @@ impl Default for Input {
         }
     }
 }
-
 /// `PromptWindow` is a struct that represents a window for displaying a prompt.
 /// It is responsible for managing the layout and rendering of the prompt
 /// window.
@@ -446,7 +486,6 @@ impl Component for PromptWindow {
     fn update(&mut self, action: Action) {
         match action {
             Action::Key(key_code, modifiers) => match (key_code, modifiers) {
-                // Move cursor to the start of the line.
                 (KeyCode::Home, ..)
                 | (
                     KeyCode::Left | KeyCode::Char('b'),
@@ -469,7 +508,6 @@ impl Component for PromptWindow {
                     self.input.move_cursor_to_start();
                 }
 
-                // Move cursor to the end of the line.
                 (KeyCode::End, ..)
                 | (
                     KeyCode::Right | KeyCode::Char('f'),
@@ -491,33 +529,27 @@ impl Component for PromptWindow {
                     self.input.unselect_all();
                     self.input.move_cursor_to_end();
                 }
-                // Select previous character.
                 (KeyCode::Left, Modifiers { shift: true, .. }) => {
                     self.input.move_cursor_left_and_toggle_selection();
                 }
 
-                // Select next character.
                 (KeyCode::Right, Modifiers { shift: true, .. }) => {
                     self.input.move_cursor_right_and_toggle_selection();
                 }
 
-                // Select previous line.
                 (KeyCode::Up, Modifiers { shift: true, .. }) => {
                     self.input.move_cursor_up_and_select_or_unselect();
                 }
 
-                // Select next line.
                 (KeyCode::Down, Modifiers { shift: true, .. }) => {
                     self.input.move_cursor_down_and_select_or_unselect();
                 }
 
-                // Copy selected text.
                 (KeyCode::Char('c'), Modifiers { control: true, .. }) => {
                     self.input.copy_selected();
                     self.input.unselect_all();
                 }
 
-                // Paste text.
                 (KeyCode::Char('v'), Modifiers { control: true, .. }) => {
                     let mut clipboard = Clipboard::new().unwrap();
                     if let Ok(text) = clipboard.get_text() {
@@ -525,25 +557,21 @@ impl Component for PromptWindow {
                     }
                 }
 
-                // Move cursor to the previous word.
                 (KeyCode::Left | KeyCode::Char('b'), Modifiers { alt: true, .. }) => {
                     self.input.unselect_all();
                     self.input.move_cursor_to_previous_word();
                 }
 
-                // Move cursor to the next word.
                 (KeyCode::Right | KeyCode::Char('f'), Modifiers { alt: true, .. }) => {
                     self.input.unselect_all();
                     self.input.move_cursor_to_next_word();
                 }
 
-                // Delete the previous word.
                 (KeyCode::Backspace, Modifiers { alt: true, .. }) => {
                     self.input.unselect_all();
                     self.input.delete_previous_word();
                 }
 
-                // Insert a character.
                 (
                     KeyCode::Char(c),
                     Modifiers {
@@ -559,43 +587,36 @@ impl Component for PromptWindow {
                     self.input.insert(c);
                 }
 
-                // Delete a character.
                 (KeyCode::Backspace, ..) => {
                     self.input.unselect_all();
                     self.input.backspace();
                 }
 
-                // Delete a character.
                 (KeyCode::Delete, ..) => {
                     self.input.unselect_all();
                     self.input.delete();
                 }
 
-                // Insert a newline.
                 (KeyCode::Enter, ..) => {
                     self.input.unselect_all();
                     self.input.insert_newline();
                 }
 
-                // Move cursor to the left.
                 (KeyCode::Left, ..) => {
                     self.input.unselect_all();
                     self.input.move_cursor_left();
                 }
 
-                // Move cursor to the right.
                 (KeyCode::Right, ..) => {
                     self.input.unselect_all();
                     self.input.move_cursor_right();
                 }
 
-                // Move cursor up.
                 (KeyCode::Up, ..) => {
                     self.input.unselect_all();
                     self.input.move_cursor_up();
                 }
 
-                // Move cursor down.
                 (KeyCode::Down, ..) => {
                     self.input.unselect_all();
                     self.input.move_cursor_down();
