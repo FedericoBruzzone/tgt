@@ -37,6 +37,9 @@ keymap = [
   { keys = ["up"], command = "chat_list_previous", description = "Select the previous chat"},
   # Unselect the current chat
   { keys = ["left"], command = "chat_list_unselect", description = "Unselect the current chat"},
+  # Open the selected chat
+  { keys = ["right"], command = "chat_list_open", description = "Open the selected chat"},
+  { keys = ["enter"], command = "chat_list_open", description = "Open the selected chat"},
 ]
 
 # The chat key bindings are only usable in the chat component.

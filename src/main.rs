@@ -76,8 +76,7 @@ async fn tokio_main() -> Result<(), AppError> {
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:?}", theme_config);
 
-    let tg_context = TgContext::default();
-
+    let tg_context = TgContext::new(tdlib::create_client());
     let app_context = Arc::new(AppContext::new(
         app_config,
         keymap_config,

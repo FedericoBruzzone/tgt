@@ -118,6 +118,11 @@ impl Component for StatusBar {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+        let selected_chat = self
+            .app_context
+            .tg_context()
+            .get_name_of_open_chat()
+            .unwrap_or_default();
         let text = vec![Line::from(vec![
             Span::styled(
                 "Press ",
@@ -136,7 +141,17 @@ impl Component for StatusBar {
             //
             Span::raw("     "),
             Span::styled(
-                "Press key: ",
+                "Open chat: ",
+                self.app_context.style_status_bar_open_chat_text(),
+            ),
+            Span::styled(
+                selected_chat,
+                self.app_context.style_status_bar_open_chat_name(),
+            ),
+            //
+            Span::raw("     "),
+            Span::styled(
+                "Key pressed: ",
                 self.app_context.style_status_bar_press_key_text(),
             ),
             Span::styled(

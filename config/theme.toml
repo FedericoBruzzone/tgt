@@ -44,6 +44,8 @@ press_key_text = { fg = "primary_light", bg = "surface", bold = false, underline
 press_key_key = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
 message_quit_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
 message_quit_key = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
+open_chat_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+open_chat_name = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
 
 [title_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }

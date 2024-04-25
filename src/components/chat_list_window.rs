@@ -270,6 +270,14 @@ impl ChatListWindow {
     fn unselect(&mut self) {
         self.chat_list_state.select(None);
     }
+    /// Confirm the selection of the chat item in the list.
+    fn confirm_selection(&mut self) {
+        if let Some(i) = self.chat_list_state.selected() {
+            if let Some(chat) = self.chat_list.get(i) {
+                *self.app_context.tg_context().open_chat_id() = chat.chat_id;
+            }
+        }
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatListWindow` struct.
@@ -311,6 +319,7 @@ impl Component for ChatListWindow {
             Action::ChatListNext => self.next(),
             Action::ChatListPrevious => self.previous(),
             Action::ChatListUnselect => self.unselect(),
+            Action::ChatListOpen => self.confirm_selection(),
             _ => {}
         }
     }
@@ -339,9 +348,9 @@ impl Component for ChatListWindow {
             .block(block)
             .style(self.app_context.style_chat_list())
             .highlight_style(self.app_context.style_chat_list_item_selected())
-            // .highlight_symbol("➤ ")
-            // .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
+        // .highlight_symbol("➤ ")
+        // .repeat_highlight_symbol(true)
 
         frame.render_stateful_widget(list, area, &mut self.chat_list_state);
         Ok(())

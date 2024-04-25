@@ -107,6 +107,8 @@ pub enum Action {
     ChatListPrevious,
     /// ChatListSelect action.
     ChatListUnselect,
+    /// ChatListOpen action.
+    ChatListOpen,
 
     /// MessageListNext action.
     MessageListNext,
@@ -150,6 +152,7 @@ impl FromStr for Action {
             "chat_list_next" => Ok(Action::ChatListNext),
             "chat_list_previous" => Ok(Action::ChatListPrevious),
             "chat_list_unselect" => Ok(Action::ChatListUnselect),
+            "chat_list_open" => Ok(Action::ChatListOpen),
             "message_list_next" => Ok(Action::MessageListNext),
             "message_list_previous" => Ok(Action::MessageListPrevious),
             "message_list_unselect" => Ok(Action::MessageListUnselect),

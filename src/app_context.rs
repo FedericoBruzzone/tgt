@@ -258,6 +258,8 @@ impl AppContext {
         status_bar,
         message_quit_key
     );
+    theme_style_generate!(style_status_bar_open_chat_text, status_bar, open_chat_text);
+    theme_style_generate!(style_status_bar_open_chat_name, status_bar, open_chat_name);
 
     // ===== TITLE BAR =====
     theme_style_generate!(style_title_bar, title_bar, self);

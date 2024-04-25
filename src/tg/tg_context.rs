@@ -31,10 +31,18 @@ pub struct TgContext {
     pub basic_groups_full_info: Mutex<HashMap<i64, BasicGroupFullInfo>>,
     pub supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
 
-    client_id: Mutex<Option<i32>>,
+    client_id: Mutex<i32>,
+    open_chat_id: Mutex<i64>,
 }
 
 impl TgContext {
+    pub fn new(client_id: i32) -> Self {
+        Self {
+            client_id: Mutex::new(client_id),
+            ..Default::default()
+        }
+    }
+
     pub fn users(&self) -> MutexGuard<'_, HashMap<i64, User>> {
         self.users.lock().unwrap()
     }
@@ -62,12 +70,23 @@ impl TgContext {
     pub fn supergroups_full_info(&self) -> MutexGuard<'_, HashMap<i64, SupergroupFullInfo>> {
         self.supergroups_full_info.lock().unwrap()
     }
-    pub fn client_id(&self) -> MutexGuard<'_, Option<i32>> {
+    pub fn client_id(&self) -> MutexGuard<'_, i32> {
         self.client_id.lock().unwrap()
     }
 
+    pub fn open_chat_id(&self) -> MutexGuard<'_, i64> {
+        self.open_chat_id.lock().unwrap()
+    }
+
+    pub fn get_name_of_open_chat(&self) -> Option<String> {
+        if let Some(chat) = self.chats().get(&self.open_chat_id()) {
+            return Some(chat.title.clone());
+        }
+        None
+    }
+
     pub fn get_main_chat_list(&self) -> Option<Vec<ChatListEntry>> {
-        let client_id = self.client_id().unwrap();
+        let client_id = *self.client_id();
         tokio::spawn(
             async move { functions::load_chats(Some(ChatList::Main), 20, client_id).await },
         );

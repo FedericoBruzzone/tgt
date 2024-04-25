@@ -22,17 +22,10 @@ pub struct TgBackend {
 impl TgBackend {
     pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
         let handle_updates = tokio::spawn(async {});
-
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
-
-        let client_id = tdlib::create_client();
-        app_context.tg_context().client_id().replace(client_id);
-
-        // probably useless in real app
+        let client_id = *app_context.tg_context().client_id();
         let have_authorization = false;
-        // probably useless in real app
         let need_quit = false;
-        // probably useless in real app
         let can_quit = Arc::new(AtomicBool::new(false));
 
         Ok(Self {
@@ -476,16 +469,14 @@ impl TgBackend {
                 }
                 AuthorizationState::LoggingOut => {
                     self.have_authorization = false;
-                    println!("[HANDLE AUTH]: Logging out");
+                    tracing::info!("Logging out");
                 }
                 AuthorizationState::Closing => {
                     self.have_authorization = false;
-                    println!("[HANDLE AUTH]: Closing");
+                    tracing::info!("Closing");
                 }
                 AuthorizationState::Closed => {
-                    println!("[HANDLE AUTH]: Closed");
-                    // Set the flag to false to stop receiving updates
-                    // from the spawned task
+                    tracing::info!("Closed");
                     if self.need_quit {
                         self.can_quit.store(true, Ordering::Release);
                     }
@@ -506,7 +497,7 @@ impl TgBackend {
                     position: position.clone(),
                     chat_id: chat.id,
                 });
-                assert!(is_removed); // Too much
+                assert!(is_removed);
             }
         }
 
@@ -518,7 +509,7 @@ impl TgBackend {
                     position: position.clone(),
                     chat_id: chat.id,
                 });
-                assert!(is_inserted); // Too much
+                assert!(is_inserted);
             }
         }
     }
@@ -543,7 +534,7 @@ impl TgBackend {
         if let Err(error) =
             functions::set_log_stream(LogStream::File(log_stream_file), self.client_id).await
         {
-            eprintln!("[ERROR] \"Write access to the current directory is required\": {error:?}")
+            tracing::error!("Failed to set log stream to file: {error:?}");
         }
     }
 }
