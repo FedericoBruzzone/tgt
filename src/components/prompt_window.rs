@@ -1,7 +1,7 @@
 use crate::{
     action::{Action, Modifiers},
     app_context::AppContext,
-    components::component::{Component, HandleFocus, HandleSmallArea},
+    components::component_traits::{Component, HandleFocus, HandleSmallArea},
     event::Event,
 };
 use arboard::Clipboard;

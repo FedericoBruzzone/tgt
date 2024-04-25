@@ -16,7 +16,6 @@ pub enum ComponentName {
 /// Implement the `Display` trait for the `ComponentName` enum.
 impl Display for ComponentName {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        // write!(f, "{:?}", self)
         match self {
             ComponentName::CoreWindow => write!(f, "CoreWindow"),
             ComponentName::ChatList => write!(f, "ChatList"),

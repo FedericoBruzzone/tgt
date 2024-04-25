@@ -1,7 +1,6 @@
-use super::component::Item;
 use crate::action::Action;
 use crate::app_context::AppContext;
-use crate::components::component::{Component, HandleFocus, HandleSmallArea};
+use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea, Item};
 use chrono::{DateTime, Utc};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};

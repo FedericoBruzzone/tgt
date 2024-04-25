@@ -6,7 +6,7 @@ use crate::{
     components::{
         chat_list_window::ChatListWindow,
         chat_window::ChatWindow,
-        component::{Component, HandleFocus, HandleSmallArea},
+        component_traits::{Component, HandleFocus, HandleSmallArea},
         prompt_window::PromptWindow,
     },
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},

@@ -2,7 +2,7 @@ use {
     crate::{
         action::Action,
         app_context::AppContext,
-        components::component::{Component, HandleFocus, HandleSmallArea},
+        components::component_traits::{Component, HandleFocus, HandleSmallArea},
     },
     ratatui::{
         layout::{Alignment, Rect},

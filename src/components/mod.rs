@@ -7,7 +7,7 @@ pub const MIN_PROMPT_SIZE: u16 = 3;
 
 pub mod chat_list_window;
 pub mod chat_window;
-pub mod component;
+pub mod component_traits;
 pub mod core_window;
 pub mod prompt_window;
 pub mod status_bar;

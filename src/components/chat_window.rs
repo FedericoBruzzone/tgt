@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     action::Action,
     app_context::AppContext,
-    components::component::{Component, HandleFocus, HandleSmallArea},
+    components::component_traits::{Component, HandleFocus, HandleSmallArea},
 };
 use ratatui::{
     layout::{Alignment, Rect},

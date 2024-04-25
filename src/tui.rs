@@ -4,8 +4,8 @@ use crate::{
     app_error::AppError,
     component_name::ComponentName,
     components::{
-        component::Component, core_window::CoreWindow, status_bar::StatusBar, title_bar::TitleBar,
-        SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
+        component_traits::Component, core_window::CoreWindow, status_bar::StatusBar,
+        title_bar::TitleBar, SMALL_AREA_HEIGHT, SMALL_AREA_WIDTH,
     },
     event::Event,
 };
