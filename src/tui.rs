@@ -74,7 +74,10 @@ impl Tui {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    pub fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<(), AppError> {
+    pub fn register_action_handler(
+        &mut self,
+        tx: UnboundedSender<Action>,
+    ) -> Result<(), AppError<Action>> {
         self.action_tx = Some(tx.clone());
         self.components
             .iter_mut()
@@ -89,7 +92,10 @@ impl Tui {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    pub fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
+    pub fn handle_events(
+        &mut self,
+        event: Option<Event>,
+    ) -> Result<Option<Action>, AppError<Action>> {
         self.components
             .get_mut(&ComponentName::CoreWindow)
             .unwrap()
@@ -115,7 +121,7 @@ impl Tui {
     ///
     /// # Returns
     /// * `Result<()>` - An Ok result or an error.
-    pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> Result<(), AppError> {
+    pub fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> Result<(), AppError<()>> {
         self.components
             .get_mut(&ComponentName::StatusBar)
             .unwrap()

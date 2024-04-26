@@ -1,8 +1,9 @@
+use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
-use tdlib::enums::{self, AuthorizationState, LogStream, Update};
+use tdlib::enums::{self, AuthorizationState, ChatList, LogStream, Update};
 use tdlib::functions;
 use tdlib::types::{Chat, ChatPosition, LogStreamFile};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -12,32 +13,58 @@ pub struct TgBackend {
     pub handle_updates: JoinHandle<()>,
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
     pub auth_tx: UnboundedSender<AuthorizationState>,
+    pub event_rx: UnboundedReceiver<Event>,
+    pub event_tx: UnboundedSender<Event>,
     pub client_id: i32,
     pub have_authorization: bool,
     pub need_quit: bool,
     pub can_quit: Arc<AtomicBool>,
     pub app_context: Arc<AppContext>,
+    full_chats_list: bool,
 }
 
 impl TgBackend {
     pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
+        tracing::info!("Creating TgBackend");
         let handle_updates = tokio::spawn(async {});
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
-        let client_id = *app_context.tg_context().client_id();
+        let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let client_id = tdlib::create_client();
         let have_authorization = false;
         let need_quit = false;
         let can_quit = Arc::new(AtomicBool::new(false));
+        let full_chats_list = false;
+        app_context.tg_context().set_event_tx(event_tx.clone());
+        tracing::info!("Created TDLib client with client_id: {}", client_id);
 
         Ok(Self {
             handle_updates,
             auth_tx,
             auth_rx,
+            event_tx,
+            event_rx,
             client_id,
             have_authorization,
             need_quit,
             can_quit,
             app_context,
+            full_chats_list,
         })
+    }
+
+    pub async fn load_chats(&mut self, chat_list: ChatList, limit: i32) {
+        if self.full_chats_list {
+            return;
+        }
+
+        if let Err(e) = functions::load_chats(Some(chat_list), limit, self.client_id).await {
+            tracing::error!("Failed to load chats: {e:?}");
+            self.full_chats_list = true;
+        }
+    }
+
+    pub async fn next(&mut self) -> Option<Event> {
+        self.event_rx.try_recv().ok()
     }
 
     pub fn start(&mut self) {
@@ -92,7 +119,7 @@ impl TgBackend {
                             let positions = chat.positions;
                             chat.positions = Vec::new();
                             Self::set_chat_positions(
-                                tg_context.main_chat_list(),
+                                tg_context.chats_index(),
                                 &mut chat,
                                 positions,
                             );
@@ -121,7 +148,7 @@ impl TgBackend {
                                     chat.last_message = update_chat.last_message;
 
                                     Self::set_chat_positions(
-                                        tg_context.main_chat_list(),
+                                        tg_context.chats_index(),
                                         chat,
                                         update_chat.positions,
                                     );
@@ -156,7 +183,7 @@ impl TgBackend {
                                         assert!(pos == new_position.len());
 
                                         Self::set_chat_positions(
-                                            tg_context.main_chat_list(),
+                                            tg_context.chats_index(),
                                             chat,
                                             new_position,
                                         );
@@ -230,7 +257,7 @@ impl TgBackend {
                                 Some(chat) => {
                                     chat.draft_message = update_chat.draft_message;
                                     Self::set_chat_positions(
-                                        tg_context.main_chat_list(),
+                                        tg_context.chats_index(),
                                         chat,
                                         update_chat.positions,
                                     );
@@ -483,13 +510,13 @@ impl TgBackend {
     }
 
     fn set_chat_positions(
-        mut main_chat_list: MutexGuard<'_, BTreeSet<OrderedChat>>,
+        mut chats_index: MutexGuard<'_, BTreeSet<OrderedChat>>,
         chat: &mut Chat,
         positions: Vec<ChatPosition>,
     ) {
         for position in &chat.positions {
             if let enums::ChatList::Main = position.list {
-                let is_removed = main_chat_list.remove(&OrderedChat {
+                let is_removed = chats_index.remove(&OrderedChat {
                     position: position.clone(),
                     chat_id: chat.id,
                 });
@@ -501,7 +528,7 @@ impl TgBackend {
 
         for position in &chat.positions {
             if let enums::ChatList::Main = position.list {
-                let is_inserted = main_chat_list.insert(OrderedChat {
+                let is_inserted = chats_index.insert(OrderedChat {
                     position: position.clone(),
                     chat_id: chat.id,
                 });

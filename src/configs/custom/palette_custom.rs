@@ -21,7 +21,7 @@ impl PaletteConfig {
     ///
     /// # Returns
     /// * `Result<Self>` - The default palette configuration.
-    pub fn default_result() -> Result<Self, AppError> {
+    pub fn default_result() -> Result<Self, AppError<()>> {
         configs::deserialize_to_config_into::<PaletteRaw, Self>(Path::new(
             &configs::custom::default_config_palette_file_path()?,
         ))

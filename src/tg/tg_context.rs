@@ -1,5 +1,7 @@
 use crate::{
+    app_error::AppError,
     components::chat_list_window::{ChatListEntry, MessageEntry},
+    event::Event,
     tg::ordered_chat::OrderedChat,
 };
 use std::{
@@ -7,16 +9,18 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 use tdlib::{
-    enums::{ChatList, ChatType},
-    functions,
+    enums::ChatType,
     types::{
         BasicGroup, BasicGroupFullInfo, Chat, SecretChat, Supergroup, SupergroupFullInfo, User,
         UserFullInfo,
     },
 };
+use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug, Default)]
 pub struct TgContext {
+    event_tx: Mutex<Option<UnboundedSender<Event>>>,
+
     pub users: Mutex<HashMap<i64, User>>,
     pub basic_groups: Mutex<HashMap<i64, BasicGroup>>,
     pub supergroups: Mutex<HashMap<i64, Supergroup>>,
@@ -24,25 +28,17 @@ pub struct TgContext {
 
     pub chats: Mutex<HashMap<i64, Chat>>,
     // Only ordered
-    pub main_chat_list: Mutex<BTreeSet<OrderedChat>>,
+    pub chats_index: Mutex<BTreeSet<OrderedChat>>,
     pub have_full_main_chat_list: bool,
 
     pub users_full_info: Mutex<HashMap<i64, UserFullInfo>>,
     pub basic_groups_full_info: Mutex<HashMap<i64, BasicGroupFullInfo>>,
     pub supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
 
-    client_id: Mutex<i32>,
     open_chat_id: Mutex<i64>,
 }
 
 impl TgContext {
-    pub fn new(client_id: i32) -> Self {
-        Self {
-            client_id: Mutex::new(client_id),
-            ..Default::default()
-        }
-    }
-
     pub fn users(&self) -> MutexGuard<'_, HashMap<i64, User>> {
         self.users.lock().unwrap()
     }
@@ -58,8 +54,8 @@ impl TgContext {
     pub fn chats(&self) -> MutexGuard<'_, HashMap<i64, Chat>> {
         self.chats.lock().unwrap()
     }
-    pub fn main_chat_list(&self) -> MutexGuard<'_, BTreeSet<OrderedChat>> {
-        self.main_chat_list.lock().unwrap()
+    pub fn chats_index(&self) -> MutexGuard<'_, BTreeSet<OrderedChat>> {
+        self.chats_index.lock().unwrap()
     }
     pub fn users_full_info(&self) -> MutexGuard<'_, HashMap<i64, UserFullInfo>> {
         self.users_full_info.lock().unwrap()
@@ -70,12 +66,14 @@ impl TgContext {
     pub fn supergroups_full_info(&self) -> MutexGuard<'_, HashMap<i64, SupergroupFullInfo>> {
         self.supergroups_full_info.lock().unwrap()
     }
-    pub fn client_id(&self) -> MutexGuard<'_, i32> {
-        self.client_id.lock().unwrap()
-    }
-
     pub fn open_chat_id(&self) -> MutexGuard<'_, i64> {
         self.open_chat_id.lock().unwrap()
+    }
+    pub fn event_tx(&self) -> MutexGuard<'_, Option<UnboundedSender<Event>>> {
+        self.event_tx.lock().unwrap()
+    }
+    pub fn set_event_tx(&self, event_tx: UnboundedSender<Event>) {
+        *self.event_tx() = Some(event_tx);
     }
 
     pub fn get_name_of_open_chat(&self) -> Option<String> {
@@ -85,20 +83,13 @@ impl TgContext {
         None
     }
 
-    pub fn get_main_chat_list(&self) -> Option<Vec<ChatListEntry>> {
-        let client_id = *self.client_id();
-        tokio::spawn(
-            async move { functions::load_chats(Some(ChatList::Main), 20, client_id).await },
-        );
-
-        let main_chat_list = self.main_chat_list();
+    pub fn get_chats_index(&self) -> Result<Option<Vec<ChatListEntry>>, AppError<Event>> {
+        let chats_index = self.chats_index();
         let chats = self.chats();
         let mut chat_list: Vec<ChatListEntry> = Vec::new();
-
-        for ord_chat in main_chat_list.iter() {
+        for ord_chat in chats_index.iter() {
             let mut chat_list_item = ChatListEntry::new();
             chat_list_item.set_chat_id(ord_chat.chat_id);
-
             if let Some(chat) = chats.get(&ord_chat.chat_id) {
                 if let Some(chat_message) = &chat.last_message {
                     chat_list_item.set_last_message(MessageEntry::from(chat_message));
@@ -132,6 +123,6 @@ impl TgContext {
             chat_list.push(chat_list_item);
         }
 
-        Some(chat_list)
+        Ok(Some(chat_list))
     }
 }

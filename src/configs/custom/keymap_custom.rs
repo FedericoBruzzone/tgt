@@ -62,7 +62,7 @@ impl KeymapConfig {
     ///
     /// # Returns
     /// The default keymap configuration.
-    pub fn default_result() -> Result<Self, AppError> {
+    pub fn default_result() -> Result<Self, AppError<()>> {
         configs::deserialize_to_config_into::<KeymapRaw, Self>(Path::new(
             &configs::custom::default_config_keymap_file_path()?,
         ))
@@ -209,7 +209,7 @@ impl KeymapConfig {
         action: Action,
         description: Option<String>,
         kind: KeymapKind,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AppError<()>> {
         let num_events = event.len();
         match num_events {
             0 => Ok(()),

@@ -48,7 +48,7 @@ pub trait Component: HandleSmallArea + HandleFocus {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
+    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError<Action>> {
         let r = match event {
             Some(Event::Key(key, modifiers)) => {
                 self.handle_key_events(Event::Key(key, modifiers))?

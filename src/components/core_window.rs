@@ -180,7 +180,7 @@ impl Component for CoreWindow {
         Ok(())
     }
 
-    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError> {
+    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError<Action>> {
         let binding = self.app_context.keymap_config();
         let map = binding.get_map_of(self.component_focused);
         if let Some(action_binding) = map.get(&event.unwrap()) {

@@ -1,6 +1,6 @@
 use {
     super::component_name::ComponentName,
-    crate::app_error::AppError,
+    crate::{app_error::AppError, tg::td_enums::TdChatList},
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::layout::Rect,
     std::str::FromStr,
@@ -84,6 +84,9 @@ pub enum Action {
     /// Paste action with a `String`.
     Paste(String),
 
+    /// LoadChats action with a `ChatList` and a limit.
+    LoadChats(TdChatList, i32),
+
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
     /// Unfocus action.
@@ -134,7 +137,7 @@ impl Action {
 
 /// Implement the `FromStr` trait for `Action`.
 impl FromStr for Action {
-    type Err = AppError;
+    type Err = AppError<()>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {

@@ -39,7 +39,7 @@ pub fn default_config_dir() -> io::Result<PathBuf> {
 ///
 /// # Returns
 /// The parsed configuration or an error if the file cannot be parsed.
-pub fn deserialize_to_config<R>(file_path: &Path) -> Result<R, AppError>
+pub fn deserialize_to_config<R>(file_path: &Path) -> Result<R, AppError<()>>
 where
     R: DeserializeOwned,
 {
@@ -59,7 +59,7 @@ where
 ///
 /// # Returns
 /// The parsed configuration or an error if the file cannot be parsed.
-pub fn deserialize_to_config_into<R, S>(file_path: &Path) -> Result<S, AppError>
+pub fn deserialize_to_config_into<R, S>(file_path: &Path) -> Result<S, AppError<()>>
 where
     R: DeserializeOwned + Into<S>,
 {

@@ -48,7 +48,7 @@ lazy_static! {
 ///
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
-async fn tokio_main() -> Result<(), AppError> {
+async fn tokio_main() -> Result<(), AppError<()>> {
     tracing::info!("Starting tokio main");
 
     // Initialize the lazy static variables
@@ -76,7 +76,7 @@ async fn tokio_main() -> Result<(), AppError> {
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:?}", theme_config);
 
-    let tg_context = TgContext::new(tdlib::create_client());
+    let tg_context = TgContext::default();
     let app_context = Arc::new(AppContext::new(
         app_config,
         keymap_config,
@@ -86,8 +86,8 @@ async fn tokio_main() -> Result<(), AppError> {
     )?);
 
     let mut tui_backend = TuiBackend::new(Arc::clone(&app_context))?;
-    let mut tui = Tui::new(Arc::clone(&app_context));
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
+    let mut tui = Tui::new(Arc::clone(&app_context));
     let mut tg_backend = TgBackend::new(Arc::clone(&app_context)).unwrap();
 
     match run::run_app(
@@ -129,7 +129,7 @@ fn init_panic_hook(mouse: bool, paste: bool) {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), AppError> {
+async fn main() -> Result<(), AppError<()>> {
     if let Err(e) = tokio_main().await {
         tracing::error!("Something went wrong: {}", e);
         Err(e)

@@ -22,7 +22,7 @@ impl LoggerConfig {
     ///
     /// # Returns
     /// The default logger configuration.
-    pub fn default_result() -> Result<Self, AppError> {
+    pub fn default_result() -> Result<Self, AppError<()>> {
         configs::deserialize_to_config_into::<LoggerRaw, Self>(Path::new(
             &configs::custom::default_config_logger_file_path()?,
         ))

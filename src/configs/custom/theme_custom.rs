@@ -32,7 +32,7 @@ impl ThemeConfig {
     ///
     /// # Returns
     /// * `Result<Self>` - The default theme configuration.
-    pub fn default_result() -> Result<Self, AppError> {
+    pub fn default_result() -> Result<Self, AppError<()>> {
         configs::deserialize_to_config_into::<ThemeRaw, Self>(Path::new(
             &configs::custom::default_config_theme_file_path()?,
         ))

@@ -80,7 +80,7 @@ impl Logger {
     ///
     /// # Returns
     /// * `Result<(), AppError>` - The result of the operation.
-    fn delete_old_log_files(&self) -> Result<(), AppError> {
+    fn delete_old_log_files(&self) -> Result<(), AppError<()>> {
         let mut logs: Vec<_> = fs::read_dir(&self.log_folder)?
             .filter_map(Result::ok)
             .map(|entry| entry.path())

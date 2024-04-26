@@ -67,7 +67,7 @@ impl ThemeStyle {
     ///
     /// # Returns
     /// * `Result<Color, AppError>` - The converted `Color`.
-    pub fn str_to_color(s: &str) -> Result<Color, AppError> {
+    pub fn str_to_color(s: &str) -> Result<Color, AppError<()>> {
         match s {
             "black" => Ok(Color::Black),
             "red" => Ok(Color::Red),
@@ -133,7 +133,7 @@ impl ThemeStyle {
     ///
     /// # Returns
     /// * `Result<Color, AppError>` - The converted `Color`.
-    pub fn str_to_color_with_palette(s: &str) -> Result<Color, AppError> {
+    pub fn str_to_color_with_palette(s: &str) -> Result<Color, AppError<()>> {
         if s.is_empty() {
             return Err(AppError::InvalidColor(s.to_string()));
         }

@@ -1,6 +1,7 @@
 use crate::action::Action;
 use crate::app_context::AppContext;
 use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea, Item};
+use crate::event::Event;
 use chrono::{DateTime, Utc};
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -12,7 +13,7 @@ use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
-use tdlib::enums::{MessageContent, UserStatus};
+use tdlib::enums::{ChatList, MessageContent, UserStatus};
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug, Default)]
@@ -241,6 +242,14 @@ impl ChatListWindow {
     fn next(&mut self) {
         let i = match self.chat_list_state.selected() {
             Some(i) => {
+                if i == self.chat_list.len() / 2 {
+                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                        event_tx
+                            .send(Event::LoadChats(ChatList::Main.into(), 20))
+                            .unwrap();
+                    }
+                }
+
                 if i >= self.chat_list.len() - 1 {
                     i
                 } else {
@@ -330,7 +339,7 @@ impl Component for ChatListWindow {
             self.app_context.style_chat_list()
         };
 
-        if let Some(items) = self.app_context.tg_context().get_main_chat_list() {
+        if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
             self.chat_list = items;
         }
         let items = self

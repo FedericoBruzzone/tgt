@@ -1,4 +1,3 @@
-use crate::action::Action;
 use config::ConfigError;
 use std::{fmt::Display, io};
 use tokio::sync::mpsc::error::SendError;
@@ -11,11 +10,11 @@ use tokio::sync::mpsc::error::SendError;
 /// * Send: A send error.
 /// * Config: A configuration error.
 /// * ConfigFile: A configuration file error.
-pub enum AppError {
+pub enum AppError<T> {
     /// It is a wrapper for the `std::io::Error`.
     Io(io::Error),
     /// It is a wrapper for the `tokio::sync::mpsc::error::SendError`.
-    Send(SendError<Action>),
+    Send(SendError<T>),
     /// It is a wrapper for the `config::ConfigError`.
     Config(ConfigError),
     /// It is an invalid action.
@@ -28,26 +27,22 @@ pub enum AppError {
     /// It is an invalid color.
     InvalidColor(String),
 }
-/// Convert an `Error` into an `AppError`.
-impl From<io::Error> for AppError {
+impl<T> From<io::Error> for AppError<T> {
     fn from(error: io::Error) -> Self {
         Self::Io(error)
     }
 }
-/// Convert a `tokio::sync::mpsc::error::SendError` into an `AppError`.
-impl From<SendError<Action>> for AppError {
-    fn from(error: SendError<Action>) -> Self {
+impl<T> From<SendError<T>> for AppError<T> {
+    fn from(error: SendError<T>) -> Self {
         Self::Send(error)
     }
 }
-/// Convert a `config::ConfigError` into an `AppError`.
-impl From<ConfigError> for AppError {
+impl<T> From<ConfigError> for AppError<T> {
     fn from(error: ConfigError) -> Self {
         Self::Config(error)
     }
 }
-/// Implement the `Display` trait for `AppError`.
-impl Display for AppError {
+impl<T> Display for AppError<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Io(error) => write!(f, "IO error: {}", error),

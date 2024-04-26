@@ -28,7 +28,7 @@ impl AppConfig {
     ///
     /// # Returns
     /// The default application configuration.
-    pub fn default_result() -> Result<Self, AppError> {
+    pub fn default_result() -> Result<Self, AppError<()>> {
         configs::deserialize_to_config_into::<AppRaw, Self>(Path::new(
             &configs::custom::default_config_app_file_path()?,
         ))
