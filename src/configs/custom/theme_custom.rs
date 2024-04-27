@@ -182,7 +182,7 @@ mod tests {
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 5);
         assert_eq!(theme_config.chat.len(), 3);
-        assert_eq!(theme_config.prompt.len(), 2);
+        assert_eq!(theme_config.prompt.len(), 4);
         assert_eq!(theme_config.status_bar.len(), 9);
         assert_eq!(theme_config.title_bar.len(), 4);
     }
@@ -404,7 +404,7 @@ mod tests {
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 5);
         assert_eq!(theme_config.chat.len(), 3);
-        assert_eq!(theme_config.prompt.len(), 2);
+        assert_eq!(theme_config.prompt.len(), 4);
         assert_eq!(theme_config.status_bar.len(), 9);
         assert_eq!(theme_config.title_bar.len(), 4);
     }

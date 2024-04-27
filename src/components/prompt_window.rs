@@ -19,12 +19,21 @@ use ratatui::{
 use std::{io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
-/// `InputMode` is an enum that represents the input mode of the prompt.
-enum InputMode {
-    /// The normal mode of the prompt.
-    Normal,
-    /// The input mode of the prompt.
-    Input,
+/// `DirSelection` is an enum that represents the direction of the selection.
+/// It is used to keep track of the direction of the selection when the user
+/// is selecting text.
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum DirSelection {
+    /// The user is not selecting text.
+    Empty,
+    /// The user is selecting text to the left.
+    Left,
+    /// The user is selecting text to the right.
+    Right,
+    /// The user is selecting text up.
+    Up,
+    /// The user is selecting text down.
+    Down,
 }
 /// `InputCell` is a struct that represents a cell of the input.
 /// It is responsible for managing the input cell of the prompt.
@@ -49,8 +58,10 @@ struct Input {
     /// Basically, it is used to send `IncreasePromptSize` and `DecreasePromptSize`
     /// actions.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the input is in selecting mode or not.
-    is_selecting: bool,
+    /// An enum that represents the direction of the selection.
+    /// Implicitly, it is used to keep track whether the user is selecting text
+    /// or not.
+    dir_selection: DirSelection,
     /// The correct prompt size.
     /// It is used to keep track of the correct prompt size when the prompt
     /// window is focused or unfocused.
@@ -246,88 +257,126 @@ impl Input {
         }
         self.is_restored = false;
     }
-
     /// Move the cursor to the left and toggle the selection.
     fn move_cursor_left_and_toggle_selection(&mut self) {
-        self.is_selecting = true;
         if self.cursor.0 > 0 {
             self.cursor.0 -= 1;
             self.text[self.cursor.1][self.cursor.0].selected =
                 !self.text[self.cursor.1][self.cursor.0].selected;
         }
+        self.dir_selection = DirSelection::Left;
     }
     /// Move the cursor to the right and toggle the selection.
     fn move_cursor_right_and_toggle_selection(&mut self) {
-        self.is_selecting = true;
         if self.cursor.0 < self.text[self.cursor.1].len() {
             self.text[self.cursor.1][self.cursor.0].selected =
                 !self.text[self.cursor.1][self.cursor.0].selected;
             self.cursor.0 += 1;
         }
+        self.dir_selection = DirSelection::Right;
     }
-    /// Select the current line.
-    fn select_line(&mut self) {
-        for cell in &mut self.text[self.cursor.1] {
-            cell.selected = true;
+    // Move the cursor to the previous word and toggle the selection.
+    fn move_cursor_to_previous_word_and_toggle_selection(&mut self) {
+        let line = &self.text[self.cursor.1];
+        let mut i = self.cursor.0;
+        while i > 0 && line[i - 1].c.is_whitespace() {
+            i -= 1;
         }
-    }
-    /// Select until the end of the line.
-    fn select_until_end_of_line(&mut self) {
-        for cell in &mut self.text[self.cursor.1][self.cursor.0..] {
-            cell.selected = true;
+        while i > 0 && !line[i - 1].c.is_whitespace() {
+            i -= 1;
         }
-    }
-    /// Select until the start of the line.
-    fn select_until_start_of_line(&mut self) {
-        for cell in &mut self.text[self.cursor.1][..self.cursor.0] {
-            cell.selected = true;
+        for cell in &mut self.text[self.cursor.1][i..self.cursor.0] {
+            cell.selected = !cell.selected;
         }
+        self.cursor.0 = i;
+        self.dir_selection = DirSelection::Left;
     }
-    /// Move the cursor up and select or unselect the text.
-    fn move_cursor_up_and_select_or_unselect(&mut self) {
-        self.is_selecting = true;
+    /// Move the cursor to the next word and toggle the selection.
+    fn move_cursor_to_next_word_and_toggle_selection(&mut self) {
+        let line = &self.text[self.cursor.1];
+        let mut i = self.cursor.0;
+        while i < line.len() && line[i].c.is_whitespace() {
+            i += 1;
+        }
+        while i < line.len() && !line[i].c.is_whitespace() {
+            i += 1;
+        }
+        for cell in &mut self.text[self.cursor.1][self.cursor.0..i] {
+            cell.selected = !cell.selected;
+        }
+        self.cursor.0 = i;
+        self.dir_selection = DirSelection::Right;
+    }
+    /// Move the cursor up and toggle the selection.
+    fn move_cursor_up_and_toggle_selection(&mut self) {
         if self.cursor.1 > 0 {
-            self.select_until_start_of_line();
+            self.toggle_selection_from_cursor_to_start_of_line();
             self.move_cursor_up();
-            self.select_line();
+            self.toggle_selection_from_end_of_line_to_cursor();
+            self.dir_selection = DirSelection::Up;
         }
     }
-    /// Move the cursor down and select or unselect the text.
-    fn move_cursor_down_and_select_or_unselect(&mut self) {
-        self.is_selecting = true;
+    /// Move the cursor down and toggle the selection.
+    fn move_cursor_down_and_toggle_selection(&mut self) {
         if self.cursor.1 < self.text.len() - 1 {
-            self.select_until_end_of_line();
+            self.toggle_selection_from_cursor_to_end_of_line();
             self.move_cursor_down();
-            self.select_line();
+            self.toggle_selection_from_start_of_line_to_cursor();
+            self.dir_selection = DirSelection::Down;
+        }
+    }
+    /// Toggle the selection from the cursor to the start of the line.
+    fn toggle_selection_from_cursor_to_start_of_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1][..self.cursor.0] {
+            cell.selected = !cell.selected;
+        }
+    }
+    /// Toggle the selection from the cursor to the end of the line.
+    fn toggle_selection_from_cursor_to_end_of_line(&mut self) {
+        for cell in &mut self.text[self.cursor.1][self.cursor.0..] {
+            cell.selected = !cell.selected;
+        }
+    }
+    /// Toggle the selection from the start of the line to the cursor.
+    fn toggle_selection_from_start_of_line_to_cursor(&mut self) {
+        for cell in &mut self.text[self.cursor.1][..self.cursor.0] {
+            cell.selected = !cell.selected;
+        }
+    }
+    /// Toggle the selection from the end of the line to the cursor.
+    fn toggle_selection_from_end_of_line_to_cursor(&mut self) {
+        for cell in &mut self.text[self.cursor.1][self.cursor.0..] {
+            cell.selected = !cell.selected;
         }
     }
     /// Unselect all the text.
     fn unselect_all(&mut self) {
-        if self.is_selecting {
+        if self.dir_selection != DirSelection::Empty {
             for line in &mut self.text {
                 for cell in line {
                     cell.selected = false;
                 }
             }
-            self.is_selecting = false;
+            self.dir_selection = DirSelection::Empty;
         }
     }
     /// Copy the selected text of the `Input` struct.
     /// The selected text is copied to the clipboard.
     fn copy_selected(&self) {
-        let mut clipboard = Clipboard::new().unwrap();
-        let mut text = String::new();
-        for (i, line) in self.text.iter().enumerate() {
-            for cell in line {
-                if cell.selected {
-                    text.push(cell.c);
+        if let Ok(mut clipboard) = Clipboard::new() {
+            let mut text = String::new();
+            for (i, line) in self.text.iter().enumerate() {
+                for cell in line {
+                    if cell.selected {
+                        text.push(cell.c);
+                    }
+                }
+                if i < self.text.len() - 1 {
+                    text.push('\n');
                 }
             }
-            if i < self.text.len() - 1 {
-                text.push('\n');
-            }
+            clipboard.set_text(text).unwrap();
         }
-        clipboard.set_text(text).unwrap();
     }
     /// Paste text into the `Input` struct.
     /// The text is pasted at the current cursor position.
@@ -349,7 +398,7 @@ impl Default for Input {
             cursor: (0, 0),
             area_input: Rect::default(),
             command_tx: None,
-            is_selecting: false,
+            dir_selection: DirSelection::Empty,
             correct_prompt_size: 0,
             is_restored: true,
         }
@@ -372,10 +421,6 @@ pub struct PromptWindow {
     focused: bool,
     /// The key that allows the `PromptWindow` to be focused.
     focused_key: String,
-    /// The current input mode of the `PromptWindow`.
-    /// Usually, when the `PromptWindow` is focused, the input mode is set to
-    /// `Input`. Otherwise, it is set to `Normal`.
-    input_mode: InputMode,
     /// The current input of the `PromptWindow`.
     input: Input,
 }
@@ -394,7 +439,6 @@ impl PromptWindow {
         let small_area = false;
         let focused = false;
         let focused_key = "".to_string();
-        let input_mode = InputMode::Normal;
         let input = Input::default();
 
         PromptWindow {
@@ -404,7 +448,6 @@ impl PromptWindow {
             small_area,
             focused,
             focused_key,
-            input_mode,
             input,
         }
     }
@@ -452,12 +495,10 @@ impl HandleFocus for PromptWindow {
     /// Set the `focused` flag for the `PromptWindow`.
     fn focus(&mut self) {
         self.focused = true;
-        self.input_mode = InputMode::Input;
     }
     /// Set the `focused` flag for the `PromptWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
-        self.input_mode = InputMode::Normal;
     }
 }
 
@@ -529,6 +570,30 @@ impl Component for PromptWindow {
                     self.input.unselect_all();
                     self.input.move_cursor_to_end();
                 }
+
+                (
+                    KeyCode::Left,
+                    Modifiers {
+                        shift: true,
+                        control: true,
+                        ..
+                    },
+                ) => {
+                    self.input
+                        .move_cursor_to_previous_word_and_toggle_selection();
+                }
+
+                (
+                    KeyCode::Right,
+                    Modifiers {
+                        shift: true,
+                        control: true,
+                        ..
+                    },
+                ) => {
+                    self.input.move_cursor_to_next_word_and_toggle_selection();
+                }
+
                 (KeyCode::Left, Modifiers { shift: true, .. }) => {
                     self.input.move_cursor_left_and_toggle_selection();
                 }
@@ -538,11 +603,11 @@ impl Component for PromptWindow {
                 }
 
                 (KeyCode::Up, Modifiers { shift: true, .. }) => {
-                    self.input.move_cursor_up_and_select_or_unselect();
+                    self.input.move_cursor_up_and_toggle_selection();
                 }
 
                 (KeyCode::Down, Modifiers { shift: true, .. }) => {
-                    self.input.move_cursor_down_and_select_or_unselect();
+                    self.input.move_cursor_down_and_toggle_selection();
                 }
 
                 (KeyCode::Char('c'), Modifiers { control: true, .. }) => {
@@ -551,9 +616,10 @@ impl Component for PromptWindow {
                 }
 
                 (KeyCode::Char('v'), Modifiers { control: true, .. }) => {
-                    let mut clipboard = Clipboard::new().unwrap();
-                    if let Ok(text) = clipboard.get_text() {
-                        self.input.paste(text);
+                    if let Ok(mut clipboard) = Clipboard::new() {
+                        if let Ok(text) = clipboard.get_text() {
+                            self.input.paste(text);
+                        }
                     }
                 }
 
@@ -567,7 +633,8 @@ impl Component for PromptWindow {
                     self.input.move_cursor_to_next_word();
                 }
 
-                (KeyCode::Backspace, Modifiers { alt: true, .. }) => {
+                (KeyCode::Backspace, Modifiers { alt: true, .. })
+                | (KeyCode::Char('w'), Modifiers { control: true, .. }) => {
                     self.input.unselect_all();
                     self.input.delete_previous_word();
                 }
@@ -651,10 +718,13 @@ impl Component for PromptWindow {
                             if cell.selected {
                                 Span::styled(
                                     cell.c.to_string(),
-                                    self.app_context.style_item_selected(),
+                                    self.app_context.style_prompt_message_text_selected(),
                                 )
                             } else {
-                                Span::raw(cell.c.to_string())
+                                Span::styled(
+                                    cell.c.to_string(),
+                                    self.app_context.style_prompt_message_text(),
+                                )
                             }
                         })
                         .collect::<Vec<Span>>(),
@@ -691,7 +761,7 @@ impl Component for PromptWindow {
 
         frame.render_widget(input, area);
 
-        if let InputMode::Input = self.input_mode {
+        if self.focused {
             frame.set_cursor(
                 area.x + self.input.cursor_x() as u16 + 1,
                 area.y + self.input.cursor_y() as u16 + 1,

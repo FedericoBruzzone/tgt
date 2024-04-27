@@ -232,6 +232,12 @@ impl AppContext {
 
     // ===== PROMPT =====
     theme_style_generate!(style_prompt, prompt, self);
+    theme_style_generate!(style_prompt_message_text, prompt, message_text);
+    theme_style_generate!(
+        style_prompt_message_text_selected,
+        prompt,
+        message_text_selected
+    );
     theme_style_generate!(
         style_prompt_message_preview_text,
         prompt,

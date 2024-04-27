@@ -34,6 +34,8 @@ message_other = { fg = "secondary_light", bg = "ternary_variant", bold = false, 
 
 [prompt]
 self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+message_text = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
+message_text_selected = { fg = "secondary_light", bg = "ternary", bold = false, underline = false, italic = true }
 message_preview_text = { fg = "ternary", bg = "background", bold = false, underline = false, italic = false }
 
 [status_bar]
