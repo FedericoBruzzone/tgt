@@ -1,6 +1,6 @@
 use crate::action::Action;
 use crate::app_context::AppContext;
-use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea, Item};
+use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea};
 use crate::event::Event;
 use chrono::{DateTime, Utc};
 use ratatui::layout::Rect;
@@ -14,6 +14,7 @@ use ratatui::Frame;
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
 use tdlib::enums::{ChatList, MessageContent, UserStatus};
+use tdlib::types::FormattedText;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug, Default)]
@@ -56,7 +57,7 @@ impl MessageEntry {
         }
     }
 
-    fn format_message_content(message: &tdlib::types::FormattedText) -> Line<'static> {
+    fn format_message_content(message: &FormattedText) -> Line<'static> {
         let text = &message.text;
         let entities = &message.entities;
 
@@ -147,12 +148,10 @@ impl ChatListEntry {
     pub fn set_verificated(&mut self, verificated: bool) {
         self.verificated = verificated;
     }
-}
-impl Item for ChatListEntry {
     fn get_text_styled(&self, app_context: &AppContext) -> Text {
         let online_symbol = match self.status {
-            tdlib::enums::UserStatus::Online(_) => "🟢 ",
-            tdlib::enums::UserStatus::Offline(_) => "",
+            UserStatus::Online(_) => "🟢 ",
+            UserStatus::Offline(_) => "",
             _ => "",
         };
         let verificated_symbol = if self.verificated { "✅" } else { "" };
@@ -179,7 +178,6 @@ impl Item for ChatListEntry {
         entry
     }
 }
-
 /// `ChatListWindow` is a struct that represents a window for displaying a list
 /// of chat items. It is responsible for managing the layout and rendering of
 /// the chat list.

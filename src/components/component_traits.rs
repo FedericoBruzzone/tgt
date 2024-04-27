@@ -1,9 +1,8 @@
 use crate::action::Action;
-use crate::app_context::AppContext;
 use crate::app_error::AppError;
 use crate::event::Event;
 use crossterm::event;
-use ratatui::{layout, text::Text};
+use ratatui::layout;
 use std::io;
 use tokio::sync::mpsc;
 
@@ -113,15 +112,6 @@ pub trait Component: HandleSmallArea + HandleFocus {
     {
         Box::new(self)
     }
-}
-/// `Item` is a trait that represents an item that can be rendered in a list.
-/// Implementors of this trait can be rendered in a list with a styled text
-/// representation.
-pub trait Item {
-    /// Get the text representation of the item.
-    /// This should return a styled text representation of the item.
-    /// AppContext is passed in to allow for the use of the theme.
-    fn get_text_styled(&self, app_context: &AppContext) -> Text;
 }
 /// `HandleSmallArea` is a trait that represents a component that can handle
 /// small area events. Implementors of this trait can be notified when the area
