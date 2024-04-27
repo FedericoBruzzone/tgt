@@ -29,7 +29,16 @@ env:
 
 jobs:
   build:
-    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - os: macos-14 # arm64 (M1)
+          - os: macos-13 # Intel
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,7 +59,7 @@ jobs:
           rm -rf build
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl/ -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl/' || '/usr/local/opt/openssl/' }} -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
         uses: actions/cache/save@v4
