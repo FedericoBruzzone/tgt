@@ -49,4 +49,9 @@ arboard = { version = "3.3.2", features = ["wayland-data-control", "wl-clipboard
 chrono = "0.4.38"
 
 [profile.dev]
-incremental = true
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
+strip = "debuginfo"
