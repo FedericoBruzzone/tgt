@@ -29,8 +29,11 @@ pub enum Event {
     Render,
     /// Update area event with a `Rect` struct.
     UpdateArea(Rect),
+
     /// Load chats event with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
+    /// Send message event with a `String`.
+    SendMessage(String),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -147,6 +150,7 @@ impl Display for Event {
             Event::LoadChats(chat_list, limit) => {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)
             }
+            Event::SendMessage(s) => write!(f, "SendMessage({})", s),
         }
     }
 }

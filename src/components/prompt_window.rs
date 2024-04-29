@@ -247,14 +247,31 @@ impl Input {
         }
     }
     /// Set the prompt size to one.
-    /// It is used to set the prompt size to one when the prompt window is
-    /// unfocused.
+    /// It is used to set the prompt size to one.
     fn set_prompt_size_to_one(&mut self) {
         if let Some(tx) = self.command_tx.as_ref() {
             for _ in 0..self.correct_prompt_size {
                 tx.send(Action::DecreasePromptSize).unwrap();
             }
         }
+    }
+    /// Set the prompt size to one.
+    /// It is used to set the prompt size to one when the prompt window is
+    /// focused.
+    /// Simply, it set the correct prompt size to zero and the cursor to the
+    /// start of the line.
+    fn set_prompt_size_to_one_focused(&mut self) {
+        self.set_prompt_size_to_one();
+        self.correct_prompt_size = 0;
+        self.cursor = (0, 0);
+    }
+    /// Set the prompt size to one.
+    /// It is used to set the prompt size to one when the prompt window is
+    /// unfocused.
+    /// It means that when the prompt window will return to focus, the prompt
+    /// size will be restored to the correct prompt size.
+    fn set_prompt_size_to_one_unfocused(&mut self) {
+        self.set_prompt_size_to_one();
         self.is_restored = false;
     }
     /// Move the cursor to the left and toggle the selection.
@@ -389,6 +406,28 @@ impl Input {
             }
         }
     }
+    /// Send a message.
+    /// The message is sent to the main event loop for processing.
+    ///
+    /// # Arguments
+    /// * `app_context` - An Arc wrapped AppContext struct.
+    fn send_message(&mut self, app_context: Arc<AppContext>) {
+        if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
+            event_tx
+                .send(Event::SendMessage(self.text_to_string()))
+                .unwrap();
+            self.text = vec![vec![]];
+            self.set_prompt_size_to_one_focused();
+        }
+    }
+    /// Convert the text of the `Input` struct to a string.
+    fn text_to_string(&mut self) -> String {
+        let mut message = String::new();
+        self.text
+            .iter()
+            .for_each(|e| e.iter().for_each(|e| message.push(e.c)));
+        message
+    }
 }
 /// Implement the `Default` trait for the `Input` struct.
 impl Default for Input {
@@ -435,7 +474,7 @@ impl PromptWindow {
     /// * `Self` - The new instance of the `PromptWindow` struct.
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
-        let command_tx = None;
+        let action_tx = None;
         let small_area = false;
         let focused = false;
         let focused_key = "".to_string();
@@ -444,7 +483,7 @@ impl PromptWindow {
         PromptWindow {
             app_context,
             name,
-            action_tx: command_tx,
+            action_tx,
             small_area,
             focused,
             focused_key,
@@ -633,6 +672,11 @@ impl Component for PromptWindow {
                     self.input.move_cursor_to_next_word();
                 }
 
+                (KeyCode::Enter, Modifiers { alt: true, .. }) => {
+                    self.input.unselect_all();
+                    self.input.send_message(Arc::clone(&self.app_context));
+                }
+
                 (KeyCode::Backspace, Modifiers { alt: true, .. })
                 | (KeyCode::Char('w'), Modifiers { control: true, .. }) => {
                     self.input.unselect_all();
@@ -740,7 +784,7 @@ impl Component for PromptWindow {
                 self.app_context.style_border_component_focused(),
             )
         } else {
-            self.input.set_prompt_size_to_one();
+            self.input.set_prompt_size_to_one_unfocused();
             (
                 vec![Line::from(format!(
                     "Press {} to send a message",

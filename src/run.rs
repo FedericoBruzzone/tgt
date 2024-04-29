@@ -79,10 +79,18 @@ async fn handle_tg_backend_events(
     app_context: Arc<AppContext>,
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
-    if let Some(Event::LoadChats(chat_list, limit)) = tg_backend.next().await {
-        app_context
-            .action_tx()
-            .send(Action::LoadChats(chat_list, limit))?;
+    if let Some(event) = tg_backend.next().await {
+        match event {
+            Event::LoadChats(chat_list, limit) => {
+                app_context
+                    .action_tx()
+                    .send(Action::LoadChats(chat_list, limit))?;
+            }
+            Event::SendMessage(message) => {
+                app_context.action_tx().send(Action::SendMessage(message))?;
+            }
+            _ => {}
+        }
     }
     Ok(())
 }
@@ -217,6 +225,9 @@ pub async fn handle_app_actions(
             }
             Action::LoadChats(chat_list, limit) => {
                 tg_backend.load_chats(chat_list.into(), limit).await;
+            }
+            Action::SendMessage(ref message) => {
+                tg_backend.send_message(message.to_string()).await;
             }
             _ => {}
         }

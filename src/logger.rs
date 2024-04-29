@@ -16,7 +16,9 @@ pub struct Logger {
     log_folder: String,
     /// The log file.
     log_file: String,
+    /// The rotation frequency.
     rotation_frequency: tracing_appender::rolling::Rotation,
+    /// The maximum number of old log files to keep.
     max_old_log_files: usize,
     /// The log level.
     log_level: String,

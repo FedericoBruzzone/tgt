@@ -3,9 +3,9 @@ use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
-use tdlib::enums::{self, AuthorizationState, ChatList, LogStream, Update};
+use tdlib::enums::{self, AuthorizationState, ChatList, InputMessageContent, LogStream, Update};
 use tdlib::functions;
-use tdlib::types::{Chat, ChatPosition, LogStreamFile};
+use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -60,6 +60,31 @@ impl TgBackend {
         if let Err(e) = functions::load_chats(Some(chat_list), limit, self.client_id).await {
             tracing::error!("Failed to load chats: {e:?}");
             self.full_chats_list = true;
+        }
+    }
+
+    #[allow(clippy::await_holding_lock)]
+    pub async fn send_message(&mut self, message: String) {
+        let text = InputMessageContent::InputMessageText(InputMessageText {
+            text: tdlib::types::FormattedText {
+                text: message,
+                entities: vec![],
+            },
+            disable_web_page_preview: false,
+            clear_draft: true,
+        });
+        if let Err(e) = functions::send_message(
+            *self.app_context.tg_context().open_chat_id(),
+            0,
+            None,
+            None,
+            None,
+            text,
+            self.client_id,
+        )
+        .await
+        {
+            tracing::error!("Failed to send message: {e:?}");
         }
     }
 

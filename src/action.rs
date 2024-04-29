@@ -86,6 +86,8 @@ pub enum Action {
 
     /// LoadChats action with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
+    /// SendMessage action with a `String`.
+    SendMessage(String),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
