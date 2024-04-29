@@ -1,5 +1,6 @@
 use crate::action::Action;
 use crate::app_context::AppContext;
+use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea};
 use crate::event::Event;
 use chrono::{DateTime, Utc};
@@ -281,6 +282,10 @@ impl ChatListWindow {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.chat_list.get(i) {
                 *self.app_context.tg_context().open_chat_id() = chat.chat_id;
+                self.app_context
+                    .action_tx()
+                    .send(Action::FocusComponent(Prompt))
+                    .unwrap();
             }
         }
     }
