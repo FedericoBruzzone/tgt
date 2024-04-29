@@ -4,7 +4,7 @@ use crate::{
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
-use std::{collections::HashMap, io, sync::Arc, time::Instant};
+use std::{collections::HashMap, io, sync::Arc, thread::sleep, time::Instant};
 use tdlib::{enums::ChatList, functions};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -238,6 +238,8 @@ pub async fn handle_app_actions(
                 tg_backend.send_message(message.to_string()).await;
             }
             Action::GetChatHistory(from_message_id, offset, limit) => {
+                tg_backend.prepare_to_get_chat_history().await;
+                sleep(std::time::Duration::from_millis(100));
                 tg_backend
                     .get_chat_history(from_message_id, offset, limit)
                     .await;

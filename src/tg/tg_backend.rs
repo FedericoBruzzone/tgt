@@ -67,6 +67,23 @@ impl TgBackend {
     }
 
     #[allow(clippy::await_holding_lock)]
+    pub async fn prepare_to_get_chat_history(&mut self) {
+        match functions::get_chat_history(
+            *self.app_context.tg_context().open_chat_id(),
+            0,
+            0,
+            100,
+            false,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(_m) => {}
+            Err(_e) => {}
+        }
+    }
+
+    #[allow(clippy::await_holding_lock)]
     pub async fn get_chat_history(&mut self, from_message_id: i64, offset: i32, limit: i32) {
         match functions::get_chat_history(
             *self.app_context.tg_context().open_chat_id(),
