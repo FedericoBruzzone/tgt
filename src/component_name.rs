@@ -4,25 +4,30 @@ use std::fmt::{Display, Formatter, Result};
 /// `ComponentName` is an enum that represents the name of a component in the
 /// user interface.
 pub enum ComponentName {
+    /// The core window.
     CoreWindow,
+    /// The chat list.
     ChatList,
+    /// The chat.
     Chat,
+    /// The prompt.
     Prompt,
 
+    /// The title bar.
     TitleBar,
+    /// The status bar.
     StatusBar,
 }
 
-/// Implement the `Display` trait for the `ComponentName` enum.
 impl Display for ComponentName {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
-            ComponentName::CoreWindow => write!(f, "CoreWindow"),
-            ComponentName::ChatList => write!(f, "ChatList"),
+            ComponentName::CoreWindow => write!(f, "Core Window"),
+            ComponentName::ChatList => write!(f, "Chat List"),
             ComponentName::Chat => write!(f, "Chat"),
             ComponentName::Prompt => write!(f, "Prompt"),
-            ComponentName::TitleBar => write!(f, "TitleBar"),
-            ComponentName::StatusBar => write!(f, "StatusBar"),
+            ComponentName::TitleBar => write!(f, "Title Bar"),
+            ComponentName::StatusBar => write!(f, "Status Bar"),
         }
     }
 }

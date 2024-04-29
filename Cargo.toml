@@ -14,7 +14,7 @@ keywords = [
     "telegram",
     "tui",
     "tdlib",
-] # "ratatui", "crossterm", "tokio", "async",  "chat", "messaging", "client"
+]
 authors = [
     "Federico Bruzzone <federico.bruzzone.i@gmail.com>",
     "Andrea Longoni",

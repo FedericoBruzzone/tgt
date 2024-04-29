@@ -29,6 +29,7 @@ item_message_timestamp = { fg = "ternary_light", bg = "background", bold = false
 
 [chat]
 self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+chat_name = { fg = "secondary", bg = "background", bold = true, underline = false, italic = false }
 message_myself = { fg = "primary_light", bg = "ternary", bold = false, underline = false, italic = false }
 message_other = { fg = "secondary_light", bg = "ternary_variant", bold = false, underline = false, italic = false }
 

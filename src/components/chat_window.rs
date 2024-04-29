@@ -6,13 +6,13 @@ use crate::{
     components::component_traits::{Component, HandleFocus, HandleSmallArea},
 };
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     symbols::{
         border::{self, Set},
         line,
     },
     text::Line,
-    widgets::{Block, Borders, List, ListDirection, ListItem, ListState},
+    widgets::{Block, Borders, List, ListDirection, ListItem, ListState, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -162,8 +162,14 @@ impl Component for ChatWindow {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+        let chat_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(2), Constraint::Percentage(100)])
+            .split(area);
+
         let border = Set {
-            top_left: line::NORMAL.horizontal_down,
+            top_left: line::NORMAL.vertical_right,
+            top_right: line::NORMAL.vertical_left,
             bottom_left: line::NORMAL.horizontal_up,
             ..border::PLAIN
         };
@@ -192,17 +198,38 @@ impl Component for ChatWindow {
             .border_set(border)
             .border_style(style_border_focused)
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .style(self.app_context.style_chat())
-            .title(self.name.as_str());
+            .style(self.app_context.style_chat());
 
         let list = List::new(items)
             .block(block)
-            .style(self.app_context.style_chat_list())
+            .style(self.app_context.style_chat())
             .highlight_style(self.app_context.style_item_selected())
             .repeat_highlight_symbol(true)
             .direction(ListDirection::BottomToTop);
 
-        frame.render_stateful_widget(list, area, &mut self.message_list_state);
+        let border_header = Set {
+            top_left: line::NORMAL.horizontal_down,
+            bottom_left: line::NORMAL.horizontal_up,
+            ..border::PLAIN
+        };
+        let block_header = Block::new()
+            .border_set(border_header)
+            .border_style(style_border_focused)
+            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+            .style(self.app_context.style_chat())
+            .title(self.name.as_str());
+        let header = Paragraph::new(
+            self.app_context
+                .tg_context()
+                .get_name_of_open_chat()
+                .unwrap_or_default(),
+        )
+        .block(block_header)
+        .style(self.app_context.style_chat_chat_name())
+        .alignment(Alignment::Center);
+
+        frame.render_widget(header, area);
+        frame.render_stateful_widget(list, chat_layout[1], &mut self.message_list_state);
 
         Ok(())
     }

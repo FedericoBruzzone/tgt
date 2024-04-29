@@ -227,6 +227,7 @@ impl AppContext {
 
     // ===== CHAT =====
     theme_style_generate!(style_chat, chat, self);
+    theme_style_generate!(style_chat_chat_name, chat, chat_name);
     theme_style_generate!(style_chat_message_myself, chat, message_myself);
     theme_style_generate!(style_chat_message_other, chat, message_other);
 

@@ -56,19 +56,19 @@ impl CoreWindow {
             (
                 ComponentName::ChatList,
                 ChatListWindow::new(Arc::clone(&app_context))
-                    .with_name("Chat list")
+                    .with_name(ComponentName::ChatList.to_string())
                     .new_boxed(),
             ),
             (
                 ComponentName::Chat,
                 ChatWindow::new(Arc::clone(&app_context))
-                    .with_name("Name")
+                    .with_name(ComponentName::Chat.to_string())
                     .new_boxed(),
             ),
             (
                 ComponentName::Prompt,
                 PromptWindow::new(Arc::clone(&app_context))
-                    .with_name("Prompt")
+                    .with_name(ComponentName::Prompt.to_string())
                     .with_focused_key(app_context.keymap_config().get_key_of_single_action(
                         ComponentName::CoreWindow,
                         Action::FocusComponent(ComponentName::Prompt),
