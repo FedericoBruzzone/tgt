@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::chat_list_window::MessageEntry;
 use crate::{
     action::Action,
     app_context::AppContext,
@@ -11,7 +12,6 @@ use ratatui::{
         border::{self, Set},
         line,
     },
-    text::Line,
     widgets::{Block, Borders, List, ListDirection, ListItem, ListState, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
@@ -29,7 +29,7 @@ pub struct ChatWindow {
     /// smaller version of itself.
     small_area: bool,
     /// A list of message items to be displayed in the `ChatWindow`.
-    message_list: Vec<String>, // [TODO] Use message_item struct
+    message_list: Vec<MessageEntry>,
     /// The state of the list.
     message_list_state: ListState,
     /// Indicates whether the `ChatWindow` is focused or not.
@@ -49,14 +49,12 @@ impl ChatWindow {
         let action_tx = None;
         let small_area = false;
         let message_list = vec![
-            "My message".to_string(),
-            "Your message".to_string(),
-            "My message".to_string(),
-            "Your message".to_string(),
-            "My message".to_string(),
-            "Your message".to_string(),
-            "My message".to_string(),
-            "Your message".to_string(),
+            MessageEntry::default(),
+            MessageEntry::default(),
+            MessageEntry::default(),
+            MessageEntry::default(),
+            MessageEntry::default(),
+            MessageEntry::default(),
         ];
         let message_list_state = ListState::default();
         let focused = false;
@@ -162,6 +160,9 @@ impl Component for ChatWindow {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+        self.message_list
+            .clone_from(&self.app_context.tg_context().open_chat_messages());
+
         let chat_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(2), Constraint::Percentage(100)])
@@ -191,7 +192,12 @@ impl Component for ChatWindow {
                 self.app_context.style_chat_message_other()
             };
 
-            ListItem::new(Line::from(item.as_str()).alignment(alignment).style(style))
+            // ListItem::new(Line::from(item.as_str()).alignment(alignment).style(style))
+            ListItem::new(
+                item.get_line_styled(&self.app_context)
+                    .alignment(alignment)
+                    .style(style),
+            )
         });
 
         let block = Block::new()

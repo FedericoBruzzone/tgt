@@ -134,8 +134,8 @@ impl TuiBackend {
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn suspend(&mut self) -> Result<(), std::io::Error> {
         self.exit()?;
-        #[cfg(not(windows))]
-        signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
+        // #[cfg(not(windows))]
+        // signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
         Ok(())
     }
     /// Resume the user interface and start processing events.

@@ -38,7 +38,7 @@ lazy_static = "1.4.0"
 # ratatui = "0.26.2"
 ratatui = { git = "https://github.com/Thorongil80/ratatui.git" }
 serde = "1.0.199"
-signal-hook = "0.3.17"
+# signal-hook = "0.3.17"
 tdlib = "0.10.0"
 tokio = { version = "1.37.0", features = ["full"] }
 tracing = "0.1.40"

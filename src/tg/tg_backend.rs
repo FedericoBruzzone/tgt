@@ -1,9 +1,12 @@
+use crate::components::chat_list_window::MessageEntry;
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
-use tdlib::enums::{self, AuthorizationState, ChatList, InputMessageContent, LogStream, Update};
+use tdlib::enums::{
+    self, AuthorizationState, ChatList, InputMessageContent, LogStream, Messages, Update,
+};
 use tdlib::functions;
 use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -60,6 +63,31 @@ impl TgBackend {
         if let Err(e) = functions::load_chats(Some(chat_list), limit, self.client_id).await {
             tracing::error!("Failed to load chats: {e:?}");
             self.full_chats_list = true;
+        }
+    }
+
+    #[allow(clippy::await_holding_lock)]
+    pub async fn get_chat_history(&mut self, from_message_id: i64, offset: i32, limit: i32) {
+        match functions::get_chat_history(
+            *self.app_context.tg_context().open_chat_id(),
+            from_message_id,
+            offset,
+            limit,
+            false,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(Messages::Messages(messages)) => {
+                for message in messages.messages.into_iter().flatten() {
+                    // TODO: Take lock before for
+                    self.app_context
+                        .tg_context()
+                        .open_chat_messages()
+                        .push(MessageEntry::from(&message));
+                }
+            }
+            Err(e) => tracing::error!("Failed to get chat history: {e:?}"),
         }
     }
 

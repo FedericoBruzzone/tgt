@@ -89,6 +89,14 @@ async fn handle_tg_backend_events(
             Event::SendMessage(message) => {
                 app_context.action_tx().send(Action::SendMessage(message))?;
             }
+            Event::GetChatHistory(from_message_id, offset, limit) => {
+                app_context.action_tx().send(Action::GetChatHistory(
+                    from_message_id,
+                    offset,
+                    limit,
+                ))?;
+            }
+
             _ => {}
         }
     }
@@ -228,6 +236,11 @@ pub async fn handle_app_actions(
             }
             Action::SendMessage(ref message) => {
                 tg_backend.send_message(message.to_string()).await;
+            }
+            Action::GetChatHistory(from_message_id, offset, limit) => {
+                tg_backend
+                    .get_chat_history(from_message_id, offset, limit)
+                    .await;
             }
             _ => {}
         }

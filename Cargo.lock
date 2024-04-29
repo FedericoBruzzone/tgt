@@ -1765,7 +1765,6 @@ dependencies = [
  "lazy_static",
  "ratatui",
  "serde",
- "signal-hook",
  "tdlib",
  "tokio",
  "tracing",

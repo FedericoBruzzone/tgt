@@ -88,6 +88,10 @@ pub enum Action {
     LoadChats(TdChatList, i32),
     /// SendMessage action with a `String`.
     SendMessage(String),
+    /// GetChatHistory action.
+    /// The first parameter is the `from_message_id`, the second parameter
+    /// is the `offset` and the third parameter is the `limit`.
+    GetChatHistory(i64, i32, i32),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),

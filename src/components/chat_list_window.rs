@@ -14,11 +14,11 @@ use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
-use tdlib::enums::{ChatList, MessageContent, UserStatus};
+use tdlib::enums::{ChatList, MessageContent, MessageSender, UserStatus};
 use tdlib::types::FormattedText;
 use tokio::sync::mpsc::UnboundedSender;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct DateTimeEntry {
     pub timestamp: i32,
 }
@@ -37,9 +37,10 @@ impl DateTimeEntry {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct MessageEntry {
     _id: i64,
+    _sender_id: i64,
     content: Line<'static>,
     timestamp: DateTimeEntry,
 }
@@ -103,6 +104,10 @@ impl From<&tdlib::types::Message> for MessageEntry {
     fn from(message: &tdlib::types::Message) -> Self {
         Self {
             _id: message.id,
+            _sender_id: match &message.sender_id {
+                MessageSender::User(user_id) => user_id.user_id,
+                MessageSender::Chat(chat_id) => chat_id.chat_id,
+            },
             content: Self::message_content_line(&message.content),
             timestamp: DateTimeEntry {
                 timestamp: message.date,
@@ -282,6 +287,9 @@ impl ChatListWindow {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.chat_list.get(i) {
                 *self.app_context.tg_context().open_chat_id() = chat.chat_id;
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    event_tx.send(Event::GetChatHistory(0, 0, 100)).unwrap();
+                }
                 self.app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))

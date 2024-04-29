@@ -34,6 +34,10 @@ pub enum Event {
     LoadChats(TdChatList, i32),
     /// Send message event with a `String`.
     SendMessage(String),
+    /// Get chat history event.
+    /// The first parameter is the `from_message_id`, the second parameter
+    /// is the `offset` and the third parameter is the `limit`.
+    GetChatHistory(i64, i32, i32),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -151,6 +155,13 @@ impl Display for Event {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)
             }
             Event::SendMessage(s) => write!(f, "SendMessage({})", s),
+            Event::GetChatHistory(from_message_id, offset, limit) => {
+                write!(
+                    f,
+                    "GetChatHistory({}, {}, {})",
+                    from_message_id, offset, limit
+                )
+            }
         }
     }
 }

@@ -36,6 +36,7 @@ pub struct TgContext {
     pub supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
 
     open_chat_id: Mutex<i64>,
+    open_chat_messages: Mutex<Vec<MessageEntry>>,
 }
 
 impl TgContext {
@@ -68,6 +69,9 @@ impl TgContext {
     }
     pub fn open_chat_id(&self) -> MutexGuard<'_, i64> {
         self.open_chat_id.lock().unwrap()
+    }
+    pub fn open_chat_messages(&self) -> MutexGuard<'_, Vec<MessageEntry>> {
+        self.open_chat_messages.lock().unwrap()
     }
     pub fn event_tx(&self) -> MutexGuard<'_, Option<UnboundedSender<Event>>> {
         self.event_tx.lock().unwrap()
