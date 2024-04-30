@@ -84,10 +84,16 @@ pub enum Action {
     /// Paste action with a `String`.
     Paste(String),
 
+    /// GetMe action.
+    GetMe,
     /// LoadChats action with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
     /// SendMessage action with a `String`.
     SendMessage(String),
+    /// Prepare chat history action.
+    /// We need to call this function because telegram the first time we want to
+    /// get the chat history send only one message.
+    PrepareChatHistory,
     /// GetChatHistory action.
     /// The first parameter is the `from_message_id`, the second parameter
     /// is the `offset` and the third parameter is the `limit`.

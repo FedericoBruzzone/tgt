@@ -181,7 +181,7 @@ mod tests {
         let theme_config = crate::configs::custom::theme_custom::ThemeConfig::default();
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 5);
-        assert_eq!(theme_config.chat.len(), 4);
+        assert_eq!(theme_config.chat.len(), 6);
         assert_eq!(theme_config.prompt.len(), 4);
         assert_eq!(theme_config.status_bar.len(), 9);
         assert_eq!(theme_config.title_bar.len(), 4);
@@ -403,7 +403,7 @@ mod tests {
         theme_config = theme_config.merge(Some(theme_raw));
         assert_eq!(theme_config.common.len(), 2);
         assert_eq!(theme_config.chat_list.len(), 5);
-        assert_eq!(theme_config.chat.len(), 4);
+        assert_eq!(theme_config.chat.len(), 6);
         assert_eq!(theme_config.prompt.len(), 4);
         assert_eq!(theme_config.status_bar.len(), 9);
         assert_eq!(theme_config.title_bar.len(), 4);

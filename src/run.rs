@@ -34,6 +34,7 @@ pub async fn run_app(
     tg_backend.set_logging().await;
     tg_backend.handle_authorization_state().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
+    tg_backend.get_me().await;
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
@@ -88,6 +89,9 @@ async fn handle_tg_backend_events(
             }
             Event::SendMessage(message) => {
                 app_context.action_tx().send(Action::SendMessage(message))?;
+            }
+            Event::PrepareChatHistory => {
+                app_context.action_tx().send(Action::PrepareChatHistory)?;
             }
             Event::GetChatHistory(from_message_id, offset, limit) => {
                 app_context.action_tx().send(Action::GetChatHistory(
@@ -237,9 +241,11 @@ pub async fn handle_app_actions(
             Action::SendMessage(ref message) => {
                 tg_backend.send_message(message.to_string()).await;
             }
-            Action::GetChatHistory(from_message_id, offset, limit) => {
+            Action::PrepareChatHistory => {
                 tg_backend.prepare_to_get_chat_history().await;
-                sleep(std::time::Duration::from_millis(100));
+                sleep(std::time::Duration::from_millis(1000));
+            }
+            Action::GetChatHistory(from_message_id, offset, limit) => {
                 tg_backend
                     .get_chat_history(from_message_id, offset, limit)
                     .await;

@@ -3,9 +3,8 @@ use crate::app_context::AppContext;
 use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea};
 use crate::event::Event;
-use chrono::{DateTime, Utc};
+use crate::tg::message_entry::MessageEntry;
 use ratatui::layout::Rect;
-use ratatui::style::{Modifier, Style};
 use ratatui::symbols::border::PLAIN;
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::block::{Block, Title};
@@ -13,108 +12,9 @@ use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
 use std::sync::Arc;
-use std::time::{Duration, UNIX_EPOCH};
-use tdlib::enums::{ChatList, MessageContent, MessageSender, UserStatus};
-use tdlib::types::FormattedText;
+use tdlib::enums::{ChatList, UserStatus};
 use tokio::sync::mpsc::UnboundedSender;
 
-#[derive(Debug, Default, Clone)]
-pub struct DateTimeEntry {
-    pub timestamp: i32,
-}
-impl DateTimeEntry {
-    pub fn convert_time(timestamp: i32) -> String {
-        let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
-        let datetime = DateTime::<Utc>::from(d);
-        datetime.format("%Y-%m-%d").to_string()
-    }
-
-    pub fn get_span_styled(&self, app_context: &AppContext) -> Span {
-        Span::styled(
-            Self::convert_time(self.timestamp),
-            app_context.style_chat_list_item_message_timestamp(),
-        )
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct MessageEntry {
-    _id: i64,
-    _sender_id: i64,
-    content: Line<'static>,
-    timestamp: DateTimeEntry,
-}
-impl MessageEntry {
-    pub fn get_line_styled(&self, app_context: &AppContext) -> Line<'static> {
-        Line::from(Span::styled(
-            format!("{}", self.content),
-            app_context.style_chat_list_item_message_content(),
-        ))
-    }
-
-    fn message_content_line(content: &MessageContent) -> Line<'static> {
-        match content {
-            MessageContent::MessageText(m) => Self::format_message_content(&m.text),
-            _ => Line::from(""),
-        }
-    }
-
-    fn format_message_content(message: &FormattedText) -> Line<'static> {
-        let text = &message.text;
-        let entities = &message.entities;
-
-        if entities.is_empty() {
-            return Line::from(Span::raw(text.clone()));
-        }
-
-        let mut message_vec = Vec::new();
-        entities.iter().for_each(|e| {
-            let offset = e.offset as usize;
-            let length = e.length as usize;
-            message_vec.push(Span::raw(text.chars().take(offset).collect::<String>()));
-            match &e.r#type {
-                tdlib::enums::TextEntityType::Italic => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::ITALIC),
-                    ));
-                }
-                tdlib::enums::TextEntityType::Bold => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
-                }
-                tdlib::enums::TextEntityType::Underline => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
-                }
-                _ => {}
-            }
-            message_vec.push(Span::raw(
-                text.chars().skip(offset + length).collect::<String>(),
-            ));
-        });
-        Line::from(message_vec)
-    }
-}
-impl From<&tdlib::types::Message> for MessageEntry {
-    fn from(message: &tdlib::types::Message) -> Self {
-        Self {
-            _id: message.id,
-            _sender_id: match &message.sender_id {
-                MessageSender::User(user_id) => user_id.user_id,
-                MessageSender::Chat(chat_id) => chat_id.chat_id,
-            },
-            content: Self::message_content_line(&message.content),
-            timestamp: DateTimeEntry {
-                timestamp: message.date,
-            },
-        }
-    }
-}
 #[derive(Debug)]
 pub struct ChatListEntry {
     chat_id: i64,
@@ -173,13 +73,15 @@ impl ChatListEntry {
                 Span::raw(" "),
                 Span::raw(verificated_symbol),
                 Span::raw(" | "),
-                self.last_message
-                    .as_ref()
-                    .map_or_else(Span::default, |e| e.timestamp.get_span_styled(app_context)),
+                self.last_message.as_ref().map_or_else(Span::default, |e| {
+                    e.timestamp().get_span_styled(app_context)
+                }),
             ]),
-            self.last_message
-                .as_ref()
-                .map_or_else(Line::default, |e| e.get_line_styled(app_context)),
+            self.last_message.as_ref().map_or_else(Line::default, |e| {
+                e.get_line_styled_with_only_content(
+                    app_context.style_chat_list_item_message_content(),
+                )
+            }),
         ]);
         entry
     }
@@ -287,13 +189,14 @@ impl ChatListWindow {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.chat_list.get(i) {
                 *self.app_context.tg_context().open_chat_id() = chat.chat_id;
-                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                    event_tx.send(Event::GetChatHistory(0, 0, 100)).unwrap();
-                }
                 self.app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))
                     .unwrap();
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    event_tx.send(Event::PrepareChatHistory).unwrap();
+                    event_tx.send(Event::GetChatHistory(0, 0, 100)).unwrap();
+                }
             }
         }
     }
@@ -349,7 +252,6 @@ impl Component for ChatListWindow {
         } else {
             self.app_context.style_chat_list()
         };
-
         if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
             self.chat_list = items;
         }

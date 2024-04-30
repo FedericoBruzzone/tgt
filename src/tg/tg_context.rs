@@ -1,7 +1,6 @@
+use super::message_entry::MessageEntry;
 use crate::{
-    app_error::AppError,
-    components::chat_list_window::{ChatListEntry, MessageEntry},
-    event::Event,
+    app_error::AppError, components::chat_list_window::ChatListEntry, event::Event,
     tg::ordered_chat::OrderedChat,
 };
 use std::{
@@ -19,22 +18,21 @@ use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug, Default)]
 pub struct TgContext {
-    event_tx: Mutex<Option<UnboundedSender<Event>>>,
+    users: Mutex<HashMap<i64, User>>,
+    basic_groups: Mutex<HashMap<i64, BasicGroup>>,
+    supergroups: Mutex<HashMap<i64, Supergroup>>,
+    secret_chats: Mutex<HashMap<i32, SecretChat>>,
 
-    pub users: Mutex<HashMap<i64, User>>,
-    pub basic_groups: Mutex<HashMap<i64, BasicGroup>>,
-    pub supergroups: Mutex<HashMap<i64, Supergroup>>,
-    pub secret_chats: Mutex<HashMap<i32, SecretChat>>,
-
-    pub chats: Mutex<HashMap<i64, Chat>>,
+    chats: Mutex<HashMap<i64, Chat>>,
     // Only ordered
-    pub chats_index: Mutex<BTreeSet<OrderedChat>>,
-    pub have_full_main_chat_list: bool,
+    chats_index: Mutex<BTreeSet<OrderedChat>>,
 
-    pub users_full_info: Mutex<HashMap<i64, UserFullInfo>>,
-    pub basic_groups_full_info: Mutex<HashMap<i64, BasicGroupFullInfo>>,
-    pub supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
+    users_full_info: Mutex<HashMap<i64, UserFullInfo>>,
+    basic_groups_full_info: Mutex<HashMap<i64, BasicGroupFullInfo>>,
+    supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
 
+    event_tx: Mutex<Option<UnboundedSender<Event>>>,
+    me: Mutex<i64>,
     open_chat_id: Mutex<i64>,
     open_chat_messages: Mutex<Vec<MessageEntry>>,
 }
@@ -76,11 +74,26 @@ impl TgContext {
     pub fn event_tx(&self) -> MutexGuard<'_, Option<UnboundedSender<Event>>> {
         self.event_tx.lock().unwrap()
     }
+    pub fn me(&self) -> MutexGuard<'_, i64> {
+        self.me.lock().unwrap()
+    }
+
+    pub fn set_me(&self, me: i64) {
+        *self.me() = me;
+    }
+
     pub fn set_event_tx(&self, event_tx: UnboundedSender<Event>) {
         *self.event_tx() = Some(event_tx);
     }
 
-    pub fn get_name_of_open_chat(&self) -> Option<String> {
+    pub fn get_name_of_chat_id(&self, chat_id: i64) -> Option<String> {
+        if let Some(chat) = self.chats().get(&chat_id) {
+            return Some(chat.title.clone());
+        }
+        None
+    }
+
+    pub fn get_name_of_open_chat_id(&self) -> Option<String> {
         if let Some(chat) = self.chats().get(&self.open_chat_id()) {
             return Some(chat.title.clone());
         }

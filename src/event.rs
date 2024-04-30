@@ -30,10 +30,16 @@ pub enum Event {
     /// Update area event with a `Rect` struct.
     UpdateArea(Rect),
 
+    /// GetMe event.
+    GetMe,
     /// Load chats event with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
     /// Send message event with a `String`.
     SendMessage(String),
+    /// Prepare chat history event.
+    /// We need to call this function because telegram the first time we want to
+    /// get the chat history send only one message.
+    PrepareChatHistory,
     /// Get chat history event.
     /// The first parameter is the `from_message_id`, the second parameter
     /// is the `offset` and the third parameter is the `limit`.
@@ -151,10 +157,12 @@ impl Display for Event {
             Event::Mouse(mouse) => write!(f, "Mouse({:?})", mouse),
             Event::UpdateArea(area) => write!(f, "UpdateArea({:?})", area),
             Event::Paste(s) => write!(f, "Paste({})", s),
+            Event::GetMe => write!(f, "GetMe"),
             Event::LoadChats(chat_list, limit) => {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)
             }
             Event::SendMessage(s) => write!(f, "SendMessage({})", s),
+            Event::PrepareChatHistory => write!(f, "PrepareChatHistory"),
             Event::GetChatHistory(from_message_id, offset, limit) => {
                 write!(
                     f,

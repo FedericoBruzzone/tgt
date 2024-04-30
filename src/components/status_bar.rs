@@ -121,7 +121,7 @@ impl Component for StatusBar {
         let selected_chat = self
             .app_context
             .tg_context()
-            .get_name_of_open_chat()
+            .get_name_of_open_chat_id()
             .unwrap_or_default();
         let text = vec![Line::from(vec![
             Span::styled(

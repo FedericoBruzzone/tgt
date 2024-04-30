@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
-use super::chat_list_window::MessageEntry;
 use crate::{
     action::Action,
     app_context::AppContext,
     components::component_traits::{Component, HandleFocus, HandleSmallArea},
+    tg::message_entry::MessageEntry,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -12,8 +10,10 @@ use ratatui::{
         border::{self, Set},
         line,
     },
+    text::{Line, Span},
     widgets::{Block, Borders, List, ListDirection, ListItem, ListState, Paragraph},
 };
+use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
 /// `ChatWindow` is a struct that represents a window for displaying a chat.
@@ -48,14 +48,7 @@ impl ChatWindow {
         let name = "".to_string();
         let action_tx = None;
         let small_area = false;
-        let message_list = vec![
-            MessageEntry::default(),
-            MessageEntry::default(),
-            MessageEntry::default(),
-            MessageEntry::default(),
-            MessageEntry::default(),
-            MessageEntry::default(),
-        ];
+        let message_list = vec![];
         let message_list_state = ListState::default();
         let focused = false;
         ChatWindow {
@@ -179,24 +172,25 @@ impl Component for ChatWindow {
         } else {
             self.app_context.style_chat()
         };
+        let items = self.message_list.iter().map(|me| {
+            let (name_style, content_style, alignment) =
+                if me.sender_id() == *self.app_context.tg_context().me() {
+                    (
+                        self.app_context.style_chat_message_myself_name(),
+                        self.app_context.style_chat_message_myself_content(),
+                        Alignment::Right,
+                    )
+                } else {
+                    (
+                        self.app_context.style_chat_message_other_name(),
+                        self.app_context.style_chat_message_other_content(),
+                        Alignment::Left,
+                    )
+                };
 
-        let items = self.message_list.iter().enumerate().map(|(i, item)| {
-            let alignment = if i % 2 == 0 {
-                Alignment::Right
-            } else {
-                Alignment::Left
-            };
-            let style = if i % 2 == 0 {
-                self.app_context.style_chat_message_myself()
-            } else {
-                self.app_context.style_chat_message_other()
-            };
-
-            // ListItem::new(Line::from(item.as_str()).alignment(alignment).style(style))
             ListItem::new(
-                item.get_line_styled(&self.app_context)
-                    .alignment(alignment)
-                    .style(style),
+                me.get_text_styled(&self.app_context, name_style, content_style)
+                    .alignment(alignment),
             )
         });
 
@@ -224,17 +218,17 @@ impl Component for ChatWindow {
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .style(self.app_context.style_chat())
             .title(self.name.as_str());
-        let header = Paragraph::new(
+        let header = Paragraph::new(Line::from(vec![Span::styled(
             self.app_context
                 .tg_context()
-                .get_name_of_open_chat()
+                .get_name_of_open_chat_id()
                 .unwrap_or_default(),
-        )
+            self.app_context.style_chat_chat_name(),
+        )]))
         .block(block_header)
-        .style(self.app_context.style_chat_chat_name())
         .alignment(Alignment::Center);
 
-        frame.render_widget(header, area);
+        frame.render_widget(header, chat_layout[0]);
         frame.render_stateful_widget(list, chat_layout[1], &mut self.message_list_state);
 
         Ok(())

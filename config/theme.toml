@@ -4,10 +4,10 @@ white = "#ffffff"
 background = "#000000"
 primary = "#00548e"
 primary_variant = "#0073b0"
-primary_light = "#b2e3f7"
-secondary = "#ca2504"
-secondary_variant = "#e33610"
-secondary_light = "#ffcbbb"
+primary_light = "#94dbf7"
+secondary = "#ca3f04"
+secondary_variant = "#e06819"
+secondary_light = "#fcac77"
 ternary = "#696969"
 ternary_variant = "#808080"
 ternary_light = "#6e7e85"
@@ -30,8 +30,10 @@ item_message_timestamp = { fg = "ternary_light", bg = "background", bold = false
 [chat]
 self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
 chat_name = { fg = "secondary", bg = "background", bold = true, underline = false, italic = false }
-message_myself = { fg = "primary_light", bg = "ternary", bold = false, underline = false, italic = false }
-message_other = { fg = "secondary_light", bg = "ternary_variant", bold = false, underline = false, italic = false }
+message_myself_name = { fg = "primary_light", bg = "background", bold = true, underline = false, italic = false }
+message_other_name = { fg = "secondary_light", bg = "background", bold = true, underline = false, italic = false }
+message_myself_content = { fg = "primary_variant", bg = "background", bold = false, underline = false, italic = false }
+message_other_content = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
 
 [prompt]
 self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }

@@ -228,8 +228,18 @@ impl AppContext {
     // ===== CHAT =====
     theme_style_generate!(style_chat, chat, self);
     theme_style_generate!(style_chat_chat_name, chat, chat_name);
-    theme_style_generate!(style_chat_message_myself, chat, message_myself);
-    theme_style_generate!(style_chat_message_other, chat, message_other);
+    theme_style_generate!(style_chat_message_myself_name, chat, message_myself_name);
+    theme_style_generate!(style_chat_message_other_name, chat, message_other_name);
+    theme_style_generate!(
+        style_chat_message_myself_content,
+        chat,
+        message_myself_content
+    );
+    theme_style_generate!(
+        style_chat_message_other_content,
+        chat,
+        message_other_content
+    );
 
     // ===== PROMPT =====
     theme_style_generate!(style_prompt, prompt, self);

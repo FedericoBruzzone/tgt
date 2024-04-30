@@ -1,16 +1,17 @@
-use crate::components::chat_list_window::MessageEntry;
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib::enums::{
-    self, AuthorizationState, ChatList, InputMessageContent, LogStream, Messages, Update,
+    self, AuthorizationState, ChatList, InputMessageContent, LogStream, Messages, Update, User,
 };
 use tdlib::functions;
 use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
+
+use super::message_entry::MessageEntry;
 
 pub struct TgBackend {
     pub handle_updates: JoinHandle<()>,
@@ -55,6 +56,15 @@ impl TgBackend {
         })
     }
 
+    pub async fn get_me(&mut self) {
+        match functions::get_me(self.client_id).await {
+            Ok(User::User(me)) => {
+                self.app_context.tg_context().set_me(me.id);
+            }
+            Err(error) => tracing::error!("Failed to get me: {error:?}"),
+        }
+    }
+
     pub async fn load_chats(&mut self, chat_list: ChatList, limit: i32) {
         if self.full_chats_list {
             return;
@@ -67,6 +77,7 @@ impl TgBackend {
     }
 
     #[allow(clippy::await_holding_lock)]
+    // By default telegram send us only one message the first time
     pub async fn prepare_to_get_chat_history(&mut self) {
         match functions::get_chat_history(
             *self.app_context.tg_context().open_chat_id(),
@@ -470,7 +481,7 @@ impl TgBackend {
                         String::new(),
                         false,
                         false,
-                        false,
+                        false, // true,
                         false,
                         env!("API_ID").parse().unwrap(),
                         env!("API_HASH").into(),
