@@ -38,7 +38,6 @@ lazy_static = "1.4.0"
 # ratatui = "0.26.2"
 ratatui = { git = "https://github.com/Thorongil80/ratatui.git" }
 serde = "1.0.199"
-# signal-hook = "0.3.17"
 tdlib = "0.10.0"
 tokio = { version = "1.37.0", features = ["full"] }
 tracing = "0.1.40"
@@ -47,6 +46,8 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tracing-appender = "0.2"
 arboard = { version = "3.4.0", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.38"
+ratatui-image = "1.0.0"
+image = "0.24.5"
 
 [profile.dev]
 

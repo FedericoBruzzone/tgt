@@ -230,6 +230,28 @@ impl Component for ChatWindow {
 
         frame.render_widget(header, chat_layout[0]);
         frame.render_stateful_widget(list, chat_layout[1], &mut self.message_list_state);
+        // if !self.message_list.is_empty() {
+        //     frame.render_stateful_widget(list, chat_layout[1], &mut self.message_list_state);
+        // } else {
+        //     let mut picker = Picker::new((8, 12));
+        //     picker.guess_protocol();
+        //     let dyn_img = image::io::Reader::open(
+        //         project_dir()
+        //             .unwrap()
+        //             .join("imgs")
+        //             .join("logo.png")
+        //             .to_string_lossy()
+        //             .to_string(),
+        //     )
+        //     .unwrap()
+        //     .decode()
+        //     .unwrap();
+        //     let image = picker.new_resize_protocol(dyn_img);
+        //     let statefull_image = StatefulImage::new(None);
+        //     let mut render_state_image: Box<dyn StatefulProtocol> = image;
+        //
+        //     frame.render_stateful_widget(statefull_image, chat_layout[1], &mut render_state_image);
+        // }
 
         Ok(())
     }
