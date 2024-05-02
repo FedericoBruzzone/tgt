@@ -4,7 +4,7 @@ use crate::{
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
-use std::{collections::HashMap, io, sync::Arc, thread::sleep, time::Instant};
+use std::{collections::HashMap, io, sync::Arc, time::Instant};
 use tdlib::{enums::ChatList, functions};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -33,39 +33,39 @@ pub async fn run_app(
     tg_backend.start();
     tg_backend.set_logging().await;
     tg_backend.handle_authorization_state().await;
-    tg_backend.load_chats(ChatList::Main, 30).await;
     tg_backend.get_me().await;
+    tg_backend.load_chats(ChatList::Main, 30).await;
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
 
     // Main loop
-    loop {
-        while tg_backend.have_authorization {
-            handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
-            handle_tg_backend_events(Arc::clone(&app_context), tg_backend).await?;
-            handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
+    while tg_backend.have_authorization {
+        handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
+        handle_tg_backend_events(Arc::clone(&app_context), tg_backend).await?;
+        handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
 
-            if app_context.quit_acquire() {
-                tg_backend.need_quit = true;
-                tg_backend.have_authorization = false;
-                match functions::close(tg_backend.client_id).await {
-                    Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
-                    Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
-                }
-                match tui_backend.exit() {
-                    Ok(_) => tracing::info!("Tui backend exited"),
-                    Err(e) => tracing::error!("Error exiting tui backend: {}", e),
-                }
-                tg_backend.handle_authorization_state().await;
-
-                // Clear the terminal and move the cursor to the top left corner
-                io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
-
-                return Ok(());
+        if app_context.quit_acquire() {
+            tg_backend.need_quit = true;
+            tg_backend.have_authorization = false;
+            match functions::close(tg_backend.client_id).await {
+                Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
+                Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
             }
+            match tui_backend.exit() {
+                Ok(_) => tracing::info!("Tui backend exited"),
+                Err(e) => tracing::error!("Error exiting tui backend: {}", e),
+            }
+            tg_backend.handle_authorization_state().await;
+
+            // Clear the terminal and move the cursor to the top left corner
+            io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
+
+            return Ok(());
         }
     }
+
+    Ok(())
 }
 /// Handle incoming events from the Telegram backend and produce actions if
 /// necessary.
@@ -242,12 +242,18 @@ pub async fn handle_app_actions(
                 tg_backend.send_message(message.to_string()).await;
             }
             Action::PrepareChatHistory => {
-                tg_backend.prepare_to_get_chat_history().await;
-                sleep(std::time::Duration::from_millis(1000));
+                tg_backend
+                    .prepare_to_get_chat_history(app_context.tg_context().open_chat_id())
+                    .await;
             }
             Action::GetChatHistory(from_message_id, offset, limit) => {
                 tg_backend
-                    .get_chat_history(from_message_id, offset, limit)
+                    .get_chat_history(
+                        app_context.tg_context().open_chat_id(),
+                        from_message_id,
+                        offset,
+                        limit,
+                    )
                     .await;
             }
             _ => {}

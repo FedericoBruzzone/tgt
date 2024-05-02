@@ -3,6 +3,7 @@ use crate::{
     app_error::AppError, components::chat_list_window::ChatListEntry, event::Event,
     tg::ordered_chat::OrderedChat,
 };
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::{
     collections::{BTreeSet, HashMap},
     sync::{Mutex, MutexGuard},
@@ -32,9 +33,12 @@ pub struct TgContext {
     supergroups_full_info: Mutex<HashMap<i64, SupergroupFullInfo>>,
 
     event_tx: Mutex<Option<UnboundedSender<Event>>>,
-    me: Mutex<i64>,
-    open_chat_id: Mutex<i64>,
+    me: AtomicI64,
+    open_chat_id: AtomicI64,
     open_chat_messages: Mutex<Vec<MessageEntry>>,
+
+    /// The chat id from which to start loading the chat history.
+    from_message_id: Mutex<i64>,
 }
 
 impl TgContext {
@@ -65,8 +69,8 @@ impl TgContext {
     pub fn supergroups_full_info(&self) -> MutexGuard<'_, HashMap<i64, SupergroupFullInfo>> {
         self.supergroups_full_info.lock().unwrap()
     }
-    pub fn open_chat_id(&self) -> MutexGuard<'_, i64> {
-        self.open_chat_id.lock().unwrap()
+    pub fn open_chat_id(&self) -> i64 {
+        self.open_chat_id.load(Ordering::Relaxed)
     }
     pub fn open_chat_messages(&self) -> MutexGuard<'_, Vec<MessageEntry>> {
         self.open_chat_messages.lock().unwrap()
@@ -74,26 +78,41 @@ impl TgContext {
     pub fn event_tx(&self) -> MutexGuard<'_, Option<UnboundedSender<Event>>> {
         self.event_tx.lock().unwrap()
     }
-    pub fn me(&self) -> MutexGuard<'_, i64> {
-        self.me.lock().unwrap()
+    pub fn me(&self) -> i64 {
+        self.me.load(Ordering::Relaxed)
+    }
+    pub fn from_message_id(&self) -> MutexGuard<'_, i64> {
+        self.from_message_id.lock().unwrap()
+    }
+
+    pub fn set_open_chat_id(&self, chat_id: i64) {
+        self.open_chat_id.store(chat_id, Ordering::Relaxed);
+    }
+
+    pub fn clear_open_chat_messages(&self) {
+        *self.open_chat_messages() = Vec::new();
+    }
+
+    pub fn set_from_message_id(&self, from_message_id: i64) {
+        *self.from_message_id() = from_message_id;
     }
 
     pub fn set_me(&self, me: i64) {
-        *self.me() = me;
+        self.me.store(me, Ordering::Relaxed);
     }
 
     pub fn set_event_tx(&self, event_tx: UnboundedSender<Event>) {
         *self.event_tx() = Some(event_tx);
     }
 
-    pub fn get_name_of_chat_id(&self, chat_id: i64) -> Option<String> {
+    pub fn name_of_chat_id(&self, chat_id: i64) -> Option<String> {
         if let Some(chat) = self.chats().get(&chat_id) {
             return Some(chat.title.clone());
         }
         None
     }
 
-    pub fn get_name_of_open_chat_id(&self) -> Option<String> {
+    pub fn name_of_open_chat_id(&self) -> Option<String> {
         if let Some(chat) = self.chats().get(&self.open_chat_id()) {
             return Some(chat.title.clone());
         }

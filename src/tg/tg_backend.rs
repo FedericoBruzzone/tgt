@@ -78,26 +78,23 @@ impl TgBackend {
 
     #[allow(clippy::await_holding_lock)]
     // By default telegram send us only one message the first time
-    pub async fn prepare_to_get_chat_history(&mut self) {
-        match functions::get_chat_history(
-            *self.app_context.tg_context().open_chat_id(),
-            0,
-            0,
-            100,
-            false,
-            self.client_id,
-        )
-        .await
-        {
+    pub async fn prepare_to_get_chat_history(&mut self, chat_id: i64) {
+        match functions::get_chat_history(chat_id, 0, 0, 100, false, self.client_id).await {
             Ok(_m) => {}
             Err(_e) => {}
         }
     }
 
     #[allow(clippy::await_holding_lock)]
-    pub async fn get_chat_history(&mut self, from_message_id: i64, offset: i32, limit: i32) {
+    pub async fn get_chat_history(
+        &mut self,
+        chat_id: i64,
+        from_message_id: i64,
+        offset: i32,
+        limit: i32,
+    ) {
         match functions::get_chat_history(
-            *self.app_context.tg_context().open_chat_id(),
+            chat_id,
             from_message_id,
             offset,
             limit,
@@ -107,12 +104,18 @@ impl TgBackend {
         .await
         {
             Ok(Messages::Messages(messages)) => {
-                for message in messages.messages.into_iter().flatten() {
+                let message_flatten = messages.messages.into_iter().flatten();
+                for message in message_flatten.clone() {
                     // TODO: Take lock before for
                     self.app_context
                         .tg_context()
                         .open_chat_messages()
                         .push(MessageEntry::from(&message));
+                }
+                if let Some(message) = message_flatten.last() {
+                    self.app_context
+                        .tg_context()
+                        .set_from_message_id(message.id);
                 }
             }
             Err(e) => tracing::error!("Failed to get chat history: {e:?}"),
@@ -130,7 +133,7 @@ impl TgBackend {
             clear_draft: true,
         });
         if let Err(e) = functions::send_message(
-            *self.app_context.tg_context().open_chat_id(),
+            self.app_context.tg_context().open_chat_id(),
             0,
             None,
             None,
@@ -461,6 +464,20 @@ impl TgBackend {
                                 update_supergroup_full_info.supergroup_full_info,
                             );
                         }
+                        Update::NewMessage(update_new_message) => {
+                            let message = update_new_message.message;
+                            let chat_id = message.chat_id;
+                            if let Some(chat) = tg_context.chats().get_mut(&chat_id) {
+                                chat.last_message = Some(message.clone());
+                                let positions = chat.positions.clone();
+                                Self::set_chat_positions(tg_context.chats_index(), chat, positions);
+                            }
+                            if tg_context.open_chat_id() == chat_id {
+                                tg_context
+                                    .open_chat_messages()
+                                    .insert(0, MessageEntry::from(&message));
+                            }
+                        }
                         // Too much prints
                         // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
                         _ => {}
@@ -481,7 +498,7 @@ impl TgBackend {
                         String::new(),
                         false,
                         false,
-                        false, // true,
+                        true, // Cache chats
                         false,
                         env!("API_ID").parse().unwrap(),
                         env!("API_HASH").into(),

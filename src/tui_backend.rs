@@ -161,7 +161,6 @@ impl TuiBackend {
         self
     }
     /// Enable or disable the mouse for the user interface.
-
     /// By default, the mouse is disabled.
     ///
     /// # Arguments

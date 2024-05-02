@@ -56,7 +56,7 @@ impl MessageEntry {
             Line::from(vec![Span::styled(
                 app_context
                     .tg_context()
-                    .get_name_of_chat_id(self.sender_id)
+                    .name_of_chat_id(self.sender_id)
                     .unwrap_or_default(),
                 name_style,
             )]),
@@ -77,7 +77,6 @@ impl MessageEntry {
         let entities = &message.entities;
 
         if entities.is_empty() {
-            tracing::info!("entities is empty {:?}", text);
             return Line::from(Span::raw(text.clone()));
         }
 

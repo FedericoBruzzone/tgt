@@ -2,6 +2,7 @@ use crate::{
     action::Action,
     app_context::AppContext,
     components::component_traits::{Component, HandleFocus, HandleSmallArea},
+    event::Event,
     tg::message_entry::MessageEntry,
 };
 use ratatui::{
@@ -77,6 +78,19 @@ impl ChatWindow {
     fn next(&mut self) {
         let i = match self.message_list_state.selected() {
             Some(i) => {
+                if i == self.message_list.len() / 2 {
+                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                        let from_message_id = *self.app_context.tg_context().from_message_id();
+                        event_tx
+                            .send(Event::GetChatHistory(from_message_id, 0, 100))
+                            .unwrap();
+
+                        self.app_context.tg_context().set_from_message_id(
+                            self.app_context.tg_context().open_chat_messages().len() as i64,
+                        );
+                    }
+                }
+
                 if i == 0 {
                     0
                 } else {
@@ -92,6 +106,19 @@ impl ChatWindow {
     fn previous(&mut self) {
         let i = match self.message_list_state.selected() {
             Some(i) => {
+                if i == self.message_list.len() / 2 {
+                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                        let from_message_id = *self.app_context.tg_context().from_message_id();
+                        event_tx
+                            .send(Event::GetChatHistory(from_message_id, 0, 100))
+                            .unwrap();
+
+                        self.app_context.tg_context().set_from_message_id(
+                            self.app_context.tg_context().open_chat_messages().len() as i64,
+                        );
+                    }
+                }
+
                 if i >= self.message_list.len() - 1 {
                     i
                 } else {
@@ -153,6 +180,10 @@ impl Component for ChatWindow {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+        if !self.focused {
+            self.message_list_state.select(None);
+        }
+
         self.message_list
             .clone_from(&self.app_context.tg_context().open_chat_messages());
 
@@ -174,7 +205,7 @@ impl Component for ChatWindow {
         };
         let items = self.message_list.iter().map(|me| {
             let (name_style, content_style, alignment) =
-                if me.sender_id() == *self.app_context.tg_context().me() {
+                if me.sender_id() == self.app_context.tg_context().me() {
                     (
                         self.app_context.style_chat_message_myself_name(),
                         self.app_context.style_chat_message_myself_content(),
@@ -221,7 +252,7 @@ impl Component for ChatWindow {
         let header = Paragraph::new(Line::from(vec![Span::styled(
             self.app_context
                 .tg_context()
-                .get_name_of_open_chat_id()
+                .name_of_open_chat_id()
                 .unwrap_or_default(),
             self.app_context.style_chat_chat_name(),
         )]))

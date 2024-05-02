@@ -12,6 +12,7 @@ use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
 use std::sync::Arc;
+use std::thread::sleep;
 use tdlib::enums::{ChatList, UserStatus};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -188,13 +189,15 @@ impl ChatListWindow {
     fn confirm_selection(&mut self) {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.chat_list.get(i) {
-                *self.app_context.tg_context().open_chat_id() = chat.chat_id;
+                self.app_context.tg_context().set_open_chat_id(chat.chat_id);
+                self.app_context.tg_context().clear_open_chat_messages();
                 self.app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))
                     .unwrap();
                 if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                     event_tx.send(Event::PrepareChatHistory).unwrap();
+                    sleep(std::time::Duration::from_millis(100));
                     event_tx.send(Event::GetChatHistory(0, 0, 100)).unwrap();
                 }
             }
