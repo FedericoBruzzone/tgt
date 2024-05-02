@@ -112,7 +112,7 @@ impl TgContext {
         if let Some(user) = self.users().get(&user_id) {
             match user.usernames.as_ref() {
                 Some(usernames) => {
-                    if let Some(username) = usernames.active_usernames.get(0) {
+                    if let Some(username) = usernames.active_usernames.first() {
                         return Some(username.clone());
                     }
                 }
