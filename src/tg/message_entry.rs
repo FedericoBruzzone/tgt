@@ -6,6 +6,8 @@ use std::time::{Duration, UNIX_EPOCH};
 use tdlib::enums::{MessageContent, MessageSender};
 use tdlib::types::FormattedText;
 
+use super::td_enums::TdMessageSender;
+
 #[derive(Debug, Default, Clone)]
 pub struct DateTimeEntry {
     pub timestamp: i32,
@@ -25,10 +27,10 @@ impl DateTimeEntry {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct MessageEntry {
     _id: i64,
-    sender_id: i64,
+    sender_id: TdMessageSender,
     content: Line<'static>,
     timestamp: DateTimeEntry,
 }
@@ -42,7 +44,10 @@ impl MessageEntry {
     }
 
     pub fn sender_id(&self) -> i64 {
-        self.sender_id
+        match self.sender_id {
+            TdMessageSender::User(user_id) => user_id,
+            TdMessageSender::Chat(chat_id) => chat_id,
+        }
     }
 
     pub fn get_text_styled(
@@ -54,10 +59,16 @@ impl MessageEntry {
         let mut entry = Text::default();
         entry.extend(vec![
             Line::from(vec![Span::styled(
-                app_context
-                    .tg_context()
-                    .name_of_chat_id(self.sender_id)
-                    .unwrap_or_default(),
+                match self.sender_id {
+                    TdMessageSender::User(user_id) => app_context
+                        .tg_context()
+                        .try_name_from_chats_or_users(user_id)
+                        .unwrap_or_default(),
+                    TdMessageSender::Chat(chat_id) => app_context
+                        .tg_context()
+                        .name_from_chats(chat_id)
+                        .unwrap_or_default(),
+                },
                 name_style,
             )]),
             self.get_line_styled_with_only_content(content_style),
@@ -118,8 +129,8 @@ impl From<&tdlib::types::Message> for MessageEntry {
         Self {
             _id: message.id,
             sender_id: match &message.sender_id {
-                MessageSender::User(user_id) => user_id.user_id,
-                MessageSender::Chat(chat_id) => chat_id.chat_id,
+                MessageSender::User(user) => TdMessageSender::User(user.user_id),
+                MessageSender::Chat(chat) => TdMessageSender::Chat(chat.chat_id),
             },
             content: Self::message_content_line(&message.content),
             timestamp: DateTimeEntry {

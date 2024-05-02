@@ -3,6 +3,12 @@ use std::hash::Hash;
 use tdlib::{enums::ChatList, types::ChatListFolder};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum TdMessageSender {
+    User(i64),
+    Chat(i64),
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TdChatList {
     Main,
     Archive,

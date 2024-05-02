@@ -203,9 +203,9 @@ impl Component for ChatWindow {
         } else {
             self.app_context.style_chat()
         };
-        let items = self.message_list.iter().map(|me| {
+        let items = self.message_list.iter().map(|message_entry| {
             let (name_style, content_style, alignment) =
-                if me.sender_id() == self.app_context.tg_context().me() {
+                if message_entry.sender_id() == self.app_context.tg_context().me() {
                     (
                         self.app_context.style_chat_message_myself_name(),
                         self.app_context.style_chat_message_myself_content(),
@@ -220,7 +220,8 @@ impl Component for ChatWindow {
                 };
 
             ListItem::new(
-                me.get_text_styled(&self.app_context, name_style, content_style)
+                message_entry
+                    .get_text_styled(&self.app_context, name_style, content_style)
                     .alignment(alignment),
             )
         });

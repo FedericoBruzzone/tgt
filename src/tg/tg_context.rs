@@ -105,7 +105,26 @@ impl TgContext {
         *self.event_tx() = Some(event_tx);
     }
 
-    pub fn name_of_chat_id(&self, chat_id: i64) -> Option<String> {
+    pub fn try_name_from_chats_or_users(&self, user_id: i64) -> Option<String> {
+        if self.name_from_chats(user_id).is_some() {
+            return self.name_from_chats(user_id);
+        }
+        if let Some(user) = self.users().get(&user_id) {
+            match user.usernames.as_ref() {
+                Some(usernames) => {
+                    if let Some(username) = usernames.active_usernames.get(0) {
+                        return Some(username.clone());
+                    }
+                }
+                None => {
+                    return Some(user.first_name.clone());
+                }
+            }
+        }
+        None
+    }
+
+    pub fn name_from_chats(&self, chat_id: i64) -> Option<String> {
         if let Some(chat) = self.chats().get(&chat_id) {
             return Some(chat.title.clone());
         }
