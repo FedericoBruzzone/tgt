@@ -16,7 +16,13 @@ impl DateTimeEntry {
     pub fn convert_time(timestamp: i32) -> String {
         let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
         let datetime = DateTime::<Utc>::from(d);
-        datetime.format("%Y-%m-%d").to_string()
+        if datetime.date_naive() == Utc::now().date_naive() {
+            return datetime.format("Today %H:%M:%S").to_string();
+        }
+        if datetime.date_naive() == (Utc::now() - chrono::Duration::days(1)).date_naive() {
+            return datetime.format("Yesterday %H:%M:%S").to_string();
+        }
+        datetime.format("%Y-%m-%d %H:%M:%S").to_string()
     }
 
     pub fn get_span_styled(&self, app_context: &AppContext) -> Span {
@@ -58,19 +64,23 @@ impl MessageEntry {
     ) -> Text {
         let mut entry = Text::default();
         entry.extend(vec![
-            Line::from(vec![Span::styled(
-                match self.sender_id {
-                    TdMessageSender::User(user_id) => app_context
-                        .tg_context()
-                        .try_name_from_chats_or_users(user_id)
-                        .unwrap_or_default(),
-                    TdMessageSender::Chat(chat_id) => app_context
-                        .tg_context()
-                        .name_from_chats(chat_id)
-                        .unwrap_or_default(),
-                },
-                name_style,
-            )]),
+            Line::from(vec![
+                Span::styled(
+                    match self.sender_id {
+                        TdMessageSender::User(user_id) => app_context
+                            .tg_context()
+                            .try_name_from_chats_or_users(user_id)
+                            .unwrap_or_default(),
+                        TdMessageSender::Chat(chat_id) => app_context
+                            .tg_context()
+                            .name_from_chats(chat_id)
+                            .unwrap_or_default(),
+                    },
+                    name_style,
+                ),
+                Span::raw(" "),
+                self.timestamp.get_span_styled(app_context),
+            ]),
             self.get_line_styled_with_only_content(content_style),
         ]);
         entry
