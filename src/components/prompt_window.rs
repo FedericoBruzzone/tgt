@@ -423,9 +423,13 @@ impl Input {
     /// Convert the text of the `Input` struct to a string.
     fn text_to_string(&mut self) -> String {
         let mut message = String::new();
-        self.text
-            .iter()
-            .for_each(|e| e.iter().for_each(|e| message.push(e.c)));
+        self.text.iter().for_each(|e| {
+            if e.is_empty() {
+                message.push('\n');
+            } else {
+                e.iter().for_each(|e| message.push(e.c))
+            }
+        });
         message
     }
 }
