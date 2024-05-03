@@ -60,6 +60,9 @@ impl Logger {
         );
 
         let file_subscriber = tracing_subscriber::fmt::layer()
+            .with_timer(tracing_subscriber::fmt::time::ChronoLocal::new(
+                "%Y-%m-%dT%H:%M:%S%.6fZ".to_string(),
+            ))
             .with_file(true)
             .with_line_number(true)
             .with_target(true)
