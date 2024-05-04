@@ -64,7 +64,7 @@ impl MessageEntry {
     }
 
     pub fn set_message_content(&mut self, content: &MessageContent) {
-        self.message_content = Self::message_content_line(&content);
+        self.message_content = Self::message_content_line(content);
     }
 
     pub fn get_text_styled(
