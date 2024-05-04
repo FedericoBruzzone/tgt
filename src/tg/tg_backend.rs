@@ -227,6 +227,7 @@ impl TgBackend {
                             }
                         }
                         Update::ChatLastMessage(update_chat) => {
+                            // This update is received also when a message is edited
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.last_message = update_chat.last_message;
@@ -465,19 +466,31 @@ impl TgBackend {
                             );
                         }
                         Update::NewMessage(update_new_message) => {
+                            // New message update only the opened chat in order to have
+                            // in real time the message displayed
                             let message = update_new_message.message;
                             let chat_id = message.chat_id;
-                            if let Some(chat) = tg_context.chats().get_mut(&chat_id) {
-                                chat.last_message = Some(message.clone());
-                                let positions = chat.positions.clone();
-                                Self::set_chat_positions(tg_context.chats_index(), chat, positions);
-                            }
+                            // if let Some(chat) = tg_context.chats().get_mut(&chat_id) {
+                            //     chat.last_message = Some(message.clone());
+                            //     let positions = chat.positions.clone();
+                            //     Self::set_chat_positions(tg_context.chats_index(), chat, positions);
+                            // }
                             if tg_context.open_chat_id() == chat_id {
                                 tg_context
                                     .open_chat_messages()
                                     .insert(0, MessageEntry::from(&message));
                             }
                         }
+                        Update::MessageContent(message) => {
+                            if tg_context.open_chat_id() == message.chat_id {
+                                for m in tg_context.open_chat_messages().iter_mut() {
+                                    if m.id() == message.message_id {
+                                        m.set_message_content(&message.new_content);
+                                    }
+                                }
+                            }
+                        }
+                        Update::MessageEdited(_) => {}
                         // Too much prints
                         // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
                         _ => {}

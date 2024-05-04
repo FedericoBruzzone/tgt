@@ -35,14 +35,21 @@ impl DateTimeEntry {
 
 #[derive(Debug, Clone)]
 pub struct MessageEntry {
-    _id: i64,
+    id: i64,
     sender_id: TdMessageSender,
-    content: Line<'static>,
+    message_content: Line<'static>,
     timestamp: DateTimeEntry,
 }
 impl MessageEntry {
     pub fn get_line_styled_with_only_content(&self, content_style: Style) -> Line<'static> {
-        Line::from(Span::styled(format!("{}", self.content), content_style))
+        Line::from(Span::styled(
+            format!("{}", self.message_content),
+            content_style,
+        ))
+    }
+
+    pub fn id(&self) -> i64 {
+        self.id
     }
 
     pub fn timestamp(&self) -> &DateTimeEntry {
@@ -54,6 +61,10 @@ impl MessageEntry {
             TdMessageSender::User(user_id) => user_id,
             TdMessageSender::Chat(chat_id) => chat_id,
         }
+    }
+
+    pub fn set_message_content(&mut self, content: &MessageContent) {
+        self.message_content = Self::message_content_line(&content);
     }
 
     pub fn get_text_styled(
@@ -137,12 +148,12 @@ impl MessageEntry {
 impl From<&tdlib::types::Message> for MessageEntry {
     fn from(message: &tdlib::types::Message) -> Self {
         Self {
-            _id: message.id,
+            id: message.id,
             sender_id: match &message.sender_id {
                 MessageSender::User(user) => TdMessageSender::User(user.user_id),
                 MessageSender::Chat(chat) => TdMessageSender::Chat(chat.chat_id),
             },
-            content: Self::message_content_line(&message.content),
+            message_content: Self::message_content_line(&message.content),
             timestamp: DateTimeEntry {
                 timestamp: message.date,
             },
