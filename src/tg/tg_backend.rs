@@ -4,10 +4,11 @@ use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib::enums::{
-    self, AuthorizationState, ChatList, InputMessageContent, LogStream, Messages, Update, User,
+    self, AuthorizationState, ChatList, InputMessageContent, LogStream, Messages, OptionValue,
+    Update, User,
 };
 use tdlib::functions;
-use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile};
+use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -147,6 +148,223 @@ impl TgBackend {
         }
     }
 
+    pub async fn close(&self) {
+        match functions::close(self.client_id).await {
+            Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
+            Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
+        }
+    }
+
+    async fn set_online(&self, online: bool) -> Result<(), tdlib::types::Error> {
+        functions::set_option(
+            String::from("online"),
+            Some(OptionValue::Boolean(OptionValueBoolean { value: online })),
+            self.client_id,
+        )
+        .await
+    }
+
+    pub async fn online(&mut self) {
+        match self.set_online(true).await {
+            Ok(_) => tracing::info!("Went online"),
+            Err(error) => tracing::error!("Error going online: {error:?}"),
+        }
+    }
+    pub async fn offline(&mut self) {
+        match self.set_online(false).await {
+            Ok(_) => tracing::info!("Went offline"),
+            Err(error) => tracing::error!("Error going offline: {error:?}"),
+        }
+    }
+
+    pub async fn disable_animated_emoji(&mut self, disable: bool) {
+        match functions::set_option(
+            String::from("disable_animated_emoji"),
+            Some(OptionValue::Boolean(OptionValueBoolean { value: disable })),
+            self.client_id,
+        )
+        .await
+        {
+            Ok(_) => {
+                tracing::info!("Animated emoji set to: {}", disable);
+            }
+            Err(error) => {
+                tracing::error!("Error setting animated emoji: {error:?}");
+            }
+        }
+    }
+
+    pub async fn handle_authorization_state(&mut self) {
+        while let Some(state) = self.auth_rx.recv().await {
+            match state {
+                AuthorizationState::WaitTdlibParameters => {
+                    let response = functions::set_tdlib_parameters(
+                        false,
+                        ".data/tg".into(),
+                        String::new(),
+                        String::new(),
+                        false,
+                        false,
+                        true, // Cache chats
+                        false,
+                        env!("API_ID").parse().unwrap(),
+                        env!("API_HASH").into(),
+                        "en".into(),
+                        "Desktop".into(),
+                        String::new(),
+                        env!("CARGO_PKG_VERSION").into(),
+                        false,
+                        true,
+                        self.client_id,
+                    )
+                    .await;
+
+                    if let Err(error) = response {
+                        println!("{}", error.message);
+                    }
+                }
+                AuthorizationState::WaitPhoneNumber => loop {
+                    let phone_number =
+                        ask_user("Enter your phone number (include the country calling code):");
+                    let response = functions::set_authentication_phone_number(
+                        phone_number,
+                        None,
+                        self.client_id,
+                    )
+                    .await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                },
+                AuthorizationState::WaitOtherDeviceConfirmation(x) => {
+                    println!(
+                        "Please confirm this login link on another device: {}",
+                        x.link
+                    );
+                }
+                AuthorizationState::WaitEmailAddress(_x) => {
+                    let email_address = ask_user("Please enter email address: ");
+                    let response =
+                        functions::set_authentication_email_address(email_address, self.client_id)
+                            .await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                }
+                AuthorizationState::WaitEmailCode(_x) => {
+                    let code = ask_user("Please enter email authentication code: ");
+                    let response = functions::check_authentication_email_code(
+                        enums::EmailAddressAuthentication::Code(
+                            tdlib::types::EmailAddressAuthenticationCode { code },
+                        ),
+                        self.client_id,
+                    )
+                    .await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                }
+                AuthorizationState::WaitCode(_x) => loop {
+                    // x contains info about verification code
+                    let code = ask_user("Enter the verification code:");
+                    let response = functions::check_authentication_code(code, self.client_id).await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                },
+                AuthorizationState::WaitRegistration(_x) => {
+                    // x useless but contains the TOS if we want to show it
+                    let first_name = ask_user("Please enter your first name: ");
+                    let last_name = ask_user("Please enter your last name: ");
+                    functions::register_user(first_name, last_name, self.client_id)
+                        .await
+                        .unwrap();
+                }
+                AuthorizationState::WaitPassword(_x) => {
+                    let password = ask_user("Please enter password: ");
+                    functions::check_authentication_password(password, self.client_id)
+                        .await
+                        .unwrap();
+                }
+                AuthorizationState::Ready => {
+                    // Maybe block all until this state is reached
+                    self.have_authorization = true;
+                    break;
+                }
+                AuthorizationState::LoggingOut => {
+                    self.have_authorization = false;
+                    tracing::info!("Logging out");
+                }
+                AuthorizationState::Closing => {
+                    self.have_authorization = false;
+                    tracing::info!("Closing");
+                }
+                AuthorizationState::Closed => {
+                    tracing::info!("Closed");
+                    if self.need_quit {
+                        self.can_quit.store(true, Ordering::Release);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    fn set_chat_positions(
+        mut chats_index: MutexGuard<'_, BTreeSet<OrderedChat>>,
+        chat: &mut Chat,
+        positions: Vec<ChatPosition>,
+    ) {
+        for position in &chat.positions {
+            if let enums::ChatList::Main = position.list {
+                let is_removed = chats_index.remove(&OrderedChat {
+                    position: position.clone(),
+                    chat_id: chat.id,
+                });
+                assert!(is_removed);
+            }
+        }
+
+        chat.positions = positions;
+
+        for position in &chat.positions {
+            if let enums::ChatList::Main = position.list {
+                let is_inserted = chats_index.insert(OrderedChat {
+                    position: position.clone(),
+                    chat_id: chat.id,
+                });
+                assert!(is_inserted);
+            }
+        }
+    }
+    pub async fn set_logging(&self) {
+        // TODO read data from config file
+
+        // Set a fairly low verbosity level. We mainly do this because tdlib
+        // requires to perform a random request with the client to start
+        // receiving updates for it.
+        functions::set_log_verbosity_level(2, self.client_id)
+            .await
+            .unwrap();
+
+        // Create log file
+        let log_stream_file = LogStreamFile {
+            path: ".data/tdlib.log".into(),
+            max_file_size: 1 << 27,
+            redirect_stderr: false,
+        };
+
+        // Set log stream to file
+        if let Err(error) =
+            functions::set_log_stream(LogStream::File(log_stream_file), self.client_id).await
+        {
+            tracing::error!("Failed to set log stream to file: {error:?}");
+        }
+    }
     pub async fn next(&mut self) -> Option<Event> {
         self.event_rx.try_recv().ok()
     }
@@ -498,178 +716,6 @@ impl TgBackend {
                 }
             }
         });
-    }
-
-    pub async fn handle_authorization_state(&mut self) {
-        while let Some(state) = self.auth_rx.recv().await {
-            match state {
-                AuthorizationState::WaitTdlibParameters => {
-                    let response = functions::set_tdlib_parameters(
-                        false,
-                        ".data/tg".into(),
-                        String::new(),
-                        String::new(),
-                        false,
-                        false,
-                        true, // Cache chats
-                        false,
-                        env!("API_ID").parse().unwrap(),
-                        env!("API_HASH").into(),
-                        "en".into(),
-                        "Desktop".into(),
-                        String::new(),
-                        env!("CARGO_PKG_VERSION").into(),
-                        false,
-                        true,
-                        self.client_id,
-                    )
-                    .await;
-
-                    if let Err(error) = response {
-                        println!("{}", error.message);
-                    }
-                }
-                AuthorizationState::WaitPhoneNumber => loop {
-                    let phone_number =
-                        ask_user("Enter your phone number (include the country calling code):");
-                    let response = functions::set_authentication_phone_number(
-                        phone_number,
-                        None,
-                        self.client_id,
-                    )
-                    .await;
-                    match response {
-                        Ok(_) => break,
-                        Err(e) => println!("{}", e.message),
-                    }
-                },
-                AuthorizationState::WaitOtherDeviceConfirmation(x) => {
-                    println!(
-                        "Please confirm this login link on another device: {}",
-                        x.link
-                    );
-                }
-                AuthorizationState::WaitEmailAddress(_x) => {
-                    let email_address = ask_user("Please enter email address: ");
-                    let response =
-                        functions::set_authentication_email_address(email_address, self.client_id)
-                            .await;
-                    match response {
-                        Ok(_) => break,
-                        Err(e) => println!("{}", e.message),
-                    }
-                }
-                AuthorizationState::WaitEmailCode(_x) => {
-                    let code = ask_user("Please enter email authentication code: ");
-                    let response = functions::check_authentication_email_code(
-                        enums::EmailAddressAuthentication::Code(
-                            tdlib::types::EmailAddressAuthenticationCode { code },
-                        ),
-                        self.client_id,
-                    )
-                    .await;
-                    match response {
-                        Ok(_) => break,
-                        Err(e) => println!("{}", e.message),
-                    }
-                }
-                AuthorizationState::WaitCode(_x) => loop {
-                    // x contains info about verification code
-                    let code = ask_user("Enter the verification code:");
-                    let response = functions::check_authentication_code(code, self.client_id).await;
-                    match response {
-                        Ok(_) => break,
-                        Err(e) => println!("{}", e.message),
-                    }
-                },
-                AuthorizationState::WaitRegistration(_x) => {
-                    // x useless but contains the TOS if we want to show it
-                    let first_name = ask_user("Please enter your first name: ");
-                    let last_name = ask_user("Please enter your last name: ");
-                    functions::register_user(first_name, last_name, self.client_id)
-                        .await
-                        .unwrap();
-                }
-                AuthorizationState::WaitPassword(_x) => {
-                    let password = ask_user("Please enter password: ");
-                    functions::check_authentication_password(password, self.client_id)
-                        .await
-                        .unwrap();
-                }
-                AuthorizationState::Ready => {
-                    // Maybe block all until this state is reached
-                    self.have_authorization = true;
-                    break;
-                }
-                AuthorizationState::LoggingOut => {
-                    self.have_authorization = false;
-                    tracing::info!("Logging out");
-                }
-                AuthorizationState::Closing => {
-                    self.have_authorization = false;
-                    tracing::info!("Closing");
-                }
-                AuthorizationState::Closed => {
-                    tracing::info!("Closed");
-                    if self.need_quit {
-                        self.can_quit.store(true, Ordering::Release);
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    fn set_chat_positions(
-        mut chats_index: MutexGuard<'_, BTreeSet<OrderedChat>>,
-        chat: &mut Chat,
-        positions: Vec<ChatPosition>,
-    ) {
-        for position in &chat.positions {
-            if let enums::ChatList::Main = position.list {
-                let is_removed = chats_index.remove(&OrderedChat {
-                    position: position.clone(),
-                    chat_id: chat.id,
-                });
-                assert!(is_removed);
-            }
-        }
-
-        chat.positions = positions;
-
-        for position in &chat.positions {
-            if let enums::ChatList::Main = position.list {
-                let is_inserted = chats_index.insert(OrderedChat {
-                    position: position.clone(),
-                    chat_id: chat.id,
-                });
-                assert!(is_inserted);
-            }
-        }
-    }
-    pub async fn set_logging(&self) {
-        // TODO read data from config file
-
-        // Set a fairly low verbosity level. We mainly do this because tdlib
-        // requires to perform a random request with the client to start
-        // receiving updates for it.
-        functions::set_log_verbosity_level(2, self.client_id)
-            .await
-            .unwrap();
-
-        // Create log file
-        let log_stream_file = LogStreamFile {
-            path: ".data/tdlib.log".into(),
-            max_file_size: 1 << 27,
-            redirect_stderr: false,
-        };
-
-        // Set log stream to file
-        if let Err(error) =
-            functions::set_log_stream(LogStream::File(log_stream_file), self.client_id).await
-        {
-            tracing::error!("Failed to set log stream to file: {error:?}");
-        }
     }
 }
 

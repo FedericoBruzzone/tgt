@@ -79,12 +79,18 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn enter(&mut self) -> Result<(), io::Error> {
-        crossterm::terminal::enable_raw_mode()?;
-        crossterm::execute!(
+        match crossterm::terminal::enable_raw_mode() {
+            Ok(_) => tracing::info!("Raw mode enabled"),
+            Err(e) => tracing::error!("Error enabling raw mode: {}", e),
+        }
+        match crossterm::execute!(
             std::io::stderr(),
             EnterAlternateScreen,
             // cursor::Hide
-        )?;
+        ) {
+            Ok(_) => tracing::info!("Alternate screen enabled"),
+            Err(e) => tracing::error!("Error enabling alternate screen: {}", e),
+        };
         if self.mouse {
             crossterm::execute!(std::io::stderr(), EnableMouseCapture)?;
         }
@@ -123,8 +129,11 @@ impl TuiBackend {
     ///
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
-    pub fn exit(&self) -> Result<(), std::io::Error> {
-        TuiBackend::force_exit(self.mouse, self.paste)
+    pub fn exit(&self) {
+        match TuiBackend::force_exit(self.mouse, self.paste) {
+            Ok(_) => tracing::info!("Tui backend exited"),
+            Err(e) => tracing::error!("Error exiting tui backend: {}", e),
+        }
     }
     /// Suspend the user interface and stop processing events.
     /// This will disable the raw mode for the terminal and switch back to the
@@ -133,7 +142,7 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn suspend(&mut self) -> Result<(), std::io::Error> {
-        self.exit()?;
+        self.exit();
         // #[cfg(not(windows))]
         // signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
         Ok(())

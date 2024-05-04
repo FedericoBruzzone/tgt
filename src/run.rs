@@ -5,7 +5,7 @@ use crate::{
 };
 use ratatui::layout::Rect;
 use std::{collections::HashMap, io, sync::Arc, time::Instant};
-use tdlib::{enums::ChatList, functions};
+use tdlib::enums::ChatList;
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Run the main event loop for the application.
@@ -34,6 +34,8 @@ pub async fn run_app(
     tg_backend.set_logging().await;
     tg_backend.handle_authorization_state().await;
     tg_backend.get_me().await;
+    // tg_backend.disable_animated_emoji(true).await;
+    tg_backend.online().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
 
     tui_backend.enter()?;
@@ -48,14 +50,9 @@ pub async fn run_app(
         if app_context.quit_acquire() {
             tg_backend.need_quit = true;
             tg_backend.have_authorization = false;
-            match functions::close(tg_backend.client_id).await {
-                Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
-                Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
-            }
-            match tui_backend.exit() {
-                Ok(_) => tracing::info!("Tui backend exited"),
-                Err(e) => tracing::error!("Error exiting tui backend: {}", e),
-            }
+            tg_backend.offline().await;
+            tg_backend.close().await;
+            tui_backend.exit();
             tg_backend.handle_authorization_state().await;
 
             // Clear the terminal and move the cursor to the top left corner
