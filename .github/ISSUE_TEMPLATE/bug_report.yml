@@ -1,0 +1,98 @@
+name: Bug Report
+description: File a bug report.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!WARNING]
+        > Before submitting this issue, please ensure that a similar issue or pull request does not already exist.
+        > You can search existing issues and pull requests [here](https://github.com/FedericoBruzzone/tgt/issues) and [here](https://github.com/FedericoBruzzone/tgt/pulls).
+        > If you find a similar issue or pull request, please consider adding a comment to provide additional information or upvote it to indicate your interest.
+  - type: input
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: "How do you trigger this bug? Please walk us through it step by step."
+      value: |
+        1.
+        2.
+        3.
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      placeholder: Add logs and screenshots to help explain your problem.
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: Additional context
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Method of Installation
+      description: Please specify how you installed tgt
+      options:
+        - Cargo
+        - Docker
+        - Download from GitHub
+        - Build from source
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tgt version
+      description: |
+        Please specify the version of the application where the issue occurred.
+        The version can be found by running the command `tgt --version`.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System (including version and architecture)
+      description: |
+        Please provide the operating system you're using, including its version and architecture.
+        If you are using tgt inside Docker, please also specify the Docker version you're using.
+      placeholder: Windows 10 (64-bit)
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal and Command Line Interface (CLI) (including versions)
+      description: Please specify the terminal emulator and the Command Line Interface (CLI) you're using, along with its versions.
+      placeholder: Windows Terminal (1.19.10821.0) PowerShell (7.4.2)
+    validations:
+      required: false
+  - type: input
+    id: rust
+    attributes:
+      label: rustc and rustup target (including versions)
+      description: |
+        Please specify the rustc and rustup target you're using, along with its versions.
+        The rustup target can be found by running the command `rustup target list` and looking for an enrty marked as installed.
+      placeholder: rustc 1.74.1 (a28077b28 2023-12-04) x86_64-pc-windows-msvc
+    validations:
+      required: false
