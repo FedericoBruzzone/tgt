@@ -5,6 +5,7 @@ use crate::{
     event::Event,
     tg::message_entry::MessageEntry,
 };
+use arboard::Clipboard;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     symbols::{
@@ -127,7 +128,7 @@ impl ChatWindow {
         self.message_list_state.select(None);
     }
 
-    fn delete_current_message(&mut self, revoke: bool) {
+    fn delete_selected(&mut self, revoke: bool) {
         if let Some(selected) = self.message_list_state.selected() {
             if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                 let chat_id = self.app_context.tg_context().open_chat_id();
@@ -139,6 +140,15 @@ impl ChatWindow {
                 event_tx
                     .send(Event::DeleteMessages(chat_id, vec![message_id], revoke))
                     .unwrap();
+            }
+        }
+    }
+
+    fn copy_selected(&self) {
+        if let Some(selected) = self.message_list_state.selected() {
+            let message = self.message_list[selected].message_content_to_string();
+            if let Ok(mut clipboard) = Clipboard::new() {
+                clipboard.set_text(message).unwrap();
             }
         }
     }
@@ -183,8 +193,9 @@ impl Component for ChatWindow {
             Action::ChatWindowNext => self.next(),
             Action::ChatWindowPrevious => self.previous(),
             Action::ChatWindowUnselect => self.unselect(),
-            Action::ChatWindowDeleteForEveryone => self.delete_current_message(true),
-            Action::ChatWindowDeleteForMe => self.delete_current_message(false),
+            Action::ChatWindowDeleteForEveryone => self.delete_selected(true),
+            Action::ChatWindowDeleteForMe => self.delete_selected(false),
+            Action::ChatWindowCopy => self.copy_selected(),
             _ => {}
         }
     }

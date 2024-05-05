@@ -39,6 +39,7 @@ keymap = [
   { keys = ["left"], command = "chat_list_unselect", description = "Unselect the current chat"},
   # Open the selected chat
   { keys = ["right"], command = "chat_list_open", description = "Open the selected chat"},
+  # Open the selected chat
   { keys = ["enter"], command = "chat_list_open", description = "Open the selected chat"},
 ]
 
@@ -56,6 +57,10 @@ keymap = [
   { keys = ["d"], command = "chat_window_delete_for_everyone", description = "Delete the selected message for all users"},
   # Delete the selected message for "me"
   { keys = ["D"], command = "chat_window_delete_for_me", description = "Delete the selected message for 'me'"},
+  # Copy the selected message
+  { keys = ["y"], command = "chat_window_copy", description = "Copy the selected message"},
+  # Copy the selected message
+  { keys = ["ctrl+c"], command = "chat_window_copy", description = "Copy the selected message"},
 ]
 
 # The prompt key bindings are only usable in the prompt component.

@@ -1,5 +1,5 @@
 use crate::app_context::AppContext;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use std::time::{Duration, UNIX_EPOCH};
@@ -16,10 +16,10 @@ impl DateTimeEntry {
     pub fn convert_time(timestamp: i32) -> String {
         let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
         let datetime = DateTime::<Local>::from(d);
-        if datetime.date_naive() == Utc::now().date_naive() {
+        if datetime.date_naive() == Local::now().date_naive() {
             return datetime.format("%H:%M").to_string();
         }
-        if datetime.date_naive() == (Utc::now() - chrono::Duration::days(1)).date_naive() {
+        if datetime.date_naive() == (Local::now() - chrono::Duration::days(1)).date_naive() {
             return datetime.format("Yesterday %H:%M").to_string();
         }
         datetime.format("%Y-%m-%d %H:%M").to_string() // :%S
@@ -55,6 +55,13 @@ impl MessageEntry {
             TdMessageSender::User(user_id) => user_id,
             TdMessageSender::Chat(chat_id) => chat_id,
         }
+    }
+
+    pub fn message_content_to_string(&self) -> String {
+        self.message_content
+            .iter()
+            .map(|l| l.iter().map(|s| s.content.clone()).collect::<String>() + "\n")
+            .collect::<String>()
     }
 
     pub fn set_message_content(&mut self, content: &MessageContent) {
@@ -147,6 +154,7 @@ impl MessageEntry {
             })
             .collect::<Vec<Line>>()
     }
+
     fn format_message_content(message: &FormattedText) -> Vec<Line<'static>> {
         let text = &message.text;
         let entities = &message.entities;

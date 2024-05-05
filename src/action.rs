@@ -143,6 +143,8 @@ pub enum Action {
     /// ChatWindowDeleteForMe action.
     /// It is used to delete a message only for the current user.
     ChatWindowDeleteForMe,
+    /// ChatWindowCopy action.
+    ChatWindowCopy,
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -185,6 +187,7 @@ impl FromStr for Action {
             "chat_window_unselect" => Ok(Action::ChatWindowUnselect),
             "chat_window_delete_for_everyone" => Ok(Action::ChatWindowDeleteForEveryone),
             "chat_window_delete_for_me" => Ok(Action::ChatWindowDeleteForMe),
+            "chat_window_copy" => Ok(Action::ChatWindowCopy),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }
