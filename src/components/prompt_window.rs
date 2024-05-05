@@ -110,6 +110,7 @@ impl Input {
     /// A newline is inserted at the current cursor position.
     /// The text after the cursor position is moved to the next line.
     fn insert_newline(&mut self) {
+        self.insert('\n');
         let line = &mut self.text[self.cursor.1];
         let right = line[self.cursor.0..].to_vec();
         line.truncate(self.cursor.0);
@@ -422,6 +423,7 @@ impl Input {
     }
     /// Convert the text of the `Input` struct to a string.
     fn text_to_string(&mut self) -> String {
+        // TODO: Parse into markdown
         let mut message = String::new();
         self.text.iter().for_each(|e| {
             if e.is_empty() {

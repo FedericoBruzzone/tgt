@@ -37,16 +37,16 @@ impl DateTimeEntry {
 pub struct MessageEntry {
     id: i64,
     sender_id: TdMessageSender,
-    message_content: Line<'static>,
+    message_content: Vec<Line<'static>>,
     timestamp: DateTimeEntry,
     is_edited: bool,
 }
 impl MessageEntry {
-    pub fn get_line_styled_with_only_content(&self, content_style: Style) -> Line<'static> {
-        Line::from(Span::styled(
-            format!("{}", self.message_content),
-            content_style,
-        ))
+    pub fn get_lines_styled_with_content(&self, content_style: Style) -> Vec<Line<'static>> {
+        self.message_content
+            .iter()
+            .map(|l| Line::from(Span::styled(format!("{}", l), content_style)))
+            .collect::<Vec<Line>>()
     }
 
     pub fn id(&self) -> i64 {
@@ -65,7 +65,7 @@ impl MessageEntry {
     }
 
     pub fn set_message_content(&mut self, content: &MessageContent) {
-        self.message_content = Self::message_content_line(content);
+        self.message_content = Self::message_content_lines(content);
     }
 
     pub fn set_is_edited(&mut self, is_edited: bool) {
@@ -79,47 +79,59 @@ impl MessageEntry {
         content_style: Style,
     ) -> Text {
         let mut entry = Text::default();
-        entry.extend(vec![
-            Line::from(vec![
-                Span::styled(
-                    match self.sender_id {
-                        TdMessageSender::User(user_id) => app_context
-                            .tg_context()
-                            .try_name_from_chats_or_users(user_id)
-                            .unwrap_or_default(),
-                        TdMessageSender::Chat(chat_id) => app_context
-                            .tg_context()
-                            .name_from_chats(chat_id)
-                            .unwrap_or_default(),
-                    },
-                    name_style,
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    if self.is_edited { "✏️" } else { "" },
-                    Style::default().add_modifier(Modifier::ITALIC),
-                ),
-                Span::raw(" "),
-                self.timestamp.get_span_styled(app_context),
-            ]),
-            self.get_line_styled_with_only_content(content_style),
-        ]);
+        entry.extend(vec![Line::from(vec![
+            Span::styled(
+                match self.sender_id {
+                    TdMessageSender::User(user_id) => app_context
+                        .tg_context()
+                        .try_name_from_chats_or_users(user_id)
+                        .unwrap_or_default(),
+                    TdMessageSender::Chat(chat_id) => app_context
+                        .tg_context()
+                        .name_from_chats(chat_id)
+                        .unwrap_or_default(),
+                },
+                name_style,
+            ),
+            Span::raw(" "),
+            Span::styled(
+                if self.is_edited { "✏️" } else { "" },
+                Style::default().add_modifier(Modifier::ITALIC),
+            ),
+            Span::raw(" "),
+            self.timestamp.get_span_styled(app_context),
+        ])]);
+        entry.extend(self.get_lines_styled_with_content(content_style));
         entry
     }
 
-    fn message_content_line(content: &MessageContent) -> Line<'static> {
+    fn message_content_lines(content: &MessageContent) -> Vec<Line<'static>> {
         match content {
             MessageContent::MessageText(m) => Self::format_message_content(&m.text),
-            _ => Line::from(""),
+            _ => vec![Line::from("")],
         }
     }
 
-    fn format_message_content(message: &FormattedText) -> Line<'static> {
+    fn from_span_to_lines(span: Span) -> Vec<Line<'static>> {
+        span.content
+            .split('\n')
+            .map(|s| Line::from(Span::styled(s.to_owned(), span.style)))
+            .collect::<Vec<Line>>()
+    }
+
+    fn from_spans_to_lines(spans: Vec<Span>) -> Vec<Line<'static>> {
+        spans
+            .iter()
+            .flat_map(|s| Self::from_span_to_lines(s.clone()))
+            .collect()
+    }
+
+    fn format_message_content(message: &FormattedText) -> Vec<Line<'static>> {
         let text = &message.text;
         let entities = &message.entities;
 
         if entities.is_empty() {
-            return Line::from(Span::raw(text.clone()));
+            return Self::from_span_to_lines(Span::raw(text));
         }
 
         let mut message_vec = Vec::new();
@@ -146,13 +158,30 @@ impl MessageEntry {
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                _ => {}
+                tdlib::enums::TextEntityType::Mention => {}
+                tdlib::enums::TextEntityType::Hashtag => {}
+                tdlib::enums::TextEntityType::Cashtag => {}
+                tdlib::enums::TextEntityType::BotCommand => {}
+                tdlib::enums::TextEntityType::Url => {}
+                tdlib::enums::TextEntityType::EmailAddress => {}
+                tdlib::enums::TextEntityType::PhoneNumber => {}
+                tdlib::enums::TextEntityType::BankCardNumber => {}
+                tdlib::enums::TextEntityType::Strikethrough => {}
+                tdlib::enums::TextEntityType::Spoiler => {}
+                tdlib::enums::TextEntityType::Code => {}
+                tdlib::enums::TextEntityType::Pre => {}
+                tdlib::enums::TextEntityType::PreCode(_) => {}
+                tdlib::enums::TextEntityType::TextUrl(_) => {}
+                tdlib::enums::TextEntityType::MentionName(_) => {}
+                tdlib::enums::TextEntityType::CustomEmoji(_) => {}
+                tdlib::enums::TextEntityType::MediaTimestamp(_) => {}
             }
             message_vec.push(Span::raw(
                 text.chars().skip(offset + length).collect::<String>(),
             ));
         });
-        Line::from(message_vec)
+
+        Self::from_spans_to_lines(message_vec)
     }
 }
 impl From<&tdlib::types::Message> for MessageEntry {
@@ -163,7 +192,7 @@ impl From<&tdlib::types::Message> for MessageEntry {
                 MessageSender::User(user) => TdMessageSender::User(user.user_id),
                 MessageSender::Chat(chat) => TdMessageSender::Chat(chat.chat_id),
             },
-            message_content: Self::message_content_line(&message.content),
+            message_content: Self::message_content_lines(&message.content),
             timestamp: DateTimeEntry {
                 timestamp: message.date,
             },

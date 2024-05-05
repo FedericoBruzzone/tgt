@@ -64,26 +64,23 @@ impl ChatListEntry {
         let verificated_symbol = if self.verificated { "✅" } else { "" };
 
         let mut entry = Text::default();
-        entry.extend(vec![
-            Line::from(vec![
-                Span::raw(online_symbol),
-                Span::styled(
-                    self.chat_name.clone(),
-                    app_context.style_chat_list_item_chat_name(),
-                ),
-                Span::raw(" "),
-                Span::raw(verificated_symbol),
-                Span::raw(" | "),
-                self.last_message.as_ref().map_or_else(Span::default, |e| {
-                    e.timestamp().get_span_styled(app_context)
-                }),
-            ]),
-            self.last_message.as_ref().map_or_else(Line::default, |e| {
-                e.get_line_styled_with_only_content(
-                    app_context.style_chat_list_item_message_content(),
-                )
+        entry.extend(vec![Line::from(vec![
+            Span::raw(online_symbol),
+            Span::styled(
+                self.chat_name.clone(),
+                app_context.style_chat_list_item_chat_name(),
+            ),
+            Span::raw(" "),
+            Span::raw(verificated_symbol),
+            Span::raw(" | "),
+            self.last_message.as_ref().map_or_else(Span::default, |e| {
+                e.timestamp().get_span_styled(app_context)
             }),
-        ]);
+        ])]);
+        entry.extend(self.last_message.as_ref().map_or_else(Line::default, |e| {
+            e.get_lines_styled_with_content(app_context.style_chat_list_item_message_content())[0]
+                .clone()
+        }));
         entry
     }
 }
