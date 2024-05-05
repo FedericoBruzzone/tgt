@@ -688,28 +688,27 @@ impl TgBackend {
                             // in real time the message displayed
                             let message = update_new_message.message;
                             let chat_id = message.chat_id;
-                            // if let Some(chat) = tg_context.chats().get_mut(&chat_id) {
-                            //     chat.last_message = Some(message.clone());
-                            //     let positions = chat.positions.clone();
-                            //     Self::set_chat_positions(tg_context.chats_index(), chat, positions);
-                            // }
                             if tg_context.open_chat_id() == chat_id {
                                 tg_context
                                     .open_chat_messages()
                                     .insert(0, MessageEntry::from(&message));
                             }
                         }
+                        Update::MessageEdited(_) => {}
                         Update::MessageContent(message) => {
+                            // Edited message
                             if tg_context.open_chat_id() == message.chat_id {
                                 for m in tg_context.open_chat_messages().iter_mut() {
                                     if m.id() == message.message_id {
                                         m.set_message_content(&message.new_content);
+                                        m.set_is_edited(true);
                                     }
                                 }
                             }
                         }
-                        Update::MessageEdited(_) => {}
-                        // Too much prints
+                        // Update::Option(option) => {
+                        //     tracing::info!("{:?}", option);
+                        // }
                         // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
                         _ => {}
                     }

@@ -1,5 +1,5 @@
 use crate::app_context::AppContext;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use std::time::{Duration, UNIX_EPOCH};
@@ -15,14 +15,14 @@ pub struct DateTimeEntry {
 impl DateTimeEntry {
     pub fn convert_time(timestamp: i32) -> String {
         let d = UNIX_EPOCH + Duration::from_secs(timestamp as u64);
-        let datetime = DateTime::<Utc>::from(d);
+        let datetime = DateTime::<Local>::from(d);
         if datetime.date_naive() == Utc::now().date_naive() {
-            return datetime.format("Today %H:%M:%S").to_string();
+            return datetime.format("%H:%M").to_string();
         }
         if datetime.date_naive() == (Utc::now() - chrono::Duration::days(1)).date_naive() {
-            return datetime.format("Yesterday %H:%M:%S").to_string();
+            return datetime.format("Yesterday %H:%M").to_string();
         }
-        datetime.format("%Y-%m-%d %H:%M:%S").to_string()
+        datetime.format("%Y-%m-%d %H:%M").to_string() // :%S
     }
 
     pub fn get_span_styled(&self, app_context: &AppContext) -> Span {
@@ -39,6 +39,7 @@ pub struct MessageEntry {
     sender_id: TdMessageSender,
     message_content: Line<'static>,
     timestamp: DateTimeEntry,
+    is_edited: bool,
 }
 impl MessageEntry {
     pub fn get_line_styled_with_only_content(&self, content_style: Style) -> Line<'static> {
@@ -67,6 +68,10 @@ impl MessageEntry {
         self.message_content = Self::message_content_line(content);
     }
 
+    pub fn set_is_edited(&mut self, is_edited: bool) {
+        self.is_edited = is_edited;
+    }
+
     pub fn get_text_styled(
         &self,
         app_context: &AppContext,
@@ -88,6 +93,11 @@ impl MessageEntry {
                             .unwrap_or_default(),
                     },
                     name_style,
+                ),
+                Span::raw(" "),
+                Span::styled(
+                    if self.is_edited { "✏️" } else { "" },
+                    Style::default().add_modifier(Modifier::ITALIC),
                 ),
                 Span::raw(" "),
                 self.timestamp.get_span_styled(app_context),
@@ -157,6 +167,7 @@ impl From<&tdlib::types::Message> for MessageEntry {
             timestamp: DateTimeEntry {
                 timestamp: message.date,
             },
+            is_edited: message.edit_date != 0,
         }
     }
 }
