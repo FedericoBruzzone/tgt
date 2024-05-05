@@ -1,3 +1,4 @@
+use crate::component_name::ComponentName::Prompt;
 use crate::{
     action::Action, app_context::AppContext, app_error::AppError,
     configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
@@ -87,6 +88,11 @@ async fn handle_tg_backend_events(
             Event::SendMessage(message) => {
                 app_context.action_tx().send(Action::SendMessage(message))?;
             }
+            Event::SendMessageEdited(message_id, message) => {
+                app_context
+                    .action_tx()
+                    .send(Action::SendMessageEdited(message_id, message))?;
+            }
             Event::PrepareChatHistory => {
                 app_context.action_tx().send(Action::PrepareChatHistory)?;
             }
@@ -97,12 +103,19 @@ async fn handle_tg_backend_events(
                     limit,
                 ))?;
             }
-            Event::DeleteMessages(chat_id, message_ids, revoke) => {
-                app_context.action_tx().send(Action::DeleteMessages(
-                    chat_id,
-                    message_ids,
-                    revoke,
-                ))?;
+            Event::DeleteMessages(message_ids, revoke) => {
+                app_context
+                    .action_tx()
+                    .send(Action::DeleteMessages(message_ids, revoke))?;
+            }
+            Event::EditMessage(message_id, message) => {
+                app_context
+                    .action_tx()
+                    .send(Action::FocusComponent(Prompt))?;
+
+                app_context
+                    .action_tx()
+                    .send(Action::EditMessage(message_id, message))?;
             }
             _ => {}
         }
@@ -244,6 +257,11 @@ pub async fn handle_app_actions(
             Action::SendMessage(ref message) => {
                 tg_backend.send_message(message.to_string()).await;
             }
+            Action::SendMessageEdited(message_id, ref message) => {
+                tg_backend
+                    .send_message_edited(message_id, message.to_string())
+                    .await;
+            }
             Action::PrepareChatHistory => {
                 tg_backend
                     .prepare_to_get_chat_history(app_context.tg_context().open_chat_id())
@@ -259,9 +277,13 @@ pub async fn handle_app_actions(
                     )
                     .await;
             }
-            Action::DeleteMessages(chat_id, ref message_ids, revoke) => {
+            Action::DeleteMessages(ref message_ids, revoke) => {
                 tg_backend
-                    .delete_messages(chat_id, message_ids.to_vec(), revoke)
+                    .delete_messages(
+                        app_context.tg_context().open_chat_id(),
+                        message_ids.to_vec(),
+                        revoke,
+                    )
                     .await;
             }
             _ => {}

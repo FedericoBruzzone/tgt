@@ -57,7 +57,7 @@ struct Input {
     /// It is used to send actions to the main event loop for processing.
     /// Basically, it is used to send `IncreasePromptSize` and `DecreasePromptSize`
     /// actions.
-    command_tx: Option<UnboundedSender<Action>>,
+    action_tx: Option<UnboundedSender<Action>>,
     /// An enum that represents the direction of the selection.
     /// Implicitly, it is used to keep track whether the user is selecting text
     /// or not.
@@ -70,6 +70,14 @@ struct Input {
     /// Basically, it is used to keep track of whether the prompt size is
     /// equal to the correct prompt size or not.
     is_restored: bool,
+    /// The edit mode of the input.
+    /// It is used to keep track of whether the input is in edit mode or not.
+    /// The edit mode is set to true when the user is editing a message.
+    /// The first parameter is the flag indicating whether the input is in edit
+    /// mode or not.
+    /// The second parameter is the message id of the message that is being
+    /// edited.
+    edit_mode: (bool, Option<i64>),
 }
 /// Implement the `Input` struct.
 impl Input {
@@ -78,7 +86,7 @@ impl Input {
     /// # Arguments
     /// * `command_tx` - An unbounded sender that send action for processing.
     fn set_command_tx(&mut self, command_tx: UnboundedSender<Action>) {
-        self.command_tx = Some(command_tx);
+        self.action_tx = Some(command_tx);
     }
     /// Get the cursor x position of the `Input` struct.
     fn cursor_x(&self) -> usize {
@@ -117,7 +125,7 @@ impl Input {
         self.text.insert(self.cursor.1 + 1, right);
         self.cursor.0 = 0;
         self.cursor.1 += 1;
-        if let Some(tx) = self.command_tx.as_ref() {
+        if let Some(tx) = self.action_tx.as_ref() {
             self.correct_prompt_size += 1;
             tx.send(Action::IncreasePromptSize).unwrap()
         }
@@ -125,7 +133,7 @@ impl Input {
     /// Delete the character before the cursor position.
     fn backspace(&mut self) {
         if self.text[self.cursor.1].is_empty() && self.cursor.1 > 0 {
-            if let Some(tx) = self.command_tx.as_ref() {
+            if let Some(tx) = self.action_tx.as_ref() {
                 self.correct_prompt_size -= 1;
                 tx.send(Action::DecreasePromptSize).unwrap();
             }
@@ -239,7 +247,7 @@ impl Input {
     /// the prompt size.
     fn restore_prompt_size(&mut self) {
         if !self.is_restored {
-            if let Some(tx) = self.command_tx.as_ref() {
+            if let Some(tx) = self.action_tx.as_ref() {
                 for _ in 0..self.correct_prompt_size {
                     tx.send(Action::IncreasePromptSize).unwrap();
                 }
@@ -250,7 +258,7 @@ impl Input {
     /// Set the prompt size to one.
     /// It is used to set the prompt size to one.
     fn set_prompt_size_to_one(&mut self) {
-        if let Some(tx) = self.command_tx.as_ref() {
+        if let Some(tx) = self.action_tx.as_ref() {
             for _ in 0..self.correct_prompt_size {
                 tx.send(Action::DecreasePromptSize).unwrap();
             }
@@ -407,18 +415,53 @@ impl Input {
             }
         }
     }
+    /// Edit a message.
+    ///
+    /// # Arguments
+    /// * `message_id` - The message id of the message to edit.
+    /// * `message` - The message to edit.
+    fn edit_message(&mut self, message_id: i64, message: String) {
+        self.edit_mode = (true, Some(message_id));
+        self.text = message
+            .split('\n')
+            .map(|line| {
+                line.chars()
+                    .map(|c| InputCell { c, selected: false })
+                    .collect()
+            })
+            .collect();
+        for _ in 0..self.text.len() - 1 {
+            if let Some(tx) = self.action_tx.as_ref() {
+                tx.send(Action::IncreasePromptSize).unwrap();
+            }
+        }
+        self.cursor = (0, 0);
+    }
+
     /// Send a message.
     /// The message is sent to the main event loop for processing.
     ///
     /// # Arguments
     /// * `app_context` - An Arc wrapped AppContext struct.
     fn send_message(&mut self, app_context: Arc<AppContext>) {
-        if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
+        if !self.edit_mode.0 {
+            if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
+                event_tx
+                    .send(Event::SendMessage(self.text_to_string()))
+                    .unwrap();
+                self.text = vec![vec![]];
+                self.set_prompt_size_to_one_focused();
+            }
+        } else if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
             event_tx
-                .send(Event::SendMessage(self.text_to_string()))
+                .send(Event::SendMessageEdited(
+                    self.edit_mode.1.unwrap(),
+                    self.text_to_string(),
+                ))
                 .unwrap();
             self.text = vec![vec![]];
             self.set_prompt_size_to_one_focused();
+            self.edit_mode = (false, None);
         }
     }
     /// Convert the text of the `Input` struct to a string.
@@ -442,10 +485,11 @@ impl Default for Input {
             text: vec![vec![]],
             cursor: (0, 0),
             area_input: Rect::default(),
-            command_tx: None,
+            action_tx: None,
             dir_selection: DirSelection::Empty,
             correct_prompt_size: 0,
             is_restored: true,
+            edit_mode: (false, None),
         }
     }
 }
@@ -743,6 +787,9 @@ impl Component for PromptWindow {
             Action::Paste(text) => {
                 self.input.unselect_all();
                 self.input.paste(text);
+            }
+            Action::EditMessage(message_id, message) => {
+                self.input.edit_message(message_id, message);
             }
             _ => {}
         }

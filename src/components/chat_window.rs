@@ -131,14 +131,13 @@ impl ChatWindow {
     fn delete_selected(&mut self, revoke: bool) {
         if let Some(selected) = self.message_list_state.selected() {
             if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                let chat_id = self.app_context.tg_context().open_chat_id();
-                let message_id = self.message_list[selected].id();
                 let sender_id = self.message_list[selected].sender_id();
                 if sender_id != self.app_context.tg_context().me() {
                     return;
                 }
+                let message_id = self.message_list[selected].id();
                 event_tx
-                    .send(Event::DeleteMessages(chat_id, vec![message_id], revoke))
+                    .send(Event::DeleteMessages(vec![message_id], revoke))
                     .unwrap();
             }
         }
@@ -149,6 +148,22 @@ impl ChatWindow {
             let message = self.message_list[selected].message_content_to_string();
             if let Ok(mut clipboard) = Clipboard::new() {
                 clipboard.set_text(message).unwrap();
+            }
+        }
+    }
+
+    fn edit_selected(&self) {
+        if let Some(selected) = self.message_list_state.selected() {
+            let sender_id = self.message_list[selected].sender_id();
+            if sender_id != self.app_context.tg_context().me() {
+                return;
+            }
+            let message = self.message_list[selected].message_content_to_string();
+            let message_id = self.message_list[selected].id();
+            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                event_tx
+                    .send(Event::EditMessage(message_id, message))
+                    .unwrap();
             }
         }
     }
@@ -196,6 +211,7 @@ impl Component for ChatWindow {
             Action::ChatWindowDeleteForEveryone => self.delete_selected(true),
             Action::ChatWindowDeleteForMe => self.delete_selected(false),
             Action::ChatWindowCopy => self.copy_selected(),
+            Action::ChatWindowEdit => self.edit_selected(),
             _ => {}
         }
     }

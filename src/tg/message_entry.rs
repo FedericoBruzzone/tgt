@@ -60,8 +60,9 @@ impl MessageEntry {
     pub fn message_content_to_string(&self) -> String {
         self.message_content
             .iter()
-            .map(|l| l.iter().map(|s| s.content.clone()).collect::<String>() + "\n")
-            .collect::<String>()
+            .map(|l| l.iter().map(|s| s.content.clone()).collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 
     pub fn set_message_content(&mut self, content: &MessageContent) {

@@ -29,6 +29,10 @@ pub enum Event {
     Render,
     /// Update area event with a `Rect` struct.
     UpdateArea(Rect),
+    /// EditMessage event with a `String`.
+    /// This event is used to edit a message.
+    /// The first parameter is the `message_id` and the second parameter is the `text`.
+    EditMessage(i64, String),
 
     /// GetMe event.
     GetMe,
@@ -36,6 +40,9 @@ pub enum Event {
     LoadChats(TdChatList, i32),
     /// Send message event with a `String`.
     SendMessage(String),
+    /// Send message edited event with a `i64` and a `String`.
+    /// The first parameter is the `message_id` and the second parameter is the `text`.
+    SendMessageEdited(i64, String),
     /// Prepare chat history event.
     /// We need to call this function because telegram the first time we want to
     /// get the chat history send only one message.
@@ -45,11 +52,10 @@ pub enum Event {
     /// is the `offset` and the third parameter is the `limit`.
     GetChatHistory(i64, i32, i32),
     /// Delete messages
-    /// The first parameter is the `chat_id`, the second parameter
-    /// is the `message_ids` and the third parameter is the `revoke`.
+    /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
-    DeleteMessages(i64, Vec<i64>, bool),
+    DeleteMessages(Vec<i64>, bool),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -168,6 +174,9 @@ impl Display for Event {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)
             }
             Event::SendMessage(s) => write!(f, "SendMessage({})", s),
+            Event::SendMessageEdited(message_id, s) => {
+                write!(f, "SendMessageEdited({}, {})", message_id, s)
+            }
             Event::PrepareChatHistory => write!(f, "PrepareChatHistory"),
             Event::GetChatHistory(from_message_id, offset, limit) => {
                 write!(
@@ -176,12 +185,11 @@ impl Display for Event {
                     from_message_id, offset, limit
                 )
             }
-            Event::DeleteMessages(chat_id, message_ids, revoke) => {
-                write!(
-                    f,
-                    "DeleteMessages({}, {:?}, {})",
-                    chat_id, message_ids, revoke
-                )
+            Event::DeleteMessages(message_ids, revoke) => {
+                write!(f, "DeleteMessages({:?}, {})", message_ids, revoke)
+            }
+            Event::EditMessage(message_id, text) => {
+                write!(f, "EditMessage({}, {})", message_id, text)
             }
         }
     }

@@ -148,6 +148,29 @@ impl TgBackend {
         }
     }
 
+    pub async fn send_message_edited(&self, message_id: i64, message: String) {
+        let text = InputMessageContent::InputMessageText(InputMessageText {
+            text: tdlib::types::FormattedText {
+                text: message,
+                entities: vec![],
+            },
+            disable_web_page_preview: false,
+            clear_draft: true,
+        });
+        match functions::edit_message_text(
+            self.app_context.tg_context().open_chat_id(),
+            message_id,
+            None,
+            text,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(_) => tracing::info!("Message edited"),
+            Err(e) => tracing::error!("Failed to edit message: {e:?}"),
+        }
+    }
+
     pub async fn delete_messages(&self, chat_id: i64, message_ids: Vec<i64>, revoke: bool) {
         match functions::delete_messages(chat_id, message_ids, revoke, self.client_id).await {
             Ok(_) => tracing::info!("Messages deleted"),

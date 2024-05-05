@@ -437,7 +437,7 @@ mod tests {
         let keymap_config = KeymapConfig::default();
         assert_eq!(keymap_config.core_window.len(), 9);
         assert_eq!(keymap_config.chat_list.len(), 5);
-        assert_eq!(keymap_config.chat.len(), 3);
+        assert_eq!(keymap_config.chat.len(), 8);
         assert_eq!(keymap_config.prompt.len(), 0);
     }
 
@@ -539,7 +539,7 @@ mod tests {
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.core_window.len(), 9);
         assert_eq!(keymap_config.chat_list.len(), 5);
-        assert_eq!(keymap_config.chat.len(), 3);
+        assert_eq!(keymap_config.chat.len(), 8);
         assert_eq!(keymap_config.prompt.len(), 0);
     }
 

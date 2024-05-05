@@ -90,6 +90,9 @@ pub enum Action {
     LoadChats(TdChatList, i32),
     /// SendMessage action with a `String`.
     SendMessage(String),
+    /// SendMessageEdited action with a `i64` and a `String`.
+    /// The first parameter is the `message_id` and the second parameter is the `text`.
+    SendMessageEdited(i64, String),
     /// Prepare chat history action.
     /// We need to call this function because telegram the first time we want to
     /// get the chat history send only one message.
@@ -99,11 +102,10 @@ pub enum Action {
     /// is the `offset` and the third parameter is the `limit`.
     GetChatHistory(i64, i32, i32),
     /// DeleteMessages action.
-    /// The first parameter is the `chat_id`, the second parameter
-    /// is the `message_ids` and the third parameter is the `revoke`.
+    /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
-    DeleteMessages(i64, Vec<i64>, bool),
+    DeleteMessages(Vec<i64>, bool),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
@@ -145,6 +147,13 @@ pub enum Action {
     ChatWindowDeleteForMe,
     /// ChatWindowCopy action.
     ChatWindowCopy,
+    /// ChatWindowEdit action.
+    ChatWindowEdit,
+
+    /// EditMessage action with a `String`.
+    /// This action is used to edit a message.
+    /// The first parameter is the `message_id` and the second parameter is the `text`.
+    EditMessage(i64, String),
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -188,6 +197,7 @@ impl FromStr for Action {
             "chat_window_delete_for_everyone" => Ok(Action::ChatWindowDeleteForEveryone),
             "chat_window_delete_for_me" => Ok(Action::ChatWindowDeleteForMe),
             "chat_window_copy" => Ok(Action::ChatWindowCopy),
+            "chat_window_edit" => Ok(Action::ChatWindowEdit),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }
