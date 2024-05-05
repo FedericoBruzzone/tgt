@@ -78,7 +78,7 @@ impl ChatListEntry {
             }),
         ])]);
         entry.extend(self.last_message.as_ref().map_or_else(Line::default, |e| {
-            e.get_lines_styled_with_content(app_context.style_chat_list_item_message_content())[0]
+            e.get_lines_styled_with_style(app_context.style_chat_list_item_message_content())[0]
                 .clone()
         }));
         entry

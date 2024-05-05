@@ -1,4 +1,4 @@
-use {super::config_type::ConfigType, crate::configs::default_config_dir, std::io};
+use {super::config_type::ConfigType, crate::utils::default_config_dir, std::io};
 
 pub mod app_custom;
 pub mod keymap_custom;

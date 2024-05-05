@@ -1,5 +1,6 @@
 use {
-    crate::configs::{self, config_type::ConfigType, TGT_CONFIG_HOME, TGT_PROGRAM_NAME},
+    crate::configs::{self, config_type::ConfigType},
+    crate::utils::{TGT_CONFIG_HOME, TGT_PROGRAM_NAME},
     lazy_static::lazy_static,
     serde::de::DeserializeOwned,
     std::path::PathBuf,

@@ -1,10 +1,9 @@
 use crate::app_error::AppError;
-use config::{Config, File, FileFormat};
+use config::Config;
+use config::File;
+use config::FileFormat;
 use serde::de::DeserializeOwned;
-use std::{
-    env, io,
-    path::{Path, PathBuf},
-};
+use std::path::Path;
 
 pub mod custom;
 pub mod raw;
@@ -13,23 +12,6 @@ pub mod config_file;
 pub mod config_theme;
 pub mod config_type;
 
-pub const TGT_PROGRAM_NAME: &str = "tgt";
-pub const TGT_CONFIG_HOME: &str = "TGT_CONFIG_HOME";
-
-/// Get the project directory.
-///
-/// # Returns
-/// The project directory.
-pub fn project_dir() -> io::Result<PathBuf> {
-    env::current_dir()
-}
-/// Get the default configuration directory.
-///
-/// # Returns
-/// The default configuration directory.
-pub fn default_config_dir() -> io::Result<PathBuf> {
-    Ok(project_dir()?.join("config"))
-}
 /// Deserialize a configuration file into a configuration struct.
 /// This function attempts to parse the specified file and returns the parsed
 /// configuration. If the file cannot be parsed, an error is returned.

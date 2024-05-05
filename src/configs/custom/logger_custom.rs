@@ -1,9 +1,7 @@
 use crate::{
     app_error::AppError,
-    configs::{
-        self, config_file::ConfigFile, config_type::ConfigType, project_dir,
-        raw::logger_raw::LoggerRaw,
-    },
+    configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::logger_raw::LoggerRaw},
+    utils::project_dir,
 };
 use std::path::Path;
 
@@ -85,10 +83,9 @@ impl From<LoggerRaw> for LoggerConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::configs::{
-        config_file::ConfigFile, custom::logger_custom::LoggerConfig, project_dir,
-        raw::logger_raw::LoggerRaw,
-    };
+    use crate::configs::config_file::ConfigFile;
+    use crate::configs::{custom::logger_custom::LoggerConfig, raw::logger_raw::LoggerRaw};
+    use crate::utils::project_dir;
 
     #[test]
     fn test_logger_config_default() {

@@ -231,7 +231,6 @@ impl Component for ChatWindow {
             .border_style(style_border_focused)
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .style(self.app_context.style_chat());
-
         let list = List::new(items)
             .block(block)
             .style(self.app_context.style_chat())

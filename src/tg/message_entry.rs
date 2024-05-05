@@ -42,13 +42,6 @@ pub struct MessageEntry {
     is_edited: bool,
 }
 impl MessageEntry {
-    pub fn get_lines_styled_with_content(&self, content_style: Style) -> Vec<Line<'static>> {
-        self.message_content
-            .iter()
-            .map(|l| Line::from(Span::styled(format!("{}", l), content_style)))
-            .collect::<Vec<Line>>()
-    }
-
     pub fn id(&self) -> i64 {
         self.id
     }
@@ -94,14 +87,11 @@ impl MessageEntry {
                 name_style,
             ),
             Span::raw(" "),
-            Span::styled(
-                if self.is_edited { "✏️" } else { "" },
-                Style::default().add_modifier(Modifier::ITALIC),
-            ),
+            Span::raw(if self.is_edited { "✏️" } else { "" }),
             Span::raw(" "),
             self.timestamp.get_span_styled(app_context),
         ])]);
-        entry.extend(self.get_lines_styled_with_content(content_style));
+        entry.extend(self.get_lines_styled_with_style(content_style));
         entry
     }
 
@@ -120,12 +110,43 @@ impl MessageEntry {
     }
 
     fn from_spans_to_lines(spans: Vec<Span>) -> Vec<Line<'static>> {
-        spans
+        let vec = spans
             .iter()
+            .filter(|s| !s.content.is_empty())
             .flat_map(|s| Self::from_span_to_lines(s.clone()))
-            .collect()
+            .collect::<Vec<Line>>();
+        if vec.is_empty() {
+            vec![Line::from("")]
+        } else {
+            vec
+        }
     }
 
+    fn merge_two_style(a: Style, b: Style) -> Style {
+        Style {
+            fg: a.fg.or(b.fg),
+            bg: a.bg.or(b.bg),
+            add_modifier: a.add_modifier | b.add_modifier,
+            sub_modifier: a.sub_modifier | b.sub_modifier,
+            ..Style::default()
+        }
+    }
+
+    pub fn get_lines_styled_with_style(&self, content_style: Style) -> Vec<Line<'static>> {
+        self.message_content
+            .iter()
+            .map(|l| {
+                l.iter()
+                    .map(|s| {
+                        Span::styled(
+                            s.content.clone(),
+                            Self::merge_two_style(s.style, content_style),
+                        )
+                    })
+                    .collect()
+            })
+            .collect::<Vec<Line>>()
+    }
     fn format_message_content(message: &FormattedText) -> Vec<Line<'static>> {
         let text = &message.text;
         let entities = &message.entities;

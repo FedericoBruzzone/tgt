@@ -1,4 +1,22 @@
-/// This module contains utility functions that are used across the project.
+use std::{env, io, path::PathBuf};
+
+pub const TGT_PROGRAM_NAME: &str = "tgt";
+pub const TGT_CONFIG_HOME: &str = "TGT_CONFIG_HOME";
+
+/// Get the project directory.
+///
+/// # Returns
+/// The project directory.
+pub fn project_dir() -> io::Result<PathBuf> {
+    env::current_dir()
+}
+/// Get the default configuration directory.
+///
+/// # Returns
+/// The default configuration directory.
+pub fn default_config_dir() -> io::Result<PathBuf> {
+    Ok(project_dir()?.join("config"))
+}
 
 /// Fail with an error message and exit the application.
 ///
