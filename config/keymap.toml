@@ -47,11 +47,15 @@ keymap = [
 [chat]
 keymap = [
   # Select the next message
-  { keys = ["down"], command = "message_list_next", description = "Select the next message"},
+  { keys = ["down"], command = "chat_window_next", description = "Select the next message"},
   # Select the previous message
-  { keys = ["up"], command = "message_list_previous", description = "Select the previous message"},
+  { keys = ["up"], command = "chat_window_previous", description = "Select the previous message"},
   # Unselect the current message
-  { keys = ["left"], command = "message_list_unselect", description = "Unselect the current message"},
+  { keys = ["left"], command = "chat_window_unselect", description = "Unselect the current message"},
+  # Delete the selected message for all users
+  { keys = ["d"], command = "chat_window_delete_for_everyone", description = "Delete the selected message for all users"},
+  # Delete the selected message for "me"
+  { keys = ["D"], command = "chat_window_delete_for_me", description = "Delete the selected message for 'me'"},
 ]
 
 # The prompt key bindings are only usable in the prompt component.

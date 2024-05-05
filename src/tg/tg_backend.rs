@@ -148,6 +148,13 @@ impl TgBackend {
         }
     }
 
+    pub async fn delete_messages(&self, chat_id: i64, message_ids: Vec<i64>, revoke: bool) {
+        match functions::delete_messages(chat_id, message_ids, revoke, self.client_id).await {
+            Ok(_) => tracing::info!("Messages deleted"),
+            Err(e) => tracing::error!("Failed to delete messages: {e:?}"),
+        }
+    }
+
     pub async fn close(&self) {
         match functions::close(self.client_id).await {
             Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
@@ -365,6 +372,7 @@ impl TgBackend {
             tracing::error!("Failed to set log stream to file: {error:?}");
         }
     }
+
     pub async fn next(&mut self) -> Option<Event> {
         self.event_rx.try_recv().ok()
     }
@@ -702,6 +710,22 @@ impl TgBackend {
                                     if m.id() == message.message_id {
                                         m.set_message_content(&message.new_content);
                                         m.set_is_edited(true);
+                                    }
+                                }
+                            }
+                        }
+                        Update::DeleteMessages(update_delete_messages) => {
+                            // Delete messages
+                            if tg_context.open_chat_id() == update_delete_messages.chat_id {
+                                let mut i = 0;
+                                while i < tg_context.open_chat_messages().len() {
+                                    if update_delete_messages
+                                        .message_ids
+                                        .contains(&tg_context.open_chat_messages()[i].id())
+                                    {
+                                        tg_context.open_chat_messages().remove(i);
+                                    } else {
+                                        i += 1;
                                     }
                                 }
                             }

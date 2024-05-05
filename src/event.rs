@@ -44,6 +44,12 @@ pub enum Event {
     /// The first parameter is the `from_message_id`, the second parameter
     /// is the `offset` and the third parameter is the `limit`.
     GetChatHistory(i64, i32, i32),
+    /// Delete messages
+    /// The first parameter is the `chat_id`, the second parameter
+    /// is the `message_ids` and the third parameter is the `revoke`.
+    /// If `revoke` is true, the message will be deleted for everyone.
+    /// If `revoke` is false, the message will be deleted only for the current user.
+    DeleteMessages(i64, Vec<i64>, bool),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -168,6 +174,13 @@ impl Display for Event {
                     f,
                     "GetChatHistory({}, {}, {})",
                     from_message_id, offset, limit
+                )
+            }
+            Event::DeleteMessages(chat_id, message_ids, revoke) => {
+                write!(
+                    f,
+                    "DeleteMessages({}, {:?}, {})",
+                    chat_id, message_ids, revoke
                 )
             }
         }

@@ -98,6 +98,12 @@ pub enum Action {
     /// The first parameter is the `from_message_id`, the second parameter
     /// is the `offset` and the third parameter is the `limit`.
     GetChatHistory(i64, i32, i32),
+    /// DeleteMessages action.
+    /// The first parameter is the `chat_id`, the second parameter
+    /// is the `message_ids` and the third parameter is the `revoke`.
+    /// If `revoke` is true, the message will be deleted for everyone.
+    /// If `revoke` is false, the message will be deleted only for the current user.
+    DeleteMessages(i64, Vec<i64>, bool),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
@@ -125,12 +131,18 @@ pub enum Action {
     /// ChatListOpen action.
     ChatListOpen,
 
-    /// MessageListNext action.
-    MessageListNext,
-    /// MessageListPrevious action.
-    MessageListPrevious,
-    /// MessageListSelect action.
-    MessageListUnselect,
+    /// ChatWindowNext action.
+    ChatWindowNext,
+    /// ChatWindowPrevious action.
+    ChatWindowPrevious,
+    /// ChatWindowUnselect action.
+    ChatWindowUnselect,
+    /// ChatWindowDeleteForEveryone action.
+    /// It is used to delete a message for everyone.
+    ChatWindowDeleteForEveryone,
+    /// ChatWindowDeleteForMe action.
+    /// It is used to delete a message only for the current user.
+    ChatWindowDeleteForMe,
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -168,9 +180,11 @@ impl FromStr for Action {
             "chat_list_previous" => Ok(Action::ChatListPrevious),
             "chat_list_unselect" => Ok(Action::ChatListUnselect),
             "chat_list_open" => Ok(Action::ChatListOpen),
-            "message_list_next" => Ok(Action::MessageListNext),
-            "message_list_previous" => Ok(Action::MessageListPrevious),
-            "message_list_unselect" => Ok(Action::MessageListUnselect),
+            "chat_window_next" => Ok(Action::ChatWindowNext),
+            "chat_window_previous" => Ok(Action::ChatWindowPrevious),
+            "chat_window_unselect" => Ok(Action::ChatWindowUnselect),
+            "chat_window_delete_for_everyone" => Ok(Action::ChatWindowDeleteForEveryone),
+            "chat_window_delete_for_me" => Ok(Action::ChatWindowDeleteForMe),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

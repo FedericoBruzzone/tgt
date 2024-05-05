@@ -97,7 +97,13 @@ async fn handle_tg_backend_events(
                     limit,
                 ))?;
             }
-
+            Event::DeleteMessages(chat_id, message_ids, revoke) => {
+                app_context.action_tx().send(Action::DeleteMessages(
+                    chat_id,
+                    message_ids,
+                    revoke,
+                ))?;
+            }
             _ => {}
         }
     }
@@ -251,6 +257,11 @@ pub async fn handle_app_actions(
                         offset,
                         limit,
                     )
+                    .await;
+            }
+            Action::DeleteMessages(chat_id, ref message_ids, revoke) => {
+                tg_backend
+                    .delete_messages(chat_id, message_ids.to_vec(), revoke)
                     .await;
             }
             _ => {}

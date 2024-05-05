@@ -84,10 +84,6 @@ impl ChatWindow {
                         event_tx
                             .send(Event::GetChatHistory(from_message_id, 0, 100))
                             .unwrap();
-
-                        self.app_context.tg_context().set_from_message_id(
-                            self.app_context.tg_context().open_chat_messages().len() as i64,
-                        );
                     }
                 }
 
@@ -112,10 +108,6 @@ impl ChatWindow {
                         event_tx
                             .send(Event::GetChatHistory(from_message_id, 0, 100))
                             .unwrap();
-
-                        self.app_context.tg_context().set_from_message_id(
-                            self.app_context.tg_context().open_chat_messages().len() as i64,
-                        );
                     }
                 }
 
@@ -133,6 +125,22 @@ impl ChatWindow {
     /// Unselect the message item in the list.
     fn unselect(&mut self) {
         self.message_list_state.select(None);
+    }
+
+    fn delete_current_message(&mut self, revoke: bool) {
+        if let Some(selected) = self.message_list_state.selected() {
+            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                let chat_id = self.app_context.tg_context().open_chat_id();
+                let message_id = self.message_list[selected].id();
+                let sender_id = self.message_list[selected].sender_id();
+                if sender_id != self.app_context.tg_context().me() {
+                    return;
+                }
+                event_tx
+                    .send(Event::DeleteMessages(chat_id, vec![message_id], revoke))
+                    .unwrap();
+            }
+        }
     }
 }
 
@@ -172,9 +180,11 @@ impl Component for ChatWindow {
 
     fn update(&mut self, action: Action) {
         match action {
-            Action::MessageListNext => self.next(),
-            Action::MessageListPrevious => self.previous(),
-            Action::MessageListUnselect => self.unselect(),
+            Action::ChatWindowNext => self.next(),
+            Action::ChatWindowPrevious => self.previous(),
+            Action::ChatWindowUnselect => self.unselect(),
+            Action::ChatWindowDeleteForEveryone => self.delete_current_message(true),
+            Action::ChatWindowDeleteForMe => self.delete_current_message(false),
             _ => {}
         }
     }
