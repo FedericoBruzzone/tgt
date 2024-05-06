@@ -77,6 +77,7 @@ impl MessageEntry {
     pub fn get_text_styled(
         &self,
         app_context: &AppContext,
+        is_unread: Option<bool>,
         name_style: Style,
         content_style: Style,
     ) -> Text {
@@ -97,6 +98,17 @@ impl MessageEntry {
             ),
             Span::raw(" "),
             Span::raw(if self.is_edited { "✏️" } else { "" }),
+            Span::raw(" "),
+            Span::raw(match is_unread {
+                Some(is_unread) => {
+                    if is_unread {
+                        "📤"
+                    } else {
+                        "👀"
+                    }
+                }
+                None => "",
+            }),
             Span::raw(" "),
             self.timestamp.get_span_styled(app_context),
         ])]);

@@ -128,6 +128,11 @@ impl ChatWindow {
         self.message_list_state.select(None);
     }
 
+    /// Delete the selected message item in the list.
+    ///
+    /// # Arguments
+    /// * `revoke` - A boolean flag indicating whether the message should be
+    ///  revoked or not.
     fn delete_selected(&mut self, revoke: bool) {
         if let Some(selected) = self.message_list_state.selected() {
             if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
@@ -143,6 +148,7 @@ impl ChatWindow {
         }
     }
 
+    /// Copy the selected message item in the list.
     fn copy_selected(&self) {
         if let Some(selected) = self.message_list_state.selected() {
             let message = self.message_list[selected].message_content_to_string();
@@ -152,6 +158,7 @@ impl ChatWindow {
         }
     }
 
+    /// Edit the selected message item in the list.
     fn edit_selected(&self) {
         if let Some(selected) = self.message_list_state.selected() {
             let sender_id = self.message_list[selected].sender_id();
@@ -240,25 +247,63 @@ impl Component for ChatWindow {
         } else {
             self.app_context.style_chat()
         };
-        let items = self.message_list.iter().map(|message_entry| {
-            let (name_style, content_style, alignment) =
-                if message_entry.sender_id() == self.app_context.tg_context().me() {
-                    (
-                        self.app_context.style_chat_message_myself_name(),
-                        self.app_context.style_chat_message_myself_content(),
-                        Alignment::Right,
-                    )
-                } else {
-                    (
-                        self.app_context.style_chat_message_other_name(),
-                        self.app_context.style_chat_message_other_content(),
-                        Alignment::Left,
-                    )
-                };
 
+        let mut is_unread_outbox = true;
+        let mut is_unread_inbox = true;
+        let items = self.message_list.iter().map(|message_entry| {
+            let (me, name_style, content_style, alignment) = if message_entry.sender_id()
+                == self.app_context.tg_context().me()
+            {
+                if message_entry.id() == self.app_context.tg_context().last_read_outbox_message_id()
+                {
+                    is_unread_outbox = false;
+                }
+                (
+                    true,
+                    self.app_context.style_chat_message_myself_name(),
+                    self.app_context.style_chat_message_myself_content(),
+                    Alignment::Right,
+                )
+            } else {
+                if message_entry.id() == self.app_context.tg_context().last_read_inbox_message_id()
+                {
+                    is_unread_inbox = false;
+                }
+                (
+                    false,
+                    self.app_context.style_chat_message_other_name(),
+                    self.app_context.style_chat_message_other_content(),
+                    Alignment::Left,
+                )
+            };
+            if me {
+                if is_unread_outbox {
+                    return ListItem::new(
+                        message_entry
+                            .get_text_styled(
+                                &self.app_context,
+                                Some(true),
+                                name_style,
+                                content_style,
+                            )
+                            .alignment(alignment),
+                    );
+                } else {
+                    return ListItem::new(
+                        message_entry
+                            .get_text_styled(
+                                &self.app_context,
+                                Some(false),
+                                name_style,
+                                content_style,
+                            )
+                            .alignment(alignment),
+                    );
+                }
+            }
             ListItem::new(
                 message_entry
-                    .get_text_styled(&self.app_context, name_style, content_style)
+                    .get_text_styled(&self.app_context, None, name_style, content_style)
                     .alignment(alignment),
             )
         });

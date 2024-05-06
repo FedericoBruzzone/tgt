@@ -25,6 +25,10 @@ pub struct ChatListEntry {
     verificated: bool,
     is_marked_as_unread: bool,
     unread_count: i32,
+    /// Identifier of the last read incoming message
+    last_read_inbox_message_id: Option<i64>,
+    /// Identifier of the last read outgoing message
+    last_read_outbox_message_id: Option<i64>,
 }
 impl Default for ChatListEntry {
     fn default() -> Self {
@@ -41,6 +45,8 @@ impl ChatListEntry {
             verificated: false,
             is_marked_as_unread: false,
             unread_count: 0,
+            last_read_inbox_message_id: None,
+            last_read_outbox_message_id: None,
         }
     }
 
@@ -64,6 +70,12 @@ impl ChatListEntry {
     }
     pub fn set_unread_count(&mut self, unread_count: i32) {
         self.unread_count = unread_count;
+    }
+    pub fn set_last_read_inbox_message_id(&mut self, last_read_inbox_message_id: i64) {
+        self.last_read_inbox_message_id = Some(last_read_inbox_message_id);
+    }
+    pub fn set_last_read_outbox_message_id(&mut self, last_read_outbox_message_id: i64) {
+        self.last_read_outbox_message_id = Some(last_read_outbox_message_id);
     }
 
     fn get_text_styled(&self, app_context: &AppContext) -> Text {
@@ -209,6 +221,14 @@ impl ChatListWindow {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.chat_list.get(i) {
                 self.app_context.tg_context().set_open_chat_id(chat.chat_id);
+                self.app_context
+                    .tg_context()
+                    .set_last_read_inbox_message_id(chat.last_read_inbox_message_id.unwrap_or(-1));
+                self.app_context
+                    .tg_context()
+                    .set_last_read_outbox_message_id(
+                        chat.last_read_outbox_message_id.unwrap_or(-1),
+                    );
                 self.app_context.tg_context().clear_open_chat_messages();
                 self.app_context
                     .action_tx()

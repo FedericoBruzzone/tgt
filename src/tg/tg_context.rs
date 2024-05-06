@@ -36,6 +36,10 @@ pub struct TgContext {
     me: AtomicI64,
     open_chat_id: AtomicI64,
     open_chat_messages: Mutex<Vec<MessageEntry>>,
+    /// Identifier of the last read incoming message
+    last_read_inbox_message_id: AtomicI64,
+    /// Identifier of the last read outgoing message
+    last_read_outbox_message_id: AtomicI64,
 
     /// The chat id from which to start loading the chat history.
     from_message_id: Mutex<i64>,
@@ -105,6 +109,24 @@ impl TgContext {
         *self.event_tx() = Some(event_tx);
     }
 
+    pub fn set_last_read_inbox_message_id(&self, last_read_inbox_message_id: i64) {
+        self.last_read_inbox_message_id
+            .store(last_read_inbox_message_id, Ordering::Relaxed);
+    }
+
+    pub fn set_last_read_outbox_message_id(&self, last_read_outbox_message_id: i64) {
+        self.last_read_outbox_message_id
+            .store(last_read_outbox_message_id, Ordering::Relaxed);
+    }
+
+    pub fn last_read_inbox_message_id(&self) -> i64 {
+        self.last_read_inbox_message_id.load(Ordering::Relaxed)
+    }
+
+    pub fn last_read_outbox_message_id(&self) -> i64 {
+        self.last_read_outbox_message_id.load(Ordering::Relaxed)
+    }
+
     pub fn try_name_from_chats_or_users(&self, user_id: i64) -> Option<String> {
         if self.name_from_chats(user_id).is_some() {
             return self.name_from_chats(user_id);
@@ -147,6 +169,8 @@ impl TgContext {
             chat_list_item.set_chat_id(ord_chat.chat_id);
             if let Some(chat) = chats.get(&ord_chat.chat_id) {
                 chat_list_item.set_is_marked_as_unread(chat.unread_count > 0);
+                chat_list_item.set_last_read_inbox_message_id(chat.last_read_inbox_message_id);
+                chat_list_item.set_last_read_outbox_message_id(chat.last_read_outbox_message_id);
                 chat_list_item.set_unread_count(chat.unread_count);
                 if let Some(chat_message) = &chat.last_message {
                     chat_list_item.set_last_message(MessageEntry::from(chat_message));
