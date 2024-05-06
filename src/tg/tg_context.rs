@@ -146,6 +146,8 @@ impl TgContext {
             let mut chat_list_item = ChatListEntry::new();
             chat_list_item.set_chat_id(ord_chat.chat_id);
             if let Some(chat) = chats.get(&ord_chat.chat_id) {
+                chat_list_item.set_is_marked_as_unread(chat.unread_count > 0);
+                chat_list_item.set_unread_count(chat.unread_count);
                 if let Some(chat_message) = &chat.last_message {
                     chat_list_item.set_last_message(MessageEntry::from(chat_message));
                 }

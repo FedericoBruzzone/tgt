@@ -41,6 +41,7 @@ pub struct MessageEntry {
     timestamp: DateTimeEntry,
     is_edited: bool,
 }
+
 impl MessageEntry {
     pub fn id(&self) -> i64 {
         self.id

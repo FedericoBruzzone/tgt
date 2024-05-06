@@ -26,6 +26,8 @@ item_selected = { fg = "", bg = "primary", bold = false, underline = false, ital
 item_chat_name = { fg = "primary_light", bg = "background", bold = true, underline = false, italic = false }
 item_message_content = { fg = "secondary_light", bg = "background", bold = false, underline = false, italic = true }
 item_message_timestamp = { fg = "ternary_light", bg = "background", bold = false, underline = false, italic = false }
+item_unread_counter = { fg = "secondary", bg = "background", bold = true, underline = false, italic = false }
+
 
 [chat]
 self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }

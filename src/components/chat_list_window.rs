@@ -23,6 +23,8 @@ pub struct ChatListEntry {
     last_message: Option<MessageEntry>,
     status: UserStatus,
     verificated: bool,
+    is_marked_as_unread: bool,
+    unread_count: i32,
 }
 impl Default for ChatListEntry {
     fn default() -> Self {
@@ -37,6 +39,8 @@ impl ChatListEntry {
             last_message: None,
             status: tdlib::enums::UserStatus::Empty,
             verificated: false,
+            is_marked_as_unread: false,
+            unread_count: 0,
         }
     }
 
@@ -55,6 +59,13 @@ impl ChatListEntry {
     pub fn set_verificated(&mut self, verificated: bool) {
         self.verificated = verificated;
     }
+    pub fn set_is_marked_as_unread(&mut self, is_marked_as_unread: bool) {
+        self.is_marked_as_unread = is_marked_as_unread;
+    }
+    pub fn set_unread_count(&mut self, unread_count: i32) {
+        self.unread_count = unread_count;
+    }
+
     fn get_text_styled(&self, app_context: &AppContext) -> Text {
         let online_symbol = match self.status {
             UserStatus::Online(_) => "🟢 ",
@@ -62,6 +73,11 @@ impl ChatListEntry {
             _ => "",
         };
         let verificated_symbol = if self.verificated { "✅" } else { "" };
+        let unread_info = if self.is_marked_as_unread {
+            format!("({})", self.unread_count)
+        } else {
+            "".to_string()
+        };
 
         let mut entry = Text::default();
         entry.extend(vec![Line::from(vec![
@@ -69,6 +85,11 @@ impl ChatListEntry {
             Span::styled(
                 self.chat_name.clone(),
                 app_context.style_chat_list_item_chat_name(),
+            ),
+            Span::raw(" "),
+            Span::styled(
+                unread_info,
+                app_context.style_chat_list_item_unread_counter(),
             ),
             Span::raw(" "),
             Span::raw(verificated_symbol),
@@ -81,6 +102,7 @@ impl ChatListEntry {
             e.get_lines_styled_with_style(app_context.style_chat_list_item_message_content())[0]
                 .clone()
         }));
+
         entry
     }
 }
