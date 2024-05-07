@@ -106,6 +106,8 @@ pub enum Action {
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
     DeleteMessages(Vec<i64>, bool),
+    /// ViewAllMessages action.
+    ViewAllMessages,
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),

@@ -51,11 +51,13 @@ pub enum Event {
     /// The first parameter is the `from_message_id`, the second parameter
     /// is the `offset` and the third parameter is the `limit`.
     GetChatHistory(i64, i32, i32),
-    /// Delete messages
+    /// Delete messages event with a `Vec<i64>` and a `bool`.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
     DeleteMessages(Vec<i64>, bool),
+    /// View all messages event.
+    ViewAllMessages,
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -190,6 +192,9 @@ impl Display for Event {
             }
             Event::EditMessage(message_id, text) => {
                 write!(f, "EditMessage({}, {})", message_id, text)
+            }
+            Event::ViewAllMessages => {
+                write!(f, "ViewAllMessages")
             }
         }
     }

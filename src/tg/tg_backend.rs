@@ -77,6 +77,27 @@ impl TgBackend {
         }
     }
 
+    pub async fn close(&self) {
+        match functions::close(self.client_id).await {
+            Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
+            Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
+        }
+    }
+
+    pub async fn view_all_messages(&self) {
+        if let Err(e) = functions::view_messages(
+            self.app_context.tg_context().open_chat_id(),
+            self.app_context.tg_context().unread_messages(),
+            None,
+            true,
+            self.client_id,
+        )
+        .await
+        {
+            tracing::error!("Failed to view all messages: {e:?}");
+        }
+    }
+
     #[allow(clippy::await_holding_lock)]
     // By default telegram send us only one message the first time
     pub async fn prepare_to_get_chat_history(&mut self, chat_id: i64) {
@@ -175,13 +196,6 @@ impl TgBackend {
         match functions::delete_messages(chat_id, message_ids, revoke, self.client_id).await {
             Ok(_) => tracing::info!("Messages deleted"),
             Err(e) => tracing::error!("Failed to delete messages: {e:?}"),
-        }
-    }
-
-    pub async fn close(&self) {
-        match functions::close(self.client_id).await {
-            Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
-            Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
         }
     }
 

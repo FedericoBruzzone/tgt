@@ -109,6 +109,8 @@ async fn handle_tg_backend_events(
                     .send(Action::DeleteMessages(message_ids, revoke))?;
             }
             Event::EditMessage(message_id, message) => {
+                // It is important to focus the prompt before editing the message.
+                // Because the actions are sent to the focused component.
                 app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))?;
@@ -116,6 +118,9 @@ async fn handle_tg_backend_events(
                 app_context
                     .action_tx()
                     .send(Action::EditMessage(message_id, message))?;
+            }
+            Event::ViewAllMessages => {
+                app_context.action_tx().send(Action::ViewAllMessages)?;
             }
             _ => {}
         }
@@ -285,6 +290,9 @@ pub async fn handle_app_actions(
                         revoke,
                     )
                     .await;
+            }
+            Action::ViewAllMessages => {
+                tg_backend.view_all_messages().await;
             }
             _ => {}
         }

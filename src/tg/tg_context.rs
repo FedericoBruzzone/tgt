@@ -119,6 +119,17 @@ impl TgContext {
             .store(last_read_outbox_message_id, Ordering::Relaxed);
     }
 
+    pub fn unread_messages(&self) -> Vec<i64> {
+        let mut unread_messages: Vec<i64> = Vec::new();
+        for message in self.open_chat_messages().iter() {
+            unread_messages.push(message.id());
+            if message.id() == self.last_read_inbox_message_id() {
+                break;
+            }
+        }
+        unread_messages
+    }
+
     pub fn last_read_inbox_message_id(&self) -> i64 {
         self.last_read_inbox_message_id.load(Ordering::Relaxed)
     }
