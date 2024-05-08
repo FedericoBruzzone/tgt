@@ -288,18 +288,12 @@ impl Component for ChatWindow {
                             )
                             .alignment(alignment),
                     );
-                } else {
-                    return ListItem::new(
-                        message_entry
-                            .get_text_styled(
-                                &self.app_context,
-                                Some(false),
-                                name_style,
-                                content_style,
-                            )
-                            .alignment(alignment),
-                    );
                 }
+                return ListItem::new(
+                    message_entry
+                        .get_text_styled(&self.app_context, Some(false), name_style, content_style)
+                        .alignment(alignment),
+                );
             }
             ListItem::new(
                 message_entry
@@ -331,13 +325,20 @@ impl Component for ChatWindow {
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .style(self.app_context.style_chat())
             .title(self.name.as_str());
-        let header = Paragraph::new(Line::from(vec![Span::styled(
-            self.app_context
-                .tg_context()
-                .name_of_open_chat_id()
-                .unwrap_or_default(),
-            self.app_context.style_chat_chat_name(),
-        )]))
+        let header = Paragraph::new(Line::from(vec![
+            Span::styled(
+                self.app_context
+                    .tg_context()
+                    .name_of_open_chat_id()
+                    .unwrap_or_default(),
+                self.app_context.style_chat_chat_name(),
+            ),
+            Span::raw(" "),
+            Span::styled(
+                self.app_context.tg_context().open_chat_user_status(),
+                self.app_context.style_timestamp(),
+            ),
+        ]))
         .block(block_header)
         .alignment(Alignment::Center);
 

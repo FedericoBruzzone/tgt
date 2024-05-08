@@ -209,6 +209,7 @@ impl AppContext {
     );
 
     theme_style_generate!(style_item_selected, common, item_selected);
+    theme_style_generate!(style_timestamp, common, timestamp);
 
     // ===== CHAT LIST =====
     theme_style_generate!(style_chat_list, chat_list, self);
@@ -218,11 +219,6 @@ impl AppContext {
         style_chat_list_item_message_content,
         chat_list,
         item_message_content
-    );
-    theme_style_generate!(
-        style_chat_list_item_message_timestamp,
-        chat_list,
-        item_message_timestamp
     );
     theme_style_generate!(
         style_chat_list_item_unread_counter,

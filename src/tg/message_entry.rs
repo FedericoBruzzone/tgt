@@ -28,7 +28,7 @@ impl DateTimeEntry {
     pub fn get_span_styled(&self, app_context: &AppContext) -> Span {
         Span::styled(
             Self::convert_time(self.timestamp),
-            app_context.style_chat_list_item_message_timestamp(),
+            app_context.style_timestamp(),
         )
     }
 }

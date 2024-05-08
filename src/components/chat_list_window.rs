@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use tdlib::enums::{ChatList, UserStatus};
+use tdlib::types::User;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug)]
@@ -22,8 +23,7 @@ pub struct ChatListEntry {
     chat_id: i64,
     chat_name: String,
     last_message: Option<MessageEntry>,
-    status: UserStatus,
-    verificated: bool,
+    user: Option<User>,
     is_marked_as_unread: bool,
     unread_count: i32,
     /// Identifier of the last read incoming message
@@ -42,8 +42,7 @@ impl ChatListEntry {
             chat_id: 0,
             chat_name: String::new(),
             last_message: None,
-            status: tdlib::enums::UserStatus::Empty,
-            verificated: false,
+            user: None,
             is_marked_as_unread: false,
             unread_count: 0,
             last_read_inbox_message_id: None,
@@ -60,11 +59,8 @@ impl ChatListEntry {
     pub fn set_last_message(&mut self, last_message: MessageEntry) {
         self.last_message = Some(last_message);
     }
-    pub fn set_status(&mut self, status: tdlib::enums::UserStatus) {
-        self.status = status;
-    }
-    pub fn set_verificated(&mut self, verificated: bool) {
-        self.verificated = verificated;
+    pub fn set_user(&mut self, user: User) {
+        self.user = Some(user);
     }
     pub fn set_is_marked_as_unread(&mut self, is_marked_as_unread: bool) {
         self.is_marked_as_unread = is_marked_as_unread;
@@ -80,12 +76,19 @@ impl ChatListEntry {
     }
 
     fn get_text_styled(&self, app_context: &AppContext) -> Text {
-        let online_symbol = match self.status {
-            UserStatus::Online(_) => "🟢 ",
-            UserStatus::Offline(_) => "",
-            _ => "",
-        };
-        let verificated_symbol = if self.verificated { "✅" } else { "" };
+        let mut online_symbol = "";
+        let mut verificated_symbol = "";
+        if let Some(user) = &self.user {
+            online_symbol = match user.status {
+                UserStatus::Online(_) => "🟢 ",
+                UserStatus::Offline(_) => "",
+                UserStatus::Empty => "",
+                UserStatus::Recently => "",
+                UserStatus::LastWeek => "",
+                UserStatus::LastMonth => "",
+            };
+            verificated_symbol = if user.is_verified { "✅" } else { "" };
+        }
         let unread_info = if self.is_marked_as_unread {
             format!("({})", self.unread_count)
         } else {
@@ -221,15 +224,10 @@ impl ChatListWindow {
     fn confirm_selection(&mut self) {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.chat_list.get(i) {
+                self.app_context
+                    .tg_context()
+                    .set_open_chat_user(chat.user.clone());
                 self.app_context.tg_context().set_open_chat_id(chat.chat_id);
-                self.app_context
-                    .tg_context()
-                    .set_last_read_inbox_message_id(chat.last_read_inbox_message_id.unwrap_or(-1));
-                self.app_context
-                    .tg_context()
-                    .set_last_read_outbox_message_id(
-                        chat.last_read_outbox_message_id.unwrap_or(-1),
-                    );
                 self.app_context.tg_context().clear_open_chat_messages();
                 self.app_context
                     .action_tx()

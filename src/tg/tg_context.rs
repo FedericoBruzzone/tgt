@@ -1,4 +1,5 @@
 use super::message_entry::MessageEntry;
+use crate::tg::message_entry::DateTimeEntry;
 use crate::{
     app_error::AppError, components::chat_list_window::ChatListEntry, event::Event,
     tg::ordered_chat::OrderedChat,
@@ -35,11 +36,10 @@ pub struct TgContext {
     event_tx: Mutex<Option<UnboundedSender<Event>>>,
     me: AtomicI64,
     open_chat_id: AtomicI64,
+    // This is the chat messages that are currently being displayed
+    // in the chat window.
     open_chat_messages: Mutex<Vec<MessageEntry>>,
-    /// Identifier of the last read incoming message
-    last_read_inbox_message_id: AtomicI64,
-    /// Identifier of the last read outgoing message
-    last_read_outbox_message_id: AtomicI64,
+    open_chat_user: Mutex<Option<User>>,
 
     /// The chat id from which to start loading the chat history.
     from_message_id: Mutex<i64>,
@@ -88,6 +88,13 @@ impl TgContext {
     pub fn from_message_id(&self) -> MutexGuard<'_, i64> {
         self.from_message_id.lock().unwrap()
     }
+    pub fn open_chat_user(&self) -> MutexGuard<'_, Option<User>> {
+        self.open_chat_user.lock().unwrap()
+    }
+
+    pub fn set_open_chat_user(&self, user: Option<User>) {
+        *self.open_chat_user() = user;
+    }
 
     pub fn set_open_chat_id(&self, chat_id: i64) {
         self.open_chat_id.store(chat_id, Ordering::Relaxed);
@@ -109,14 +116,23 @@ impl TgContext {
         *self.event_tx() = Some(event_tx);
     }
 
-    pub fn set_last_read_inbox_message_id(&self, last_read_inbox_message_id: i64) {
-        self.last_read_inbox_message_id
-            .store(last_read_inbox_message_id, Ordering::Relaxed);
-    }
-
-    pub fn set_last_read_outbox_message_id(&self, last_read_outbox_message_id: i64) {
-        self.last_read_outbox_message_id
-            .store(last_read_outbox_message_id, Ordering::Relaxed);
+    pub fn open_chat_user_status(&self) -> String {
+        if let Some(user) = self.open_chat_user().as_ref() {
+            return match &user.status {
+                tdlib::enums::UserStatus::Empty => "Empty".to_string(),
+                tdlib::enums::UserStatus::Online(_) => "Online".to_string(),
+                tdlib::enums::UserStatus::Offline(offline) => {
+                    format!(
+                        "Last seen {}",
+                        DateTimeEntry::convert_time(offline.was_online)
+                    )
+                }
+                tdlib::enums::UserStatus::Recently => "Last seen recently ".to_string(),
+                tdlib::enums::UserStatus::LastWeek => "Last seen LastWeek".to_string(),
+                tdlib::enums::UserStatus::LastMonth => "Last seen LastMonth ".to_string(),
+            };
+        }
+        "".to_string()
     }
 
     pub fn unread_messages(&self) -> Vec<i64> {
@@ -131,11 +147,19 @@ impl TgContext {
     }
 
     pub fn last_read_inbox_message_id(&self) -> i64 {
-        self.last_read_inbox_message_id.load(Ordering::Relaxed)
+        let opened_chat = self.chats().get(&self.open_chat_id()).cloned();
+        if let Some(opened_chat) = opened_chat {
+            return opened_chat.last_read_inbox_message_id;
+        }
+        -1
     }
 
     pub fn last_read_outbox_message_id(&self) -> i64 {
-        self.last_read_outbox_message_id.load(Ordering::Relaxed)
+        let opened_chat = self.chats().get(&self.open_chat_id()).cloned();
+        if let Some(opened_chat) = opened_chat {
+            return opened_chat.last_read_outbox_message_id;
+        }
+        -1
     }
 
     pub fn try_name_from_chats_or_users(&self, user_id: i64) -> Option<String> {
@@ -180,6 +204,7 @@ impl TgContext {
             chat_list_item.set_chat_id(ord_chat.chat_id);
             if let Some(chat) = chats.get(&ord_chat.chat_id) {
                 chat_list_item.set_is_marked_as_unread(chat.unread_count > 0);
+                chat_list_item.set_chat_name(chat.title.clone());
                 chat_list_item.set_last_read_inbox_message_id(chat.last_read_inbox_message_id);
                 chat_list_item.set_last_read_outbox_message_id(chat.last_read_outbox_message_id);
                 chat_list_item.set_unread_count(chat.unread_count);
@@ -189,9 +214,7 @@ impl TgContext {
                 match &chat.r#type {
                     ChatType::Private(p) => {
                         if let Some(user) = self.users().get(&p.user_id) {
-                            chat_list_item.set_chat_name(chat.title.clone());
-                            chat_list_item.set_verificated(user.is_verified);
-                            chat_list_item.set_status(user.status.clone());
+                            chat_list_item.set_user(user.clone());
                         }
                     }
                     ChatType::BasicGroup(bg) => {
