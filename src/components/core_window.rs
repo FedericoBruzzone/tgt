@@ -111,6 +111,10 @@ impl CoreWindow {
         self.name = name.as_ref().to_string();
         self
     }
+    /// Toggle the chat list component.
+    pub fn toggle_chat_list(&mut self) {
+        self.size_chat_list = if self.size_chat_list == 0 { 20 } else { 0 };
+    }
     /// Increase the size of the chat list component.
     pub fn increase_chat_list_size(&mut self) {
         if self.size_chat_list == MAX_CHAT_LIST_SIZE {
@@ -198,6 +202,7 @@ impl Component for CoreWindow {
     }
 
     fn update(&mut self, action: Action) {
+        tracing::info!("CoreWindow update: {:?}", action);
         match action {
             Action::FocusComponent(component_name) => {
                 self.component_focused = Some(component_name);
@@ -215,6 +220,9 @@ impl Component for CoreWindow {
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
                 }
+            }
+            Action::ToggleChatList => {
+                self.toggle_chat_list();
             }
             Action::IncreaseChatListSize => {
                 self.increase_chat_list_size();

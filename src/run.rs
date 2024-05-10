@@ -163,7 +163,8 @@ async fn handle_tui_backend_events(
                 {
                     match action_binding {
                         ActionBinding::Single { action, .. } => {
-                            app_context.action_tx().send(action.clone())?
+                            app_context.action_tx().send(action.clone())?;
+                            return Ok(());
                         }
                         ActionBinding::Multiple(map_event_action) => {
                             consume_until_single_action(

@@ -113,6 +113,8 @@ pub enum Action {
     FocusComponent(ComponentName),
     /// Unfocus action.
     UnfocusComponent,
+    /// Toggle ChatList action.
+    ToggleChatList,
     /// Increase ChatList size action.
     IncreaseChatListSize,
     /// Decrease ChatList size action.
@@ -185,6 +187,7 @@ impl FromStr for Action {
             "focus_chat" => Ok(Action::FocusComponent(ComponentName::Chat)),
             "focus_prompt" => Ok(Action::FocusComponent(ComponentName::Prompt)),
             "unfocus_component" => Ok(Action::UnfocusComponent),
+            "toggle_chat_list" => Ok(Action::ToggleChatList),
             "increase_chat_list_size" => Ok(Action::IncreaseChatListSize),
             "decrease_chat_list_size" => Ok(Action::DecreaseChatListSize),
             "increase_prompt_size" => Ok(Action::IncreasePromptSize),
