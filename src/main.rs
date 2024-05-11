@@ -77,6 +77,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     tracing::info!("Theme config: {:?}", theme_config);
 
     let tg_context = TgContext::default();
+    tracing::info!("Telegram context: {:?}", tg_context);
     let app_context = Arc::new(AppContext::new(
         app_config,
         keymap_config,
@@ -84,11 +85,15 @@ async fn tokio_main() -> Result<(), AppError<()>> {
         palette_config,
         tg_context,
     )?);
+    tracing::info!("App context: {:?}", app_context);
 
     let mut tui_backend = TuiBackend::new(Arc::clone(&app_context))?;
+    tracing::info!("Tui backend initialized");
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
     let mut tui = Tui::new(Arc::clone(&app_context));
+    tracing::info!("Tui initialized");
     let mut tg_backend = TgBackend::new(Arc::clone(&app_context)).unwrap();
+    tracing::info!("Telegram backend initialized");
 
     match run::run_app(
         Arc::clone(&app_context),

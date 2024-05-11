@@ -239,6 +239,7 @@ impl TgBackend {
     }
 
     pub async fn handle_authorization_state(&mut self) {
+        tracing::info!("Handling authorization state");
         while let Some(state) = self.auth_rx.recv().await {
             match state {
                 AuthorizationState::WaitTdlibParameters => {
@@ -420,6 +421,7 @@ impl TgBackend {
         let tg_context = self.app_context.tg_context();
 
         self.handle_updates = tokio::spawn(async move {
+            tracing::info!("Starting handling updates from TDLib");
             while !can_quit.load(Ordering::Acquire) {
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
                 if let Some((update, _client_id)) = tdlib::receive() {

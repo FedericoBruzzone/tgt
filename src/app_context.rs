@@ -51,6 +51,7 @@ macro_rules! theme_style_generate {
     };
 }
 
+#[derive(Debug)]
 /// `AppContext` is a struct that represents the main application.
 /// It contains the application configuration, keymap configuration, theme
 /// configuration, palette configuration, and an unbounded sender and receiver
