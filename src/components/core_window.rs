@@ -6,7 +6,7 @@ use crate::{
     components::{
         chat_list_window::ChatListWindow,
         chat_window::ChatWindow,
-        component_traits::{Component, HandleFocus, HandleSmallArea},
+        component_traits::{Component, HandleFocus},
         prompt_window::PromptWindow,
     },
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
@@ -111,6 +111,15 @@ impl CoreWindow {
         self.name = name.as_ref().to_string();
         self
     }
+
+    /// Set small area flag.
+    ///
+    /// # Arguments
+    /// * `small_area` - A flag indicating whether the `CoreWindow` should be displayed as a
+    pub fn with_small_area(&mut self, small_area: bool) {
+        self.small_area = small_area;
+    }
+
     /// Toggle the chat list component.
     pub fn toggle_chat_list(&mut self) {
         self.size_chat_list = if self.size_chat_list == 0 { 20 } else { 0 };
@@ -154,23 +163,6 @@ impl HandleFocus for CoreWindow {
     /// Set the `focused` flag for the `CoreWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
-    }
-}
-
-/// Implement the `HandleSmallArea` trait for the `CoreWindow` struct.
-/// This trait allows the `CoreWindow` to display a smaller version of itself if
-/// necessary.
-impl HandleSmallArea for CoreWindow {
-    /// Set the `small_area` flag for the `CoreWindow`.
-    ///
-    /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `CoreWindow`
-    ///   should be displayed as a smaller version of itself.
-    fn with_small_area(&mut self, small_area: bool) {
-        self.small_area = small_area;
-        for (_, component) in self.components.iter_mut() {
-            component.with_small_area(small_area);
-        }
     }
 }
 

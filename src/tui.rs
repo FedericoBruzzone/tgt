@@ -45,7 +45,7 @@ impl Tui {
             (
                 ComponentName::CoreWindow,
                 CoreWindow::new(Arc::clone(&app_context))
-                    .with_name("CoreWindow")
+                    .with_name("Core Window")
                     .new_boxed(),
             ),
             (
@@ -127,10 +127,11 @@ impl Tui {
             .unwrap()
             .update(Action::UpdateArea(area));
 
-        self.components
-            .get_mut(&ComponentName::CoreWindow)
-            .unwrap()
-            .with_small_area(area.width < SMALL_AREA_WIDTH);
+        let core_window: &mut dyn std::any::Any =
+            self.components.get_mut(&ComponentName::CoreWindow).unwrap();
+        if let Some(core_window) = core_window.downcast_mut::<CoreWindow>() {
+            core_window.with_small_area(area.width < SMALL_AREA_WIDTH);
+        }
 
         let main_layout = Layout::new(
             Direction::Vertical,

@@ -2,7 +2,7 @@ use {
     crate::{
         action::Action,
         app_context::AppContext,
-        components::component_traits::{Component, HandleFocus, HandleSmallArea},
+        components::component_traits::{Component, HandleFocus},
     },
     ratatui::{
         layout::{Alignment, Rect},
@@ -22,9 +22,6 @@ pub struct TitleBar {
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<mpsc::UnboundedSender<Action>>,
-    /// A flag indicating whether the `TitleBar` should be displayed as a
-    /// smaller version of itself.
-    small_area: bool,
     /// Indicates whether the `TitleBar` is focused or not.
     focused: bool,
 }
@@ -33,13 +30,11 @@ impl TitleBar {
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
-        let small_area = false;
         let focused = false;
         TitleBar {
             app_context,
             command_tx,
             name,
-            small_area,
             focused,
         }
     }
@@ -69,19 +64,6 @@ impl HandleFocus for TitleBar {
     }
 }
 
-/// Implement the `HandleSmallArea` trait for the `TitleBar` struct.
-/// This trait allows the `TitleBar` to display a smaller version of itself if
-/// necessary.
-impl HandleSmallArea for TitleBar {
-    /// Set the `small_area` flag for the `TitleBar`.
-    ///
-    /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `TitleBar` should
-    ///   be displayed as a smaller version of itself.
-    fn with_small_area(&mut self, small: bool) {
-        self.small_area = small;
-    }
-}
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for TitleBar {
     fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {

@@ -1,7 +1,7 @@
 use crate::{
     action::{Action, Modifiers},
     app_context::AppContext,
-    components::component_traits::{Component, HandleFocus, HandleSmallArea},
+    components::component_traits::{Component, HandleFocus},
     event::Event,
 };
 use arboard::Clipboard;
@@ -503,9 +503,6 @@ pub struct PromptWindow {
     name: String,
     /// An unbounded sender that send action for processing.
     action_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `PromptWindow` should be displayed as a
-    /// smaller version of itself.
-    small_area: bool,
     /// Indicates whether the `PromptWindow` is focused or not.
     focused: bool,
     /// The key that allows the `PromptWindow` to be focused.
@@ -525,7 +522,6 @@ impl PromptWindow {
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
         let action_tx = None;
-        let small_area = false;
         let focused = false;
         let focused_key = "".to_string();
         let input = Input::default();
@@ -534,7 +530,6 @@ impl PromptWindow {
             app_context,
             name,
             action_tx,
-            small_area,
             focused,
             focused_key,
             input,
@@ -588,20 +583,6 @@ impl HandleFocus for PromptWindow {
     /// Set the `focused` flag for the `PromptWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
-    }
-}
-
-/// Implement the `HandleSmallArea` trait for the `PromptWindow` struct.
-/// This trait allows the `PromptWindow` to display a smaller version of itself
-/// if necessary.
-impl HandleSmallArea for PromptWindow {
-    /// Set the `small_area` flag for the `PromptWindow`.
-    ///
-    /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `PromptWindow`
-    ///   should be displayed as a smaller version of itself.
-    fn with_small_area(&mut self, small_area: bool) {
-        self.small_area = small_area;
     }
 }
 

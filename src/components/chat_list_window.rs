@@ -1,7 +1,7 @@
 use crate::action::Action;
 use crate::app_context::AppContext;
 use crate::component_name::ComponentName::Prompt;
-use crate::components::component_traits::{Component, HandleFocus, HandleSmallArea};
+use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
 use ratatui::layout::Rect;
@@ -132,9 +132,6 @@ pub struct ChatListWindow {
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `ChatListWindow` should be displayed as a
-    /// smaller version of itself.
-    small_area: bool,
     /// A list of chat items to be displayed in the `ChatListWindow`.
     chat_list: Vec<ChatListEntry>,
     /// The state of the list.
@@ -154,7 +151,6 @@ impl ChatListWindow {
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
         let command_tx = None;
-        let small_area = false;
         let chat_list = vec![];
         let chat_list_state = ListState::default();
         let focused = false;
@@ -163,7 +159,6 @@ impl ChatListWindow {
             app_context,
             name,
             command_tx,
-            small_area,
             chat_list,
             chat_list_state,
             focused,
@@ -258,20 +253,6 @@ impl HandleFocus for ChatListWindow {
     /// Set the `focused` flag for the `ChatListWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
-    }
-}
-
-/// Implement the `HandleSmallArea` trait for the `ChatListWindow` struct.
-/// This trait allows the `ChatListWindow` to display a smaller version of
-/// itself if necessary.
-impl HandleSmallArea for ChatListWindow {
-    /// Set the `small_area` flag for the `ChatListWindow`.
-    ///
-    /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `ChatListWindow`
-    ///   should be displayed as a smaller version of itself.
-    fn with_small_area(&mut self, small_area: bool) {
-        self.small_area = small_area;
     }
 }
 

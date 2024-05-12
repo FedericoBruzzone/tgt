@@ -1,7 +1,7 @@
 use crate::{
     action::Action,
     app_context::AppContext,
-    components::component_traits::{Component, HandleFocus, HandleSmallArea},
+    components::component_traits::{Component, HandleFocus},
     event::Event,
     tg::message_entry::MessageEntry,
 };
@@ -27,9 +27,6 @@ pub struct ChatWindow {
     name: String,
     /// An unbounded sender that send action for processing.
     action_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `ChatWindow` should be displayed as a
-    /// smaller version of itself.
-    small_area: bool,
     /// A list of message items to be displayed in the `ChatWindow`.
     message_list: Vec<MessageEntry>,
     /// The state of the list.
@@ -49,7 +46,6 @@ impl ChatWindow {
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
         let action_tx = None;
-        let small_area = false;
         let message_list = vec![];
         let message_list_state = ListState::default();
         let focused = false;
@@ -57,7 +53,6 @@ impl ChatWindow {
             app_context,
             name,
             action_tx,
-            small_area,
             message_list,
             message_list_state,
             focused,
@@ -186,20 +181,6 @@ impl HandleFocus for ChatWindow {
     /// Set the `focused` flag for the `ChatWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
-    }
-}
-
-/// Implement the `HandleSmallArea` trait for the `ChatWindow` struct.
-/// This trait allows the `ChatWindow` to display a smaller version of itself if
-/// necessary.
-impl HandleSmallArea for ChatWindow {
-    /// Set the `small_area` flag for the `ChatWindow`.
-    ///
-    /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `ChatWindow`
-    ///   should be displayed as a smaller version of itself.
-    fn with_small_area(&mut self, small_area: bool) {
-        self.small_area = small_area;
     }
 }
 

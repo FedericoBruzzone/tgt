@@ -2,7 +2,7 @@ use {
     crate::{
         action::Action,
         app_context::AppContext,
-        components::component_traits::{Component, HandleFocus, HandleSmallArea},
+        components::component_traits::{Component, HandleFocus},
         event::Event,
     },
     ratatui::{
@@ -23,9 +23,6 @@ pub struct StatusBar {
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A flag indicating whether the `StatusBar` should be displayed as a
-    /// smaller version of itself.
-    small_area: bool,
     /// Indicates whether the `StatusBar` is focused or not.
     focused: bool,
     /// The area of the terminal where the all the content will be rendered.
@@ -45,7 +42,6 @@ impl StatusBar {
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
-        let small_area = false;
         let terminal_area = Rect::default();
         let last_key = Event::Unknown;
         let focused = false;
@@ -54,7 +50,6 @@ impl StatusBar {
             app_context,
             command_tx,
             name,
-            small_area,
             terminal_area,
             last_key,
             focused,
@@ -83,20 +78,6 @@ impl HandleFocus for StatusBar {
     /// Set the `focused` flag for the `StatusBar`.
     fn unfocus(&mut self) {
         self.focused = false;
-    }
-}
-
-/// Implement the `HandleSmallArea` trait for the `StatusBar` struct.
-/// This trait allows the `StatusBar` to display a smaller version of itself if
-/// necessary.
-impl HandleSmallArea for StatusBar {
-    /// Set the `small_area` flag for the `StatusBar`.
-    ///
-    /// # Arguments
-    /// * `small_area` - A boolean flag indicating whether the `StatusBar`
-    ///   should be displayed as a smaller version of itself.
-    fn with_small_area(&mut self, small_area: bool) {
-        self.small_area = small_area;
     }
 }
 
