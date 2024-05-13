@@ -249,13 +249,11 @@ impl Component for CoreWindow {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
-        let size_chat_list = self.size_chat_list; // if self.small_area { 0 } else { self.size_chat_list };
-
         let core_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(size_chat_list),
-                Constraint::Percentage(100 - size_chat_list),
+                Constraint::Percentage(self.size_chat_list),
+                Constraint::Percentage(100 - self.size_chat_list),
             ])
             .split(area);
 

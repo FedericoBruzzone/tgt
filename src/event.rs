@@ -1,11 +1,9 @@
-use crate::tg::td_enums::TdChatList;
+use crate::app_error::AppError;
+use crate::tg::td_enums::{TdChatList, TdMessageReplyToMessage};
+use crossterm::event::{KeyCode, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
+use std::fmt::{self, Display, Formatter};
 use std::{hash::Hash, str::FromStr};
-use {
-    crate::app_error::AppError,
-    crossterm::event::{KeyCode, KeyModifiers, MouseEvent},
-    std::fmt::{self, Display, Formatter},
-};
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 /// `Event` is an enum that represents the different types of events that can be
@@ -39,7 +37,10 @@ pub enum Event {
     /// Load chats event with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
     /// Send message event with a `String`.
-    SendMessage(String),
+    /// This event is used to send a message.
+    /// The first parameter is the `text`.
+    /// The second parameter is the `reply_to` field.
+    SendMessage(String, Option<TdMessageReplyToMessage>),
     /// Send message edited event with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),
@@ -175,7 +176,9 @@ impl Display for Event {
             Event::LoadChats(chat_list, limit) => {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)
             }
-            Event::SendMessage(s) => write!(f, "SendMessage({})", s),
+            Event::SendMessage(s, reply_to) => {
+                write!(f, "SendMessage({}, {:?})", s, reply_to)
+            }
             Event::SendMessageEdited(message_id, s) => {
                 write!(f, "SendMessageEdited({}, {})", message_id, s)
             }

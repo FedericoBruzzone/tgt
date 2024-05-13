@@ -444,24 +444,24 @@ impl Input {
     /// # Arguments
     /// * `app_context` - An Arc wrapped AppContext struct.
     fn send_message(&mut self, app_context: Arc<AppContext>) {
-        if !self.edit_mode.0 {
-            if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
+        if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
+            if !self.edit_mode.0 {
                 event_tx
-                    .send(Event::SendMessage(self.text_to_string()))
+                    .send(Event::SendMessage(self.text_to_string(), None))
                     .unwrap();
                 self.text = vec![vec![]];
                 self.set_prompt_size_to_one_focused();
+            } else {
+                event_tx
+                    .send(Event::SendMessageEdited(
+                        self.edit_mode.1.unwrap(),
+                        self.text_to_string(),
+                    ))
+                    .unwrap();
+                self.text = vec![vec![]];
+                self.set_prompt_size_to_one_focused();
+                self.edit_mode = (false, None);
             }
-        } else if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
-            event_tx
-                .send(Event::SendMessageEdited(
-                    self.edit_mode.1.unwrap(),
-                    self.text_to_string(),
-                ))
-                .unwrap();
-            self.text = vec![vec![]];
-            self.set_prompt_size_to_one_focused();
-            self.edit_mode = (false, None);
         }
     }
     /// Convert the text of the `Input` struct to a string.

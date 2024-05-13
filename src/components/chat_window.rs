@@ -169,6 +169,10 @@ impl ChatWindow {
             }
         }
     }
+
+    fn reply_selected(&self) {
+        todo!()
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatWindow` struct.
@@ -200,6 +204,7 @@ impl Component for ChatWindow {
             Action::ChatWindowDeleteForMe => self.delete_selected(false),
             Action::ChatWindowCopy => self.copy_selected(),
             Action::ChatWindowEdit => self.edit_selected(),
+            Action::ChatWindowReply => self.reply_selected(),
             _ => {}
         }
     }

@@ -1,6 +1,9 @@
 use {
     super::component_name::ComponentName,
-    crate::{app_error::AppError, tg::td_enums::TdChatList},
+    crate::{
+        app_error::AppError,
+        tg::td_enums::{TdChatList, TdMessageReplyToMessage},
+    },
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::layout::Rect,
     std::str::FromStr,
@@ -89,7 +92,9 @@ pub enum Action {
     /// LoadChats action with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
     /// SendMessage action with a `String`.
-    SendMessage(String),
+    /// The first parameter is the `text`.
+    /// The second parameter is the `reply_to` field.
+    SendMessage(String, Option<TdMessageReplyToMessage>),
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),
@@ -153,6 +158,8 @@ pub enum Action {
     ChatWindowCopy,
     /// ChatWindowEdit action.
     ChatWindowEdit,
+    /// ChatWindowReply action.
+    ChatWindowReply,
 
     /// EditMessage action with a `String`.
     /// This action is used to edit a message.
@@ -203,6 +210,7 @@ impl FromStr for Action {
             "chat_window_delete_for_me" => Ok(Action::ChatWindowDeleteForMe),
             "chat_window_copy" => Ok(Action::ChatWindowCopy),
             "chat_window_edit" => Ok(Action::ChatWindowEdit),
+            "chat_window_reply" => Ok(Action::ChatWindowReply),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

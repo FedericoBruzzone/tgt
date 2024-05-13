@@ -4,8 +4,8 @@ use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib::enums::{
-    self, AuthorizationState, ChatList, InputMessageContent, LogStream, Messages, OptionValue,
-    Update, User,
+    self, AuthorizationState, ChatList, InputMessageContent, LogStream, MessageReplyTo, Messages,
+    OptionValue, Update, User,
 };
 use tdlib::functions;
 use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
@@ -13,6 +13,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
 use super::message_entry::MessageEntry;
+use super::td_enums::TdMessageReplyToMessage;
 
 pub struct TgBackend {
     pub handle_updates: JoinHandle<()>,
@@ -145,19 +146,25 @@ impl TgBackend {
     }
 
     #[allow(clippy::await_holding_lock)]
-    pub async fn send_message(&mut self, message: String) {
+    pub async fn send_message(
+        &mut self,
+        message: String,
+        reply_to: Option<TdMessageReplyToMessage>,
+    ) {
         let text = InputMessageContent::InputMessageText(InputMessageText {
             text: tdlib::types::FormattedText {
                 text: message,
-                entities: vec![],
+                entities: vec![], // TODO: Add entities
             },
             disable_web_page_preview: false,
             clear_draft: true,
         });
+        let reply_to: Option<MessageReplyTo> =
+            reply_to.map(|reply_to| MessageReplyTo::Message(reply_to.into()));
         if let Err(e) = functions::send_message(
             self.app_context.tg_context().open_chat_id(),
             0,
-            None,
+            reply_to,
             None,
             None,
             text,

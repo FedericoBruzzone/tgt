@@ -15,6 +15,32 @@ pub enum TdChatList {
     Folder(i32),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct TdMessageReplyToMessage {
+    /// The identifier of the chat to which the replied message belongs; ignored for outgoing replies. For example, messages in the Replies chat are replies to messages in different chats
+    pub chat_id: i64,
+    /// The identifier of the replied message
+    pub message_id: i64,
+}
+
+impl From<TdMessageReplyToMessage> for tdlib::types::MessageReplyToMessage {
+    fn from(reply_to_message: TdMessageReplyToMessage) -> Self {
+        tdlib::types::MessageReplyToMessage {
+            chat_id: reply_to_message.chat_id,
+            message_id: reply_to_message.message_id,
+        }
+    }
+}
+
+impl From<tdlib::types::MessageReplyToMessage> for TdMessageReplyToMessage {
+    fn from(reply_to_message: tdlib::types::MessageReplyToMessage) -> Self {
+        TdMessageReplyToMessage {
+            chat_id: reply_to_message.chat_id,
+            message_id: reply_to_message.message_id,
+        }
+    }
+}
+
 impl From<ChatList> for TdChatList {
     fn from(chat_list: ChatList) -> Self {
         match chat_list {

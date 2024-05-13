@@ -85,8 +85,10 @@ async fn handle_tg_backend_events(
                     .action_tx()
                     .send(Action::LoadChats(chat_list, limit))?;
             }
-            Event::SendMessage(message) => {
-                app_context.action_tx().send(Action::SendMessage(message))?;
+            Event::SendMessage(message, reply_to) => {
+                app_context
+                    .action_tx()
+                    .send(Action::SendMessage(message, reply_to))?;
             }
             Event::SendMessageEdited(message_id, message) => {
                 app_context
@@ -260,8 +262,10 @@ pub async fn handle_app_actions(
             Action::LoadChats(chat_list, limit) => {
                 tg_backend.load_chats(chat_list.into(), limit).await;
             }
-            Action::SendMessage(ref message) => {
-                tg_backend.send_message(message.to_string()).await;
+            Action::SendMessage(ref message, ref reply_to) => {
+                tg_backend
+                    .send_message(message.to_string(), reply_to.clone())
+                    .await;
             }
             Action::SendMessageEdited(message_id, ref message) => {
                 tg_backend
