@@ -242,6 +242,13 @@ impl AppContext {
         chat,
         message_other_content
     );
+    theme_style_generate!(style_chat_message_reply_name, chat, message_reply_name);
+    theme_style_generate!(
+        style_chat_message_reply_content,
+        chat,
+        message_reply_content
+    );
+    theme_style_generate!(style_chat_message_reply_text, chat, message_reply_text);
 
     // ===== PROMPT =====
     theme_style_generate!(style_prompt, prompt, self);

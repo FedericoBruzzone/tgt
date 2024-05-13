@@ -160,7 +160,7 @@ impl TgBackend {
             clear_draft: true,
         });
         let reply_to: Option<MessageReplyTo> =
-            reply_to.map(|reply_to| MessageReplyTo::Message(reply_to.into()));
+            reply_to.map(|reply_to| MessageReplyTo::Message((&reply_to).into()));
         if let Err(e) = functions::send_message(
             self.app_context.tg_context().open_chat_id(),
             0,

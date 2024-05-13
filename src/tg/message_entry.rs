@@ -3,10 +3,10 @@ use chrono::{DateTime, Local};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use std::time::{Duration, UNIX_EPOCH};
-use tdlib::enums::{MessageContent, MessageSender};
+use tdlib::enums::{MessageContent, MessageReplyTo, MessageSender};
 use tdlib::types::FormattedText;
 
-use super::td_enums::TdMessageSender;
+use super::td_enums::{TdMessageReplyTo, TdMessageSender};
 
 #[derive(Debug, Default, Clone)]
 pub struct DateTimeEntry {
@@ -38,6 +38,7 @@ pub struct MessageEntry {
     id: i64,
     sender_id: TdMessageSender,
     message_content: Vec<Line<'static>>,
+    reply_to: Option<TdMessageReplyTo>,
     timestamp: DateTimeEntry,
     is_edited: bool,
 }
@@ -81,6 +82,62 @@ impl MessageEntry {
         name_style: Style,
         content_style: Style,
     ) -> Text {
+        let reply_text = match &self.reply_to {
+            Some(reply_to) => match reply_to {
+                TdMessageReplyTo::Message(message) => {
+                    if app_context.tg_context().open_chat_id() == message.chat_id {
+                        let mut entry = Text::default();
+                        entry.extend(vec![Line::from(vec![
+                            Span::styled(
+                                "↩️ Reply to: ",
+                                app_context.style_chat_message_reply_text(),
+                            ),
+                            Span::styled(
+                                app_context
+                                    .tg_context()
+                                    .try_name_from_chats_or_users(
+                                        app_context
+                                            .tg_context()
+                                            .open_chat_messages()
+                                            .iter()
+                                            .find(|m| m.id() == message.message_id)
+                                            .unwrap()
+                                            .sender_id(),
+                                    )
+                                    .unwrap_or_default(),
+                                app_context.style_chat_message_reply_name(),
+                            ),
+                        ])]);
+                        entry.extend(
+                            app_context
+                                .tg_context()
+                                .open_chat_messages()
+                                .iter()
+                                .find(|m| m.id() == message.message_id)
+                                .unwrap()
+                                .get_lines_styled_with_style(
+                                    app_context.style_chat_message_reply_content(),
+                                ),
+                        );
+                        entry.extend(vec![Line::from("")]);
+                        Some(entry)
+                    } else {
+                        None
+                    }
+                }
+                TdMessageReplyTo::Story(_) => {
+                    let mut entry = Text::default();
+                    entry.extend(vec![Line::from(vec![
+                        Span::styled("↩️ Reply to: ", app_context.style_chat_message_reply_text()),
+                        Span::styled("Story", app_context.style_chat_message_reply_name()),
+                    ])]);
+                    entry.extend(vec![Line::from("")]);
+                    Some(entry)
+                }
+            },
+            None => None,
+        };
+
         let mut entry = Text::default();
         entry.extend(vec![Line::from(vec![
             Span::styled(
@@ -112,6 +169,7 @@ impl MessageEntry {
             Span::raw(" "),
             self.timestamp.get_span_styled(app_context),
         ])]);
+        entry.extend(reply_text.unwrap_or_default());
         entry.extend(self.get_lines_styled_with_style(content_style));
         entry
     }
@@ -119,6 +177,13 @@ impl MessageEntry {
     fn message_content_lines(content: &MessageContent) -> Vec<Line<'static>> {
         match content {
             MessageContent::MessageText(m) => Self::format_message_content(&m.text),
+            MessageContent::MessageAudio(_) => vec![Line::from("🎵 Audio")],
+            MessageContent::MessagePhoto(_) => vec![Line::from("📷 Photo")],
+            MessageContent::MessageSticker(_) => vec![Line::from("🎨 Sticker")],
+            MessageContent::MessageVideo(_) => vec![Line::from("🎥 Video")],
+            MessageContent::MessageAnimation(_) => vec![Line::from("🎞️ Animation")],
+            MessageContent::MessageVoiceNote(_) => vec![Line::from("🎤 Voice Note")],
+            MessageContent::MessageDocument(_) => vec![Line::from("📄 Document")],
             _ => vec![Line::from("")],
         }
     }
@@ -236,6 +301,15 @@ impl From<&tdlib::types::Message> for MessageEntry {
                 MessageSender::Chat(chat) => TdMessageSender::Chat(chat.chat_id),
             },
             message_content: Self::message_content_lines(&message.content),
+            reply_to: match &message.reply_to {
+                Some(reply) => match reply {
+                    MessageReplyTo::Message(message) => {
+                        Some(TdMessageReplyTo::Message(message.into()))
+                    }
+                    MessageReplyTo::Story(story) => Some(TdMessageReplyTo::Story(story.into())),
+                },
+                None => None,
+            },
             timestamp: DateTimeEntry {
                 timestamp: message.date,
             },
