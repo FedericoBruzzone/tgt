@@ -119,7 +119,7 @@ impl MessageEntry {
                                     app_context.style_chat_message_reply_content(),
                                 ),
                         );
-                        entry.extend(vec![Line::from("")]);
+                        // entry.extend(vec![Line::from("")]);
                         Some(entry)
                     } else {
                         None
@@ -131,7 +131,7 @@ impl MessageEntry {
                         Span::styled("↩️ Reply to: ", app_context.style_chat_message_reply_text()),
                         Span::styled("Story", app_context.style_chat_message_reply_name()),
                     ])]);
-                    entry.extend(vec![Line::from("")]);
+                    // entry.extend(vec![Line::from("")]);
                     Some(entry)
                 }
             },
@@ -266,23 +266,89 @@ impl MessageEntry {
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::Mention => {}
-                tdlib::enums::TextEntityType::Hashtag => {}
-                tdlib::enums::TextEntityType::Cashtag => {}
-                tdlib::enums::TextEntityType::BotCommand => {}
-                tdlib::enums::TextEntityType::Url => {}
-                tdlib::enums::TextEntityType::EmailAddress => {}
-                tdlib::enums::TextEntityType::PhoneNumber => {}
-                tdlib::enums::TextEntityType::BankCardNumber => {}
-                tdlib::enums::TextEntityType::Strikethrough => {}
+                tdlib::enums::TextEntityType::Strikethrough => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::CROSSED_OUT),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Url => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
+                tdlib::enums::TextEntityType::TextUrl(text_url) => {
+                    message_vec.push(Span::styled(
+                        text_url.url.clone(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
+                tdlib::enums::TextEntityType::EmailAddress => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Mention => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Hashtag => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ));
+                }
+                tdlib::enums::TextEntityType::PhoneNumber => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
+                tdlib::enums::TextEntityType::MentionName(mention_name) => {
+                    message_vec.push(Span::styled(
+                        // TODO: Fix from user_id to username
+                        mention_name.user_id.to_string(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Code => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::DIM),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Pre => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::DIM),
+                    ));
+                }
+                tdlib::enums::TextEntityType::PreCode(_pre_code) => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::DIM),
+                    ));
+                }
+                tdlib::enums::TextEntityType::Cashtag => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ));
+                }
+                tdlib::enums::TextEntityType::BankCardNumber => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    ));
+                }
                 tdlib::enums::TextEntityType::Spoiler => {}
-                tdlib::enums::TextEntityType::Code => {}
-                tdlib::enums::TextEntityType::Pre => {}
-                tdlib::enums::TextEntityType::PreCode(_) => {}
-                tdlib::enums::TextEntityType::TextUrl(_) => {}
-                tdlib::enums::TextEntityType::MentionName(_) => {}
-                tdlib::enums::TextEntityType::CustomEmoji(_) => {}
                 tdlib::enums::TextEntityType::MediaTimestamp(_) => {}
+                tdlib::enums::TextEntityType::CustomEmoji(_) => {}
+                tdlib::enums::TextEntityType::BotCommand => {}
             }
             message_vec.push(Span::raw(
                 text.chars().skip(offset + length).collect::<String>(),
