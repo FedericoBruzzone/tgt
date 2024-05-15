@@ -1,10 +1,10 @@
 [package]
 name = "tgt"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "A simple TUI for Telegram"
 license = "Apache-2.0"
-documentation = "https://docs.rs/crate/tgt/0.1.3"
+documentation = "https://docs.rs/crate/tgt/0.1.5"
 homepage = "https://github.com/FedericoBruzzone/tgt"
 repository = "https://github.com/FedericoBruzzone/tgt"
 readme = "README.md"
@@ -19,8 +19,9 @@ authors = [
     "Federico Bruzzone <federico.bruzzone.i@gmail.com>",
     "Andrea Longoni",
 ]
-categories = []
 default-run = "tgt"
+build = "build.rs"
+categories = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 # [toolchain]
@@ -48,6 +49,9 @@ arboard = { version = "3.4.0", features = ["wayland-data-control", "wl-clipboard
 chrono = "0.4.38"
 ratatui-image = "1.0.0"
 image = "0.25.1"
+
+[build-dependencies]
+dirs = "5.0.1"
 
 [profile.dev]
 

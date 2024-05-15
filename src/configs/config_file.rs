@@ -101,20 +101,17 @@ pub trait ConfigFile: Sized + Default + Clone {
         R: DeserializeOwned,
     {
         match Self::search_config_file(file_name) {
-            Some(file_path) => {
-                match configs::deserialize_to_config::<R>(&file_path) {
-                    Ok(s) => {
-                        tracing::info!("Loaded config from {}", file_path.display());
-                        Some(s)
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to parse {}: {}", file_name, e);
-                        eprintln!("Failed to parse {}: {}", file_name, e);
-                        std::process::exit(1);
-                        // None
-                    }
+            Some(file_path) => match configs::deserialize_to_config::<R>(&file_path) {
+                Ok(s) => {
+                    tracing::info!("Loaded config from {}", file_path.display());
+                    Some(s)
                 }
-            }
+                Err(e) => {
+                    tracing::error!("Failed to parse {}: {}", file_name, e);
+                    eprintln!("Failed to parse {}: {}", file_name, e);
+                    std::process::exit(1);
+                }
+            },
             None => {
                 tracing::info!("No config file found for {}", file_name);
                 None
