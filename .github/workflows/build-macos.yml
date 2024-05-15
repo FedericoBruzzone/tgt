@@ -47,7 +47,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: td/
-          key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
+          key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
         run: |
