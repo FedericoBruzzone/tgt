@@ -96,28 +96,32 @@ impl MessageEntry {
                                 app_context
                                     .tg_context()
                                     .try_name_from_chats_or_users(
-                                        app_context
+                                        match app_context
                                             .tg_context()
                                             .open_chat_messages()
                                             .iter()
                                             .find(|m| m.id() == message.message_id)
-                                            .unwrap()
-                                            .sender_id(),
+                                        {
+                                            Some(m) => m.sender_id(),
+                                            None => -1,
+                                        },
                                     )
                                     .unwrap_or_default(),
                                 app_context.style_chat_message_reply_name(),
                             ),
                         ])]);
                         entry.extend(
-                            app_context
+                            match app_context
                                 .tg_context()
                                 .open_chat_messages()
                                 .iter()
                                 .find(|m| m.id() == message.message_id)
-                                .unwrap()
-                                .get_lines_styled_with_style(
+                            {
+                                Some(m) => m.get_lines_styled_with_style(
                                     app_context.style_chat_message_reply_content(),
                                 ),
+                                None => vec![Line::from("")],
+                            },
                         );
                         // entry.extend(vec![Line::from("")]);
                         Some(entry)
