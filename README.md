@@ -6,7 +6,8 @@
 [github-ci-windows-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml/badge.svg
 [github-ci-macos]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml
 [github-ci-macos-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml/badge.svg
-[github-license]: https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE
+[github-license-mit]: https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE-MIT
+[github-license-apache]: https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE-APACHE
 [github-license-shield]: https://img.shields.io/github/license/FedericoBruzzone/tgt
 [total-lines]: https://github.com/FedericoBruzzone/tgt
 [total-lines-shield]: https://tokei.rs/b1/github/FedericoBruzzone/tgt?type=Rust,Python
@@ -27,7 +28,7 @@
 [![GitHub CI Linux][github-ci-linux-shield]][github-ci-linux]
 [![GitHub CI Windows][github-ci-windows-shield]][github-ci-windows]
 [![GitHub CI macOS][github-ci-macos-shield]][github-ci-macos]
-[![GitHub License][github-license-shield]][github-license]
+[![GitHub License][github-license-shield]][github-license-apache]
 [![Crates.io Downloads][creates-io-downloads-shield]][creates-io-downloads]
 [![][total-lines-shield]][total-lines]
 
@@ -69,7 +70,15 @@ COMMAND:
 
 ## License
 
-This repository is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Please review the license file provided in the repository for more information regarding the terms and conditions of the license.
+This repository are licensed under either of
+
+* Apache License, Version 2.0 ([LICENSE-APACHE][github-license-apache] or http://www.apache.org/licenses/LICENSE-2.0)
+
+* MIT license ([LICENSE-MIT][github-license-mit] or http://opensource.org/licenses/MIT)
+
+at your option.
+
+Please review the license file provided in the repository for more information regarding the terms and conditions of the license.
 
 ## Contact
 
