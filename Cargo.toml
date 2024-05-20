@@ -38,7 +38,7 @@ futures = "0.3.30"
 lazy_static = "1.4.0"
 # ratatui = "0.26.2"
 ratatui = { git = "https://github.com/Thorongil80/ratatui.git" }
-serde = "1.0.201"
+serde = "1.0.202"
 tdlib = "0.10.0"
 tokio = { version = "1.37.0", features = ["full"] }
 tracing = "0.1.40"
