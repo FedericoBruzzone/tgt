@@ -1085,12 +1085,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indoc"
-version = "2.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
-
-[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1742,33 +1736,14 @@ dependencies = [
 
 [[package]]
 name = "ratatui"
-version = "0.26.2"
+version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a564a852040e82671dc50a37d88f3aa83bbc690dfc6844cfe7a2591620206a80"
-dependencies = [
- "bitflags 2.5.0",
- "cassowary",
- "compact_str",
- "indoc",
- "itertools",
- "lru",
- "paste",
- "stability",
- "strum",
- "unicode-segmentation",
- "unicode-width",
-]
-
-[[package]]
-name = "ratatui"
-version = "0.26.2"
-source = "git+https://github.com/Thorongil80/ratatui.git#de9cd6a02ba50501741a6a483034094e261a8c5d"
+checksum = "f44c9e68fd46eda15c646fbb85e1040b657a58cdc8c98db1d97a55930d991eef"
 dependencies = [
  "bitflags 2.5.0",
  "cassowary",
  "compact_str",
  "crossterm",
- "indoc",
  "itertools",
  "lru",
  "paste",
@@ -1790,7 +1765,7 @@ dependencies = [
  "icy_sixel",
  "image 0.24.9",
  "rand",
- "ratatui 0.26.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ratatui",
  "rustix",
 ]
 
@@ -2301,7 +2276,7 @@ dependencies = [
  "futures",
  "image 0.25.1",
  "lazy_static",
- "ratatui 0.26.2 (git+https://github.com/Thorongil80/ratatui.git)",
+ "ratatui",
  "ratatui-image",
  "serde",
  "tdlib",
