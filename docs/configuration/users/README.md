@@ -15,3 +15,29 @@ In the configuration directory, `tgt` looks for the following files:
 - `keymap.toml` for keymap configuration (see [Keymap Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/keymap.toml.md))
 - `theme.toml` for theme configuration (see [Theme Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/theme.toml.md))
 - `logger.toml` for logger configuration (see [Logger Configuration](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/users/logger.toml.md))
+
+
+## Arch Linux Users
+
+If you are an Arch Linux user, make sure to have installed:
+```bash
+sudo pacman -S clang14
+sudo pacman -S openssl
+sudo pacman -S libc++abi
+sudo pacman -S libc++
+sudo pacman -S libunwind
+```
+
+(OPTIONAL) and then create the following symbolic link:
+
+```bash
+sudo ln -s /usr/lib/libunwind.so.8.1.0 /usr/lib/libunwind.so.1
+sudo ln -s /usr/lib/llvm14/bin/clang++ /usr/bin/clang++-14
+```
+
+and export the following environment variable:
+
+```bash
+export PATH=$PATH:/usr/lib/llvm14/bin
+```
+
