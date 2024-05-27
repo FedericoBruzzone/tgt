@@ -30,6 +30,11 @@ categories = []
 # targets = [ "wasm32-unknown-unknown", "thumbv2-none-eabi" ]
 # profile = "minimal"
 
+[features]
+# By deafult you need to set the `LOCAL_TDLIB_PATH` environment variable to the path of the TDLib library. See CONTRIBUTING.md for more information.
+default = []
+download-tdlib = ["tdlib-rs/download-tdlib"]
+
 [dependencies]
 config = "0.14.0"
 crossterm = { version = "0.27.0", features = ["event-stream"] }
@@ -38,7 +43,7 @@ futures = "0.3.30"
 lazy_static = "1.4.0"
 ratatui = "0.26.3"
 serde = "1.0.203"
-tdlib = "0.10.0"
+tdlib-rs = "1.0.2"
 tokio = { version = "1.37.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-error = "0.2.0"

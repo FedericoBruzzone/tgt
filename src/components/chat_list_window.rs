@@ -14,8 +14,8 @@ use ratatui::Frame;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
-use tdlib::enums::{ChatList, UserStatus};
-use tdlib::types::User;
+use tdlib_rs::enums::{ChatList, UserStatus};
+use tdlib_rs::types::User;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug)]

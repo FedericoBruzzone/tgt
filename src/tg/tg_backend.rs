@@ -3,12 +3,12 @@ use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
-use tdlib::enums::{
+use tdlib_rs::enums::{
     self, AuthorizationState, ChatList, InputMessageContent, LogStream, MessageReplyTo, Messages,
     OptionValue, Update, User,
 };
-use tdlib::functions;
-use tdlib::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
+use tdlib_rs::functions;
+use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -35,7 +35,7 @@ impl TgBackend {
         let handle_updates = tokio::spawn(async {});
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
         let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
-        let client_id = tdlib::create_client();
+        let client_id = tdlib_rs::create_client();
         let have_authorization = false;
         let need_quit = false;
         let can_quit = Arc::new(AtomicBool::new(false));
@@ -152,7 +152,7 @@ impl TgBackend {
         reply_to: Option<TdMessageReplyToMessage>,
     ) {
         let text = InputMessageContent::InputMessageText(InputMessageText {
-            text: tdlib::types::FormattedText {
+            text: tdlib_rs::types::FormattedText {
                 text: message,
                 entities: vec![], // TODO: Add entities
             },
@@ -166,7 +166,6 @@ impl TgBackend {
             0,
             reply_to,
             None,
-            None,
             text,
             self.client_id,
         )
@@ -178,7 +177,7 @@ impl TgBackend {
 
     pub async fn send_message_edited(&self, message_id: i64, message: String) {
         let text = InputMessageContent::InputMessageText(InputMessageText {
-            text: tdlib::types::FormattedText {
+            text: tdlib_rs::types::FormattedText {
                 text: message,
                 entities: vec![],
             },
@@ -188,7 +187,6 @@ impl TgBackend {
         match functions::edit_message_text(
             self.app_context.tg_context().open_chat_id(),
             message_id,
-            None,
             text,
             self.client_id,
         )
@@ -206,7 +204,7 @@ impl TgBackend {
         }
     }
 
-    async fn set_online(&self, online: bool) -> Result<(), tdlib::types::Error> {
+    async fn set_online(&self, online: bool) -> Result<(), tdlib_rs::types::Error> {
         functions::set_option(
             String::from("online"),
             Some(OptionValue::Boolean(OptionValueBoolean { value: online })),
@@ -309,7 +307,7 @@ impl TgBackend {
                     let code = ask_user("Please enter email authentication code: ");
                     let response = functions::check_authentication_email_code(
                         enums::EmailAddressAuthentication::Code(
-                            tdlib::types::EmailAddressAuthenticationCode { code },
+                            tdlib_rs::types::EmailAddressAuthenticationCode { code },
                         ),
                         self.client_id,
                     )
@@ -396,7 +394,7 @@ impl TgBackend {
     pub async fn set_logging(&self) {
         // TODO read data from config file
 
-        // Set a fairly low verbosity level. We mainly do this because tdlib
+        // Set a fairly low verbosity level. We mainly do this because tdlib_rs
         // requires to perform a random request with the client to start
         // receiving updates for it.
         functions::set_log_verbosity_level(2, self.client_id)
@@ -405,7 +403,7 @@ impl TgBackend {
 
         // Create log file
         let log_stream_file = LogStreamFile {
-            path: ".data/tdlib.log".into(),
+            path: ".data/tdlib_rs.log".into(),
             max_file_size: 1 << 27,
             redirect_stderr: false,
         };
@@ -431,7 +429,7 @@ impl TgBackend {
             tracing::info!("Starting handling updates from TDLib");
             while !can_quit.load(Ordering::Acquire) {
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
-                if let Some((update, _client_id)) = tdlib::receive() {
+                if let Some((update, _client_id)) = tdlib_rs::receive() {
                     update_dequeue.push_back(update);
                     let update = update_dequeue.pop_front().unwrap();
                     match update.clone() {

@@ -2,7 +2,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use tdlib::{
+use tdlib_rs::{
     enums::{AuthorizationState, Update, User},
     functions,
 };
@@ -91,7 +91,7 @@ async fn handle_authorization_state(
 #[tokio::main]
 async fn main() {
     // Create the client object
-    let client_id = tdlib::create_client();
+    let client_id = tdlib_rs::create_client();
 
     // Create a mpsc channel for handling AuthorizationState updates separately
     // from the task
@@ -108,13 +108,13 @@ async fn main() {
                 break;
             }
 
-            if let Some((update, _client_id)) = tdlib::receive() {
+            if let Some((update, _client_id)) = tdlib_rs::receive() {
                 handle_update(update, &auth_tx).await;
             }
         }
     });
 
-    // Set a fairly low verbosity level. We mainly do this because tdlib
+    // Set a fairly low verbosity level. We mainly do this because tdlib_rs
     // requires to perform a random request with the client to start receiving
     // updates for it.
     functions::set_log_verbosity_level(2, client_id)

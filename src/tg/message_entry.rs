@@ -3,8 +3,8 @@ use chrono::{DateTime, Local};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use std::time::{Duration, UNIX_EPOCH};
-use tdlib::enums::{MessageContent, MessageReplyTo, MessageSender};
-use tdlib::types::FormattedText;
+use tdlib_rs::enums::{MessageContent, MessageReplyTo, MessageSender};
+use tdlib_rs::types::FormattedText;
 
 use super::td_enums::{TdMessageReplyTo, TdMessageSender};
 
@@ -252,107 +252,107 @@ impl MessageEntry {
             let length = e.length as usize;
             message_vec.push(Span::raw(text.chars().take(offset).collect::<String>()));
             match &e.r#type {
-                tdlib::enums::TextEntityType::Italic => {
+                tdlib_rs::enums::TextEntityType::Italic => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::ITALIC),
                     ));
                 }
-                tdlib::enums::TextEntityType::Bold => {
+                tdlib_rs::enums::TextEntityType::Bold => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::BOLD),
                     ));
                 }
-                tdlib::enums::TextEntityType::Underline => {
+                tdlib_rs::enums::TextEntityType::Underline => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::Strikethrough => {
+                tdlib_rs::enums::TextEntityType::Strikethrough => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::CROSSED_OUT),
                     ));
                 }
-                tdlib::enums::TextEntityType::Url => {
+                tdlib_rs::enums::TextEntityType::Url => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::TextUrl(text_url) => {
+                tdlib_rs::enums::TextEntityType::TextUrl(text_url) => {
                     message_vec.push(Span::styled(
                         text_url.url.clone(),
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::EmailAddress => {
+                tdlib_rs::enums::TextEntityType::EmailAddress => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::Mention => {
+                tdlib_rs::enums::TextEntityType::Mention => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::BOLD),
                     ));
                 }
-                tdlib::enums::TextEntityType::Hashtag => {
+                tdlib_rs::enums::TextEntityType::Hashtag => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::BOLD),
                     ));
                 }
-                tdlib::enums::TextEntityType::PhoneNumber => {
+                tdlib_rs::enums::TextEntityType::PhoneNumber => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::MentionName(mention_name) => {
+                tdlib_rs::enums::TextEntityType::MentionName(mention_name) => {
                     message_vec.push(Span::styled(
                         // TODO: Fix from user_id to username
                         mention_name.user_id.to_string(),
                         Style::default().add_modifier(Modifier::BOLD),
                     ));
                 }
-                tdlib::enums::TextEntityType::Code => {
+                tdlib_rs::enums::TextEntityType::Code => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::DIM),
                     ));
                 }
-                tdlib::enums::TextEntityType::Pre => {
+                tdlib_rs::enums::TextEntityType::Pre => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::DIM),
                     ));
                 }
-                tdlib::enums::TextEntityType::PreCode(_pre_code) => {
+                tdlib_rs::enums::TextEntityType::PreCode(_pre_code) => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::DIM),
                     ));
                 }
-                tdlib::enums::TextEntityType::Cashtag => {
+                tdlib_rs::enums::TextEntityType::Cashtag => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::BOLD),
                     ));
                 }
-                tdlib::enums::TextEntityType::BankCardNumber => {
+                tdlib_rs::enums::TextEntityType::BankCardNumber => {
                     message_vec.push(Span::styled(
                         text.chars().skip(offset).take(length).collect::<String>(),
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
-                tdlib::enums::TextEntityType::Spoiler => {}
-                tdlib::enums::TextEntityType::MediaTimestamp(_) => {}
-                tdlib::enums::TextEntityType::CustomEmoji(_) => {}
-                tdlib::enums::TextEntityType::BotCommand => {}
+                tdlib_rs::enums::TextEntityType::Spoiler => {}
+                tdlib_rs::enums::TextEntityType::MediaTimestamp(_) => {}
+                tdlib_rs::enums::TextEntityType::CustomEmoji(_) => {}
+                tdlib_rs::enums::TextEntityType::BotCommand => {}
             }
             message_vec.push(Span::raw(
                 text.chars().skip(offset + length).collect::<String>(),
@@ -362,8 +362,8 @@ impl MessageEntry {
         Self::from_spans_to_lines(message_vec)
     }
 }
-impl From<&tdlib::types::Message> for MessageEntry {
-    fn from(message: &tdlib::types::Message) -> Self {
+impl From<&tdlib_rs::types::Message> for MessageEntry {
+    fn from(message: &tdlib_rs::types::Message) -> Self {
         Self {
             id: message.id,
             sender_id: match &message.sender_id {

@@ -1,4 +1,4 @@
-use {std::hash::Hash, tdlib::types::ChatPosition};
+use {std::hash::Hash, tdlib_rs::types::ChatPosition};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OrderedChat {

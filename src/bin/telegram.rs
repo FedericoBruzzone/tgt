@@ -1,8 +1,8 @@
 // Run it with `cargo run --bin telegram`
-// telegram getting started -> https://core.telegram.org/tdlib/getting-started
-// tdlib rust docs -> https://docs.rs/tdlib/latest/tdlib/
-// tdlib telegram docs -> https://core.telegram.org/tdlib/docs/
-// java example -> https://github.com/tdlib/td/blob/master/example/java/org/drinkless/tdlib/example/Example.java
+// telegram getting started -> https://core.telegram.org/tdlib_rs/getting-started
+// tdlib_rs rust docs -> https://docs.rs/tdlib_rs/latest/tdlib_rs/
+// tdlib_rs telegram docs -> https://core.telegram.org/tdlib_rs/docs/
+// java example -> https://github.com/tdlib_rs/td/blob/master/example/java/org/drinkless/tdlib_rs/example/Example.java
 
 use {
     std::{
@@ -13,7 +13,7 @@ use {
             Arc, Mutex,
         },
     },
-    tdlib::{
+    tdlib_rs::{
         enums::{self, AuthorizationState, LogStream, Update},
         functions,
         types::{
@@ -74,7 +74,7 @@ impl Ord for OrderedChat {
 }
 
 pub struct TgBackend {
-    // thread for receiving updates from tdlib
+    // thread for receiving updates from tdlib_rs
     pub handle_updates: JoinHandle<()>,
 
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
@@ -108,7 +108,7 @@ impl TgBackend {
 
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
 
-        let client_id = tdlib::create_client();
+        let client_id = tdlib_rs::create_client();
 
         // probably useless in real app
         let have_authorization = false;
@@ -180,7 +180,7 @@ impl TgBackend {
             while !can_quit.load(Ordering::Acquire) {
                 // TODO check that the client_ids are equal
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
-                if let Some((update, _client_id)) = tdlib::receive() {
+                if let Some((update, _client_id)) = tdlib_rs::receive() {
                     update_dequeue.push_back(update);
                     let update = update_dequeue.pop_front().unwrap();
                     match update.clone() {
@@ -593,7 +593,7 @@ impl TgBackend {
                     let code = ask_user("Please enter email authentication code: ");
                     let response = functions::check_authentication_email_code(
                         enums::EmailAddressAuthentication::Code(
-                            tdlib::types::EmailAddressAuthenticationCode { code },
+                            tdlib_rs::types::EmailAddressAuthenticationCode { code },
                         ),
                         self.client_id,
                     )
@@ -724,7 +724,6 @@ impl TgBackend {
                     0,
                     None,
                     None,
-                    None,
                     text,
                     self.client_id,
                 )
@@ -800,7 +799,7 @@ impl TgBackend {
     pub async fn set_logging(&self) {
         // TODO read data from config file
 
-        // Set a fairly low verbosity level. We mainly do this because tdlib
+        // Set a fairly low verbosity level. We mainly do this because tdlib_rs
         // requires to perform a random request with the client to start
         // receiving updates for it.
         functions::set_log_verbosity_level(2, self.client_id)
@@ -809,7 +808,7 @@ impl TgBackend {
 
         // Create log file
         let log_stream_file = LogStreamFile {
-            path: ".data/tdlib.log".into(),
+            path: ".data/tdlib_rs.log".into(),
             max_file_size: 1 << 27,
             redirect_stderr: false,
         };

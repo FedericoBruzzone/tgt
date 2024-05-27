@@ -6,16 +6,26 @@ project_name := "tgt"
 _default:
   just --list --justfile {{justfile()}}
 
-# All
-all: fmt clippy test build
+# Run fmt, clippy, test
+all: fmt clippy test
 
-# Build the project using cargo
-build:
+# Build the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
+build_local:
   cargo build
 
-# Run the project using cargo
-run BIN="" BIN_NAME="":
+# Build the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
+build_download:
+  cargo build --features download-tdlib
+
+# Run the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
+# Example: just run_local BIN="bin" BIN_NAME="get_me"
+run_local BIN="" BIN_NAME="":
   cargo run {{BIN}} {{BIN_NAME}}
+
+# Run the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
+# Example: just run_download BIN="bin" BIN_NAME="get_me"
+run_download BIN="" BIN_NAME="":
+  cargo run --features download-tdlib {{BIN}} {{BIN_NAME}}
 
 # Format the code using cargo
 fmt:
@@ -38,16 +48,3 @@ test:
 # Clean the project using cargo
 clean:
   cargo clean
-
-_help:
-  @echo "Usage: just [recipe]"
-  @echo ""
-  @echo "Available recipes:"
-  @echo "  build       # Build the project using cargo"
-  @echo "  run         # Run the project using cargo"
-  @echo "  fmt_nightly # Format the code using cargo nightly"
-  @echo "  fmt         # Format the code using cargo"
-  @echo "  clippy      # Run clippy using cargo"
-  @echo "  test        # Run tests using cargo"
-  @echo "  clean       # Clean the project using cargo"
-  @echo "  help        # Display this help message"

@@ -9,7 +9,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     sync::{Mutex, MutexGuard},
 };
-use tdlib::{
+use tdlib_rs::{
     enums::ChatType,
     types::{
         BasicGroup, BasicGroupFullInfo, Chat, SecretChat, Supergroup, SupergroupFullInfo, User,
@@ -119,17 +119,17 @@ impl TgContext {
     pub fn open_chat_user_status(&self) -> String {
         if let Some(user) = self.open_chat_user().as_ref() {
             return match &user.status {
-                tdlib::enums::UserStatus::Empty => "Empty".to_string(),
-                tdlib::enums::UserStatus::Online(_) => "Online".to_string(),
-                tdlib::enums::UserStatus::Offline(offline) => {
+                tdlib_rs::enums::UserStatus::Empty => "Empty".to_string(),
+                tdlib_rs::enums::UserStatus::Online(_) => "Online".to_string(),
+                tdlib_rs::enums::UserStatus::Offline(offline) => {
                     format!(
                         "Last seen {}",
                         DateTimeEntry::convert_time(offline.was_online)
                     )
                 }
-                tdlib::enums::UserStatus::Recently => "Last seen recently ".to_string(),
-                tdlib::enums::UserStatus::LastWeek => "Last seen LastWeek".to_string(),
-                tdlib::enums::UserStatus::LastMonth => "Last seen LastMonth ".to_string(),
+                tdlib_rs::enums::UserStatus::Recently => "Last seen recently ".to_string(),
+                tdlib_rs::enums::UserStatus::LastWeek => "Last seen LastWeek".to_string(),
+                tdlib_rs::enums::UserStatus::LastMonth => "Last seen LastMonth ".to_string(),
             };
         }
         "".to_string()

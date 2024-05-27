@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use tdlib::{enums::ChatList, types::ChatListFolder};
+use tdlib_rs::{enums::ChatList, types::ChatListFolder};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TdMessageSender {
@@ -29,17 +29,17 @@ pub struct TdMessageReplyToMessage {
     pub message_id: i64,
 }
 
-impl From<&TdMessageReplyToMessage> for tdlib::types::MessageReplyToMessage {
+impl From<&TdMessageReplyToMessage> for tdlib_rs::types::MessageReplyToMessage {
     fn from(reply_to_message: &TdMessageReplyToMessage) -> Self {
-        tdlib::types::MessageReplyToMessage {
+        tdlib_rs::types::MessageReplyToMessage {
             chat_id: reply_to_message.chat_id,
             message_id: reply_to_message.message_id,
         }
     }
 }
 
-impl From<&tdlib::types::MessageReplyToMessage> for TdMessageReplyToMessage {
-    fn from(reply_to_message: &tdlib::types::MessageReplyToMessage) -> Self {
+impl From<&tdlib_rs::types::MessageReplyToMessage> for TdMessageReplyToMessage {
+    fn from(reply_to_message: &tdlib_rs::types::MessageReplyToMessage) -> Self {
         TdMessageReplyToMessage {
             chat_id: reply_to_message.chat_id,
             message_id: reply_to_message.message_id,
@@ -55,17 +55,17 @@ pub struct TdMessageReplyToStory {
     pub story_id: i32,
 }
 
-impl From<&TdMessageReplyToStory> for tdlib::types::MessageReplyToStory {
+impl From<&TdMessageReplyToStory> for tdlib_rs::types::MessageReplyToStory {
     fn from(reply_to_story: &TdMessageReplyToStory) -> Self {
-        tdlib::types::MessageReplyToStory {
+        tdlib_rs::types::MessageReplyToStory {
             story_sender_chat_id: reply_to_story.story_sender_chat_id,
             story_id: reply_to_story.story_id,
         }
     }
 }
 
-impl From<&tdlib::types::MessageReplyToStory> for TdMessageReplyToStory {
-    fn from(reply_to_story: &tdlib::types::MessageReplyToStory) -> Self {
+impl From<&tdlib_rs::types::MessageReplyToStory> for TdMessageReplyToStory {
+    fn from(reply_to_story: &tdlib_rs::types::MessageReplyToStory) -> Self {
         TdMessageReplyToStory {
             story_sender_chat_id: reply_to_story.story_sender_chat_id,
             story_id: reply_to_story.story_id,

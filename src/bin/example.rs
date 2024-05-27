@@ -1,14 +1,14 @@
 // Run it with `cargo run --bin example`
-// tdlib rust docs -> https://docs.rs/tdlib/latest/tdlib/
-// tdlib telegram docs -> https://core.telegram.org/tdlib/docs/
-// java example -> https://github.com/tdlib/td/blob/master/example/java/org/drinkless/tdlib/example/Example.java
+// tdlib_rs rust docs -> https://docs.rs/tdlib_rs/latest/tdlib_rs/
+// tdlib_rs telegram docs -> https://core.telegram.org/tdlib_rs/docs/
+// java example -> https://github.com/tdlib_rs/td/blob/master/example/java/org/drinkless/tdlib_rs/example/Example.java
 
 use {
     std::sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    tdlib::{
+    tdlib_rs::{
         enums::{self, AuthorizationState, LogStream, Update},
         functions,
         types::{FormattedText, InputMessageText, LogStreamFile},
@@ -60,7 +60,6 @@ async fn get_command(client_id: i32) -> bool {
             match functions::send_message(
                 commands[1].parse().unwrap(),
                 0,
-                None,
                 None,
                 None,
                 text,
@@ -275,7 +274,7 @@ async fn handle_authorization_state(
 #[tokio::main]
 async fn main() {
     // Create the client object
-    let client_id = tdlib::create_client();
+    let client_id = tdlib_rs::create_client();
 
     // Create a mpsc channel for handling AuthorizationState updates separately
     // from the task
@@ -289,13 +288,13 @@ async fn main() {
     let handle = tokio::spawn(async move {
         while run_flag_clone.load(Ordering::Acquire) {
             // TODO check that the client_ids are equal
-            if let Some((update, _client_id)) = tdlib::receive() {
+            if let Some((update, _client_id)) = tdlib_rs::receive() {
                 handle_update(update, &auth_tx).await;
             }
         }
     });
 
-    // Set a fairly low verbosity level. We mainly do this because tdlib
+    // Set a fairly low verbosity level. We mainly do this because tdlib_rs
     // requires to perform a random request with the client to start receiving
     // updates for it.
     functions::set_log_verbosity_level(2, client_id)
@@ -304,7 +303,7 @@ async fn main() {
 
     // Create log file
     let log_stream_file = LogStreamFile {
-        path: ".data/tdlib.log".into(),
+        path: ".data/tdlib_rs.log".into(),
         max_file_size: 1 << 27,
         redirect_stderr: false,
     };

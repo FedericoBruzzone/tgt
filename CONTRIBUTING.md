@@ -1,5 +1,23 @@
 # Configure the project
 
+## Using local TDLib
+
+By default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory.
+
+You can set the `LOCAL_TDLIB_PATH` environment variable in the `.bashrc` or `.zshrc` file:
+```bash
+export LOCAL_TDLIB_PATH="/path/to/tdlib"
+```
+
+To compile the tdlib, you can see the instructions in the [Build TDLib](#build-tdlib) section.
+
+## Using download-tdlib feature of tdlib-rs
+
+Thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using `cargo build --features download-tdlib` to download the `tdlib` automatically and build the project.
+
+
+## Build TDLib
+
 The steps to build TDLib can be found [here](https://tdlib.github.io/td/build.html?language=Rust), for other info check the official repository of [TDLib](https://github.com/tdlib/td).
 
 About the `api_id` you can get one form [https://my.telegram.org](https://my.telegram.org), for other info check the official [documentation](https://core.telegram.org/api/obtaining_api_id).
@@ -233,3 +251,4 @@ After `cargo build`, if it fails, you may need to move explicitly the `libtdjson
 ```bash
 cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.so.1.8.19 '/usr/lib/'
 ```
+

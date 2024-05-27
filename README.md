@@ -41,7 +41,9 @@
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
 For more information, do not hesitate to contact us (see the [Contact](#contact) section).
 
-The [CONFIGURE_TDLIB.md](https://github.com/FedericoBruzzone/tgt/blob/main/docs/configuration/contributors/CONFIGURE_TDLIB.md) file contains the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
+By default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory. But thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using `cargo build --features download-tdlib` to download the `tdlib` automatically and build the project.
+
+The [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file contains the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
 
 ### Road Map
 
@@ -58,14 +60,16 @@ just COMMAND
 make COMMAND
 
 COMMAND:
-  all    # fmt, clippy, test, build
-  build  # Build the project
-  run    # Run the project
-  fmt    # Format the code
-  clippy # Run clippy
-  test   # Run the tests
-  clean  # Clean the project
-  help   # Print the help message
+  all            # Run fmt, clippy and test
+  build_local    # Build the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
+  build_download # Build the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
+  run_local      # Run the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
+  run_download   # Run the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
+  fmt            # Format the code using cargo
+  clippy         # Format the code using nightly cargo
+  test           # Run clippy using cargo
+  clean          # Run tests using cargo
+  help           # Clean the project using cargo
 ```
 
 ## License

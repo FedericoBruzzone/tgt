@@ -6,7 +6,7 @@ use crate::{
 };
 use ratatui::layout::Rect;
 use std::{collections::HashMap, io, sync::Arc, time::Instant};
-use tdlib::enums::ChatList;
+use tdlib_rs::enums::ChatList;
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Run the main event loop for the application.
