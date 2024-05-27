@@ -1,4 +1,4 @@
-name: Build Linux
+name: CI Linux
 
 on:
   push:
@@ -78,17 +78,17 @@ jobs:
       - name: Set LOCAL_TDLIB_PATH
         if: matrix.feature == 'default'
         run: echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      # - name: Cache cargo
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ~/.cargo/bin/
+      #       ~/.cargo/registry/index/
+      #       ~/.cargo/registry/cache/
+      #       ~/.cargo/git/db/
+      #       target/
+      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      #     restore-keys: ${{ runner.os }}-cargo-
       - name: Run cargo build
         run: cargo build --verbose --features ${{ matrix.feature }}
       - name: Run cargo test

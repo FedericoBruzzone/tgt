@@ -194,7 +194,6 @@ impl Component for CoreWindow {
     }
 
     fn update(&mut self, action: Action) {
-        tracing::info!("CoreWindow update: {:?}", action);
         match action {
             Action::FocusComponent(component_name) => {
                 self.component_focused = Some(component_name);
