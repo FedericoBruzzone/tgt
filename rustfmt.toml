@@ -1,3 +1,5 @@
+reorder_imports = true
+
 # unstable_features = true
 # tab_spaces = 4
 # max_width = 80

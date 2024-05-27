@@ -28,19 +28,25 @@ env:
   API_ID: 94575
 
 jobs:
-  build:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        feature: [default, pkg-config, download-tdlib]
+
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Restore cache TDLib
+        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
         uses: actions/cache/restore@v4
         with:
           path: td/
           key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
         run: |
           sudo apt-get update
           sudo apt-get -y upgrade
@@ -54,21 +60,24 @@ jobs:
           CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v4
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Extract TDLib
+        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
         run: |
           cp -r ./td/tdlib ./
           sudo cp ./tdlib/lib/libtdjson.so.* /usr/lib/
-      - name: Set environment variables
-        run: echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
-      - name: Install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: clippy, rustfmt
+      - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH
+        if: matrix.feature == 'pkg-config'
+        run: |
+          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
+      - name: Set LOCAL_TDLIB_PATH
+        if: matrix.feature == 'default'
+        run: echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -81,13 +90,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
       - name: Run cargo build
-        run: cargo build --verbose
+        run: cargo build --verbose --features ${{ matrix.feature }}
       - name: Run cargo test
-        run: cargo test --verbose -- --nocapture --test-threads=1
+        run: cargo test --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
       - name: Run cargo clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --features ${{ matrix.feature }} -- -D warnings
       - name: Run cargo fmt
-        run: cargo +nightly fmt --all -- --check
+        run: cargo fmt --all -- --check
       # - name: Upload artifact
       #   uses: actions/upload-artifact@v4
       #   with:

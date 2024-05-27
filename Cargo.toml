@@ -34,6 +34,7 @@ categories = []
 # By deafult you need to set the `LOCAL_TDLIB_PATH` environment variable to the path of the TDLib library. See CONTRIBUTING.md for more information.
 default = []
 download-tdlib = ["tdlib-rs/download-tdlib"]
+pkg-config = ["tdlib-rs/pkg-config"]
 
 [dependencies]
 config = "0.14.0"

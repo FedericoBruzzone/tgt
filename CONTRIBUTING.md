@@ -1,6 +1,27 @@
 # Configure the project
 
-## Using local TDLib
+The first this is to set the `API_HASH` and `API_ID` environment variables with the values of your Telegram application, you can get them from [here](https://my.telegram.org/) or for the development you can use the following values:
+```bash
+export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
+export API_ID="94575"
+```
+
+## Using download-tdlib feature of tdlib-rs
+
+Using the `download-tdlib` feature of [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you do not need to set any environment variable.
+Thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using
+```bash
+cargo build --features download-tdlib
+```
+to download the `tdlib` automatically and build the project.
+
+Note that this way is supported only for the following platforms:
+- Linux x86_64
+- Windows x86_64
+- MacOS x86_64
+- MacOS aarch64
+
+## Using your local TDLib
 
 By default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory.
 
@@ -11,10 +32,29 @@ export LOCAL_TDLIB_PATH="/path/to/tdlib"
 
 To compile the tdlib, you can see the instructions in the [Build TDLib](#build-tdlib) section.
 
-## Using download-tdlib feature of tdlib-rs
+## Using pkg-config
 
-Thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using `cargo build --features download-tdlib` to download the `tdlib` automatically and build the project.
+If you have the `tdlib` installed in your system, you can use the `pkg-config` to find the path of the library.
 
+You can set the `PKG_CONFIG_PATH` environment variable in the `.bashrc` or `.zshrc` file:
+```bash
+# pkg-config configuration
+export PKG_CONFIG_PATH="/path/to/tdlib/lib/pkgconfig:$PKG_CONFIG_PATH"
+```
+
+and then you need to tell linker where to find the library:
+If you are using Linux, you can set the `LD_LIBRARY_PATH` environment variable in the `.bashrc` or `.zshrc` file:
+```bash
+export LD_LIBRARY_PATH="/path/to/tdlib/lib:$LD_LIBRARY_PATH"
+```
+If you are using MacOS, you can set the `DYLD_LIBRARY_PATH` environment variable in the `.bashrc` or `.zshrc` file:
+```bash
+export DYLD_LIBRARY_PATH="/path/to/tdlib/lib:$DYLD_LIBRARY_PATH"
+```
+If you are using Windows, you can set the `PATH` environment variable in the `.bashrc` or `.zshrc` file:
+```bash
+export PATH="/path/to/tdlib/bin:$PATH"
+```
 
 ## Build TDLib
 

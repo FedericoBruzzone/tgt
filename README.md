@@ -1,11 +1,11 @@
 [crates-io]: https://crates.io/crates/tgt
 [crates-io-shield]: https://img.shields.io/crates/v/tgt
-[github-ci-linux]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml
-[github-ci-linux-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-linux.yml/badge.svg
-[github-ci-windows]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml
-[github-ci-windows-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-windows.yml/badge.svg
-[github-ci-macos]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml
-[github-ci-macos-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/build-macos.yml/badge.svg
+[github-ci-linux]: https://github.com/FedericoBruzzone/tgt/actions/workflows/ci-linux.yml
+[github-ci-linux-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/ci-linux.yml/badge.svg
+[github-ci-windows]: https://github.com/FedericoBruzzone/tgt/actions/workflows/ci-windows.yml
+[github-ci-windows-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/ci-windows.yml/badge.svg
+[github-ci-macos]: https://github.com/FedericoBruzzone/tgt/actions/workflows/ci-macos.yml
+[github-ci-macos-shield]: https://github.com/FedericoBruzzone/tgt/actions/workflows/ci-macos.yml/badge.svg
 [github-license-mit]: https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE-MIT
 [github-license-apache]: https://github.com/FedericoBruzzone/tgt/blob/main/LICENSE-APACHE
 [github-license-shield]: https://img.shields.io/github/license/FedericoBruzzone/tgt
@@ -41,9 +41,16 @@
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
 For more information, do not hesitate to contact us (see the [Contact](#contact) section).
 
-By default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory. But thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using `cargo build --features download-tdlib` to download the `tdlib` automatically and build the project.
+Using the `download-tdlib` feature of [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you do not need to set any environment variable. Then you can compile `tgt` using `cargo build --features download-tdlib`.
+Instead, by default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory. Or you can use `pkg-config` to find the path of the library, in this case see the [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file for more information.
 
-The [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file contains the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
+Remember to set the `API_HASH` and `API_ID` environment variables with the values of your Telegram application, you can get them from [here](https://my.telegram.org/) or for the development you can use the following values:
+```bash
+export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
+export API_ID="94575"
+```
+
+The [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file contains information for building `tgt` and the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
 
 ### Road Map
 

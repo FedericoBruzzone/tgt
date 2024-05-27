@@ -1,35 +1,44 @@
 export RUST_BACKTRACE := 1
 
+# Usage: make <command> ARGS="--features <feature> --bin <bin_name>"
+#
+# Avaialble commands:
+#   all
+#   build
+#   run
+#   test
+#   clippy
+#   fmt
+#   clean
+#
+# Available features:
+#   default
+#   download-tdlib
+#   pkg-config
+#
+# Available bin_name:
+#   tgt
+#   example
+#   telegram
+#   get_me
 
 all: fmt clippy test
 
-build_local:
-	cargo build
+build:
+	cargo build --verbose $(ARGS)
 
-build_download:
-	cargo build --features download-tdlib
-
-# Example: make run_local ARGS="--bin <bin_name>"
-run_local:
+run:
 	cargo run $(ARGS)
 
-# Example: make run_download ARGS="--bin <bin_name>"
-run_download:
-	cargo run --features download-tdlib $(ARGS)
-
-fmt:
-	cargo fmt
-	cargo fmt -- --check
-
-fmt_nightly:
-	cargo +nightly fmt
-	cargo +nightly fmt -- --check
+test:
+	cargo test --verbose $(ARGS) -- --nocapture --test-threads=1
 
 clippy:
-	cargo clippy --all-targets --all-features -- -D warnings
+	cargo clippy --all-targets $(ARGS) -- -D warnings
 
-test:
-	cargo test -- --nocapture --test-threads=1
+fmt:
+	cargo fmt --all
+	cargo fmt --all -- --check
 
 clean:
 	cargo clean
@@ -39,15 +48,12 @@ help:
 	@echo ""
 	@echo "Available targets:"
 	@echo "  all            # Run fmt, clippy and test"
-	@echo "  build_local    # Build the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable"
-	@echo "  build_download # Build the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate"
-	@echo "  run_local	    # Run the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable"
-	@echo "  run_download   # Run the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate"
-	@echo "  fmt            # Format the code using cargo"
-	@echo "  fmt_nightly    # Format the code using nightly cargo"
-	@echo "  clippy         # Run clippy using cargo"
-	@echo "  test           # Run tests using cargo"
-	@echo "  clean          # Clean the project using cargo"
+	@echo "  build          # Build the project"
+	@echo "  run            # Run the project"
+	@echo "  test           # Run the tests"
+	@echo "  clippy         # Run clippy"
+	@echo "  fmt            # Run rustfmt"
+	@echo "  clean          # Clean the project"
 	@echo "  help           # Display this help message"
 
 # Each entry of .PHONY is a target that is not a file

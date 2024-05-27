@@ -2783,6 +2783,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "system-deps",
  "tdlib-rs-gen",
  "tdlib-rs-parser",
  "zip",

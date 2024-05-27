@@ -3,47 +3,55 @@ set windows-powershell := true
 export RUST_BACKTRACE := "1"
 project_name := "tgt"
 
+
+# Usage: just <command> <feature> <bin_name>
+#
+# Avaialble commands:
+#   all
+#   build
+#   run
+#   test
+#   clippy
+#   fmt
+#   clean
+#
+# Available features:
+#   default
+#   download-tdlib
+#   pkg-config
+#
+# Available bin_name:
+#   tgt
+#   example
+#   telegram
+#   get_me
+
 _default:
-  just --list --justfile {{justfile()}}
+	just --list --justfile {{justfile()}}
 
 # Run fmt, clippy, test
 all: fmt clippy test
 
-# Build the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
-build_local:
-  cargo build
+# Build the project
+build FEATURES="default" BIN_NAME="tgt":
+  cargo build --verbose --features {{FEATURES}} --bin {{BIN_NAME}}
 
-# Build the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
-build_download:
-  cargo build --features download-tdlib
+# Run the project
+run FEATURES="default" BIN_NAME="tgt":
+  cargo run --features {{FEATURES}} --bin {{BIN_NAME}}
 
-# Run the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
-# Example: just run_local BIN="bin" BIN_NAME="get_me"
-run_local BIN="" BIN_NAME="":
-  cargo run {{BIN}} {{BIN_NAME}}
+# Run the tests
+test FEATURES="default":
+  cargo test --verbose --features {{FEATURES}} -- --nocapture --test-threads=1
 
-# Run the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
-# Example: just run_download BIN="bin" BIN_NAME="get_me"
-run_download BIN="" BIN_NAME="":
-  cargo run --features download-tdlib {{BIN}} {{BIN_NAME}}
+# Run clippy
+clippy FEATURES="default":
+	cargo clippy --all-targets --features {{FEATURES}} -- -D warnings
 
-# Format the code using cargo
+# Run rustfmt
 fmt:
-  cargo fmt
-  cargo fmt -- --check
-
-# Format the code using cargo nightly
-fmt_nightly:
-  cargo +nightly fmt
-  cargo +nightly fmt -- --check
-
-# Run clippy using cargo
-clippy:
-  cargo clippy --all-targets --all-features -- -D warnings
-
-# Run tests using cargo
-test:
-  cargo test -- --nocapture --test-threads=1
+  cargo fmt --all
+  cargo fmt --all -- --check
 
 # Clean the project using cargo
 clean:
