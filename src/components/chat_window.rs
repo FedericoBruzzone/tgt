@@ -126,8 +126,7 @@ impl ChatWindow {
     /// Delete the selected message item in the list.
     ///
     /// # Arguments
-    /// * `revoke` - A boolean flag indicating whether the message should be
-    ///  revoked or not.
+    /// * `revoke` - A boolean flag indicating whether the message should be revoked or not.
     fn delete_selected(&mut self, revoke: bool) {
         if let Some(selected) = self.message_list_state.selected() {
             if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {

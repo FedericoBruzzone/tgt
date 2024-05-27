@@ -41,6 +41,7 @@ impl Logger {
     /// The logger is initialized with the following layers:
     /// - a file subscriber
     /// - an error layer
+    ///
     /// The file subscriber is initialized with the following settings:
     /// - file: true
     /// - line_number: true
@@ -48,6 +49,7 @@ impl Logger {
     /// - ansi: false
     /// - writer: the log file
     /// - filter: the `RUST_LOG` environment variable
+    ///
     /// The error layer is initialized with the default settings.
     pub fn init(&self) {
         self.set_rust_log_variable();
@@ -107,11 +109,10 @@ impl Logger {
         Ok(())
     }
     /// Set the `RUST_LOG` environment variable.
+    ///
     /// This function try to set the `RUST_LOG` environment variable to:
     /// - the value of the `RUST_LOG` environment variable
-    /// - the value of `log_level` field of the `Logger` struct
-    /// or to `CARGO_CRATE_NAME=info` if the `RUST_LOG` environment variable is
-    /// not set.
+    /// - the value of `log_level` field of the `Logger` struct or to `CARGO_CRATE_NAME=info` if the `RUST_LOG` environment variable is not set.
     fn set_rust_log_variable(&self) {
         std::env::set_var(
             "RUST_LOG",
