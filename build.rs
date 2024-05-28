@@ -20,12 +20,4 @@ fn move_config_folder_to_home_dottgt() {
 fn main() {
     empty_tgt_folder();
     move_config_folder_to_home_dottgt();
-
-    // let prefix = "/Users/federicobruzzone/lib/tdlib";
-    // let include_dir = format!("{}/include", prefix);
-    // let lib_dir = format!("{}/lib", prefix);
-    //
-    // println!("cargo:rustc-link-search=native={}", lib_dir);
-    // println!("cargo:rustc-link-lib=tdjson");
-    // println!("cargo:include={}", include_dir);
 }
