@@ -135,14 +135,10 @@ impl ChatWindow {
                     return;
                 }
                 let message_id = self.message_list[selected].id();
-                tracing::info!("Delete message: {}", message_id);
-                tracing::info!(
-                    "Body message: {}",
-                    self.message_list[selected].message_content_to_string()
-                );
                 event_tx
                     .send(Event::DeleteMessages(vec![message_id], revoke))
                     .unwrap();
+                self.app_context.tg_context().delete_message(message_id);
             }
         }
     }

@@ -116,6 +116,11 @@ impl TgContext {
         *self.event_tx() = Some(event_tx);
     }
 
+    pub fn delete_message(&self, message_id: i64) {
+        let mut open_chat_messages = self.open_chat_messages();
+        open_chat_messages.retain(|message| message.id() != message_id);
+    }
+
     pub fn open_chat_user_status(&self) -> String {
         if let Some(user) = self.open_chat_user().as_ref() {
             return match &user.status {

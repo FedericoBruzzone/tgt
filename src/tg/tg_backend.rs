@@ -748,7 +748,6 @@ impl TgBackend {
                         }
                         Update::MessageEdited(_) => {}
                         Update::MessageContent(message) => {
-                            // Edited message
                             if tg_context.open_chat_id() == message.chat_id {
                                 for m in tg_context.open_chat_messages().iter_mut() {
                                     if m.id() == message.message_id {
@@ -759,7 +758,6 @@ impl TgBackend {
                             }
                         }
                         Update::DeleteMessages(update_delete_messages) => {
-                            // Delete messages
                             if tg_context.open_chat_id() == update_delete_messages.chat_id {
                                 let mut i = 0;
                                 while i < tg_context.open_chat_messages().len() {

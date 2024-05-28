@@ -74,10 +74,9 @@ jobs:
       - name: Extract TDLib ARM64
         if: runner.arch == 'ARM64' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
         run: |
-          csrutil disable
-          ls -la /usr/lib/dyld
-          cp -r ./td/tdlib ./
-          sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/lib/dyld
+          sudo mkdir -p /usr/local/lib
+          sudo cp -r ./td/tdlib ./
+          sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
       - name: Set PKG_CONFIG_PATH and DYLD_LIBRARY_PATH
         if: matrix.feature == 'pkg-config'
         run: |
