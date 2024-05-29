@@ -47,7 +47,7 @@ enum Mode {
     /// The reply mode of the prompt.
     /// Usually, when the prompt is replying to a message.
     /// The parameter is the message id of the message that is being replied.
-    Reply(i64),
+    _Reply(i64),
 }
 /// `InputCell` is a struct that represents a cell of the input.
 /// It is responsible for managing the input cell of the prompt.
@@ -594,6 +594,8 @@ impl HandleFocus for PromptWindow {
     /// Set the `focused` flag for the `PromptWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
+        self.input.mode = Mode::Normal;
+        self.input.text = vec![vec![]];
     }
 }
 
