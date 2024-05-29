@@ -35,6 +35,20 @@ enum DirSelection {
     /// The user is selecting text down.
     Down,
 }
+/// `Mode` is an enum that represents the mode of the prompt.
+/// It is used to keep track of the mode of the prompt.
+enum Mode {
+    /// The normal mode of the prompt.
+    Normal,
+    /// The edit mode of the prompt.
+    /// Usually, when the prompt is editing a message.
+    /// The parameter is the message id of the message that is being replied.
+    Edit(i64),
+    /// The reply mode of the prompt.
+    /// Usually, when the prompt is replying to a message.
+    /// The parameter is the message id of the message that is being replied.
+    Reply(i64),
+}
 /// `InputCell` is a struct that represents a cell of the input.
 /// It is responsible for managing the input cell of the prompt.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -70,14 +84,9 @@ struct Input {
     /// Basically, it is used to keep track of whether the prompt size is
     /// equal to the correct prompt size or not.
     is_restored: bool,
-    /// The edit mode of the input.
-    /// It is used to keep track of whether the input is in edit mode or not.
-    /// The edit mode is set to true when the user is editing a message.
-    /// The first parameter is the flag indicating whether the input is in edit
-    /// mode or not.
-    /// The second parameter is the message id of the message that is being
-    /// edited.
-    edit_mode: (bool, Option<i64>),
+    /// The mode of the input.
+    /// It is used to keep track of the mode of the input.
+    mode: Mode,
 }
 /// Implement the `Input` struct.
 impl Input {
@@ -421,7 +430,7 @@ impl Input {
     /// * `message_id` - The message id of the message to edit.
     /// * `message` - The message to edit.
     fn edit_message(&mut self, message_id: i64, message: String) {
-        self.edit_mode = (true, Some(message_id));
+        self.mode = Mode::Edit(message_id);
         self.text = message
             .split('\n')
             .map(|line| {
@@ -445,22 +454,23 @@ impl Input {
     /// * `app_context` - An Arc wrapped AppContext struct.
     fn send_message(&mut self, app_context: Arc<AppContext>) {
         if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
-            if !self.edit_mode.0 {
-                event_tx
-                    .send(Event::SendMessage(self.text_to_string(), None))
-                    .unwrap();
-                self.text = vec![vec![]];
-                self.set_prompt_size_to_one_focused();
-            } else {
-                event_tx
-                    .send(Event::SendMessageEdited(
-                        self.edit_mode.1.unwrap(),
-                        self.text_to_string(),
-                    ))
-                    .unwrap();
-                self.text = vec![vec![]];
-                self.set_prompt_size_to_one_focused();
-                self.edit_mode = (false, None);
+            match self.mode {
+                Mode::Normal => {
+                    event_tx
+                        .send(Event::SendMessage(self.text_to_string(), None))
+                        .unwrap();
+                    self.text = vec![vec![]];
+                    self.set_prompt_size_to_one_focused();
+                }
+                Mode::Edit(message_id) => {
+                    event_tx
+                        .send(Event::SendMessageEdited(message_id, self.text_to_string()))
+                        .unwrap();
+                    self.text = vec![vec![]];
+                    self.set_prompt_size_to_one_focused();
+                    self.mode = Mode::Normal;
+                }
+                _ => {}
             }
         }
     }
@@ -489,7 +499,8 @@ impl Default for Input {
             dir_selection: DirSelection::Empty,
             correct_prompt_size: 0,
             is_restored: true,
-            edit_mode: (false, None),
+            // edit_mode: (false, None),
+            mode: Mode::Normal,
         }
     }
 }
