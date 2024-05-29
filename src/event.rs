@@ -31,6 +31,10 @@ pub enum Event {
     /// This event is used to edit a message.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     EditMessage(i64, String),
+    /// ReplyMessage event with a `String`.
+    /// This event is used to reply to a message.
+    /// The first parameter is the `message_id` and the second parameter is the `text`.
+    ReplyMessage(i64, String),
 
     /// GetMe event.
     GetMe,
@@ -195,6 +199,9 @@ impl Display for Event {
             }
             Event::EditMessage(message_id, text) => {
                 write!(f, "EditMessage({}, {})", message_id, text)
+            }
+            Event::ReplyMessage(message_id, text) => {
+                write!(f, "ReplyMessage({}, {})", message_id, text)
             }
             Event::ViewAllMessages => {
                 write!(f, "ViewAllMessages")

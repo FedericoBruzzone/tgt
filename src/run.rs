@@ -121,6 +121,15 @@ async fn handle_tg_backend_events(
                     .action_tx()
                     .send(Action::EditMessage(message_id, message))?;
             }
+            Event::ReplyMessage(message_id, message) => {
+                app_context
+                    .action_tx()
+                    .send(Action::FocusComponent(Prompt))?;
+
+                app_context
+                    .action_tx()
+                    .send(Action::ReplyMessage(message_id, message))?;
+            }
             Event::ViewAllMessages => {
                 app_context.action_tx().send(Action::ViewAllMessages)?;
             }
@@ -295,6 +304,11 @@ pub async fn handle_app_actions(
                         revoke,
                     )
                     .await;
+            }
+            Action::ReplyMessage(message_id, ref message) => {
+                app_context
+                    .tg_context()
+                    .set_reply_message(message_id, message.to_string());
             }
             Action::ViewAllMessages => {
                 tg_backend.view_all_messages().await;

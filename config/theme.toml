@@ -45,6 +45,10 @@ message_text = { fg = "primary_light", bg = "background", bold = false, underlin
 message_text_selected = { fg = "secondary_light", bg = "ternary", bold = false, underline = false, italic = true }
 message_preview_text = { fg = "ternary", bg = "background", bold = false, underline = false, italic = false }
 
+[reply_message]
+self = { fg = "secondary_light", bg = "background", bold = false, underline = false, italic = false }
+message_text = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
+
 [status_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
 size_info_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }

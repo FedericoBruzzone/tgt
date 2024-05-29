@@ -67,27 +67,30 @@ impl KeymapConfig {
             &configs::custom::default_config_keymap_file_path()?,
         ))
     }
-    /// Get the key of a single action.
+    /// Get the keys associated with an action.
     ///
     /// # Arguments
     /// * `map` - A hashmap of event and action binding.
     /// * `value` - An action.
     ///
     /// # Returns
-    /// The key of the single action.
+    /// A vector of events associated with the action.
     pub fn get_key_of_single_action(
         &self,
         component_name: ComponentName,
         value: Action,
-    ) -> Option<&Event> {
+    ) -> Vec<Event> {
         let map = self.get_map_of(Some(component_name));
+        let mut keys = vec![];
         for (k, v) in map.iter() {
             match v {
-                ActionBinding::Single { action, .. } if *action == value => return Some(k),
+                ActionBinding::Single { action, .. } if *action == value => {
+                    keys.push(k.clone());
+                }
                 _ => {}
             }
         }
-        None
+        keys
     }
     /// Print the configuration file error.
     /// It is used to print the error when the configuration file is not
@@ -435,7 +438,7 @@ mod tests {
     #[test]
     fn test_keymap_config_default() {
         let keymap_config = KeymapConfig::default();
-        assert_eq!(keymap_config.core_window.len(), 14);
+        assert_eq!(keymap_config.core_window.len(), 15);
         assert_eq!(keymap_config.chat_list.len(), 5);
         assert_eq!(keymap_config.chat.len(), 9);
         assert_eq!(keymap_config.prompt.len(), 0);
@@ -537,7 +540,7 @@ mod tests {
             prompt: Some(KeymapMode { keymap: vec![] }),
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
-        assert_eq!(keymap_config.core_window.len(), 14);
+        assert_eq!(keymap_config.core_window.len(), 15);
         assert_eq!(keymap_config.chat_list.len(), 5);
         assert_eq!(keymap_config.chat.len(), 9);
         assert_eq!(keymap_config.prompt.len(), 0);

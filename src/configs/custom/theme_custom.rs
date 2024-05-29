@@ -25,6 +25,8 @@ pub struct ThemeConfig {
     pub status_bar: HashMap<String, ThemeStyle>,
     /// The theme configuration for the title bar.
     pub title_bar: HashMap<String, ThemeStyle>,
+    /// The theme configuration for the reply message.
+    pub reply_message: HashMap<String, ThemeStyle>,
 }
 /// The theme configuration implementation.
 impl ThemeConfig {
@@ -101,6 +103,11 @@ impl ConfigFile for ThemeConfig {
                         self.title_bar.insert(k, ThemeStyle::from(v));
                     });
                 }
+                if let Some(reply_message) = other.reply_message {
+                    reply_message.into_iter().for_each(|(k, v)| {
+                        self.reply_message.insert(k, ThemeStyle::from(v));
+                    });
+                }
                 self.clone()
             }
         }
@@ -151,6 +158,12 @@ impl From<ThemeRaw> for ThemeConfig {
             .into_iter()
             .map(|(k, v)| (k, ThemeStyle::from(v)))
             .collect();
+        let reply_message = raw
+            .reply_message
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, ThemeStyle::from(v)))
+            .collect();
 
         Self {
             common,
@@ -159,6 +172,7 @@ impl From<ThemeRaw> for ThemeConfig {
             prompt,
             status_bar,
             title_bar,
+            reply_message,
         }
     }
 }
@@ -196,6 +210,7 @@ mod tests {
             prompt: Some(HashMap::new()),
             status_bar: Some(HashMap::new()),
             title_bar: Some(HashMap::new()),
+            reply_message: Some(HashMap::new()),
         };
         let theme_config = ThemeConfig::from(theme_raw);
         assert_eq!(theme_config.common.len(), 0);
@@ -253,6 +268,7 @@ mod tests {
             prompt: Some(HashMap::new()),
             status_bar: Some(HashMap::new()),
             title_bar: Some(HashMap::new()),
+            reply_message: Some(HashMap::new()),
         };
         let theme_config = ThemeConfig::from(theme_raw);
         assert_eq!(theme_config.common.len(), 2);
@@ -261,6 +277,7 @@ mod tests {
         assert_eq!(theme_config.prompt.len(), 0);
         assert_eq!(theme_config.status_bar.len(), 0);
         assert_eq!(theme_config.title_bar.len(), 0);
+        assert_eq!(theme_config.reply_message.len(), 0);
     }
 
     #[test]
@@ -315,6 +332,7 @@ mod tests {
             prompt: Some(HashMap::new()),
             status_bar: Some(HashMap::new()),
             title_bar: Some(HashMap::new()),
+            reply_message: Some(HashMap::new()),
         };
         let mut theme_config = ThemeConfig::from(theme_raw);
 
@@ -358,6 +376,7 @@ mod tests {
             prompt: Some(HashMap::new()),
             status_bar: Some(HashMap::new()),
             title_bar: Some(HashMap::new()),
+            reply_message: Some(HashMap::new()),
         };
         let theme_config = theme_config.merge(Some(theme_raw));
         assert_eq!(theme_config.common.len(), 2);
@@ -366,6 +385,7 @@ mod tests {
         assert_eq!(theme_config.prompt.len(), 0);
         assert_eq!(theme_config.status_bar.len(), 0);
         assert_eq!(theme_config.title_bar.len(), 0);
+        assert_eq!(theme_config.reply_message.len(), 0);
         assert_eq!(
             theme_config.common.get("default").unwrap().fg,
             Some(Color::Blue)
@@ -399,6 +419,7 @@ mod tests {
             prompt: Some(HashMap::new()),
             status_bar: Some(HashMap::new()),
             title_bar: Some(HashMap::new()),
+            reply_message: Some(HashMap::new()),
         };
         theme_config = theme_config.merge(Some(theme_raw));
         assert_eq!(theme_config.common.len(), 3);
@@ -407,6 +428,7 @@ mod tests {
         assert_eq!(theme_config.prompt.len(), 4);
         assert_eq!(theme_config.status_bar.len(), 9);
         assert_eq!(theme_config.title_bar.len(), 4);
+        assert_eq!(theme_config.reply_message.len(), 2);
     }
 
     #[test]

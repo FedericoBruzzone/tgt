@@ -1,6 +1,7 @@
 use crate::{
     action::{Action, Modifiers},
     app_context::AppContext,
+    component_name::ComponentName,
     components::component_traits::{Component, HandleFocus},
     event::Event,
 };
@@ -499,7 +500,6 @@ impl Default for Input {
             dir_selection: DirSelection::Empty,
             correct_prompt_size: 0,
             is_restored: true,
-            // edit_mode: (false, None),
             mode: Mode::Normal,
         }
     }
@@ -516,8 +516,8 @@ pub struct PromptWindow {
     action_tx: Option<UnboundedSender<Action>>,
     /// Indicates whether the `PromptWindow` is focused or not.
     focused: bool,
-    /// The key that allows the `PromptWindow` to be focused.
-    focused_key: String,
+    /// The keys that allows the `PromptWindow` to be focused.
+    focused_keys: Vec<Event>,
     /// The current input of the `PromptWindow`.
     input: Input,
 }
@@ -534,7 +534,11 @@ impl PromptWindow {
         let name = "".to_string();
         let action_tx = None;
         let focused = false;
-        let focused_key = "".to_string();
+        let focused_keys = app_context.keymap_config().get_key_of_single_action(
+            ComponentName::CoreWindow,
+            Action::FocusComponent(ComponentName::Prompt),
+        );
+
         let input = Input::default();
 
         PromptWindow {
@@ -542,7 +546,7 @@ impl PromptWindow {
             name,
             action_tx,
             focused,
-            focused_key,
+            focused_keys,
             input,
         }
     }
@@ -555,20 +559,6 @@ impl PromptWindow {
     /// * `Self` - The modified instance of the `PromptWindow`.
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name = name.as_ref().to_string();
-        self
-    }
-    /// Set the focused key of the `PromptWindow`.
-    /// It is the key that allows the `PromptWindow` to be focused.
-    ///
-    /// # Arguments
-    /// * `event` - An optional event that contains the focused key.
-    ///
-    /// # Returns
-    /// * `Self` - The modified instance of the `PromptWindow`.
-    pub fn with_focused_key(mut self, event: Option<&Event>) -> Self {
-        if let Some(event) = event {
-            self.focused_key = event.to_string();
-        }
         self
     }
     /// Update the input area of the `PromptWindow`.
@@ -835,7 +825,11 @@ impl Component for PromptWindow {
             (
                 vec![Line::from(format!(
                     "Press {} to send a message",
-                    self.focused_key
+                    self.focused_keys
+                        .iter()
+                        .map(|e| e.to_string())
+                        .collect::<Vec<String>>()
+                        .join(" or ")
                 ))],
                 self.app_context.style_prompt_message_preview_text(),
                 self.app_context.style_prompt(),

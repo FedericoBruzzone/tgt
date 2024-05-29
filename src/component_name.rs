@@ -12,6 +12,8 @@ pub enum ComponentName {
     Chat,
     /// The prompt.
     Prompt,
+    /// The reply message window.
+    ReplyMessage,
 
     /// The title bar.
     TitleBar,
@@ -28,6 +30,7 @@ impl Display for ComponentName {
             ComponentName::Prompt => write!(f, "Prompt"),
             ComponentName::TitleBar => write!(f, "Title Bar"),
             ComponentName::StatusBar => write!(f, "Status Bar"),
+            ComponentName::ReplyMessage => write!(f, "Reply Message"),
         }
     }
 }

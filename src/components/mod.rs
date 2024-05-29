@@ -10,5 +10,6 @@ pub mod chat_window;
 pub mod component_traits;
 pub mod core_window;
 pub mod prompt_window;
+pub mod reply_message;
 pub mod status_bar;
 pub mod title_bar;

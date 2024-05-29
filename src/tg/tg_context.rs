@@ -41,8 +41,13 @@ pub struct TgContext {
     open_chat_messages: Mutex<Vec<MessageEntry>>,
     open_chat_user: Mutex<Option<User>>,
 
-    /// The chat id from which to start loading the chat history.
-    from_message_id: Mutex<i64>,
+    /// The message id from which to start loading the chat history.
+    from_message_id: AtomicI64,
+
+    /// reply message id
+    reply_message_id: AtomicI64,
+    /// reply message text
+    reply_message_text: Mutex<String>,
 }
 
 impl TgContext {
@@ -85,8 +90,8 @@ impl TgContext {
     pub fn me(&self) -> i64 {
         self.me.load(Ordering::Relaxed)
     }
-    pub fn from_message_id(&self) -> MutexGuard<'_, i64> {
-        self.from_message_id.lock().unwrap()
+    pub fn from_message_id(&self) -> i64 {
+        self.from_message_id.load(Ordering::Relaxed)
     }
     pub fn open_chat_user(&self) -> MutexGuard<'_, Option<User>> {
         self.open_chat_user.lock().unwrap()
@@ -105,7 +110,8 @@ impl TgContext {
     }
 
     pub fn set_from_message_id(&self, from_message_id: i64) {
-        *self.from_message_id() = from_message_id;
+        self.from_message_id
+            .store(from_message_id, Ordering::Relaxed);
     }
 
     pub fn set_me(&self, me: i64) {
@@ -114,6 +120,11 @@ impl TgContext {
 
     pub fn set_event_tx(&self, event_tx: UnboundedSender<Event>) {
         *self.event_tx() = Some(event_tx);
+    }
+
+    pub fn set_reply_message(&self, message_id: i64, text: String) {
+        self.reply_message_id.store(message_id, Ordering::Relaxed);
+        *self.reply_message_text.lock().unwrap() = text;
     }
 
     pub fn delete_message(&self, message_id: i64) {
@@ -191,6 +202,14 @@ impl TgContext {
             return Some(chat.title.clone());
         }
         None
+    }
+
+    pub fn reply_message_id(&self) -> i64 {
+        self.reply_message_id.load(Ordering::Relaxed)
+    }
+
+    pub fn reply_message_text(&self) -> MutexGuard<'_, String> {
+        self.reply_message_text.lock().unwrap()
     }
 
     pub fn name_of_open_chat_id(&self) -> Option<String> {

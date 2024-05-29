@@ -64,7 +64,7 @@ impl HandleFocus for TitleBar {
     }
 }
 
-/// Implement the `Component` trait for the `ChatListWindow` struct.
+/// Implement the `Component` trait for the `TitleBar` struct.
 impl Component for TitleBar {
     fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> io::Result<()> {
         self.command_tx = Some(tx);

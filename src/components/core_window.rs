@@ -17,6 +17,8 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
+use super::reply_message::ReplyMessage;
+
 /// `CoreWindow` is a struct that represents the core window of the application.
 /// It is responsible for managing the layout and rendering of the core window.
 pub struct CoreWindow {
@@ -33,6 +35,8 @@ pub struct CoreWindow {
     small_area: bool,
     /// The size of the prompt component.
     size_prompt: u16,
+    /// The size of the message reply component.
+    size_message_reply: u16,
     /// The size of the chat list component.
     size_chat_list: u16,
     /// The name of the component that currently has focus. It is an optional
@@ -41,6 +45,8 @@ pub struct CoreWindow {
     component_focused: Option<ComponentName>,
     /// Indicates whether the `CoreWindow` is focused or not.
     focused: bool,
+    /// Indicates whether the reply message should be shown.
+    show_reply_message: bool,
 }
 
 impl CoreWindow {
@@ -69,10 +75,12 @@ impl CoreWindow {
                 ComponentName::Prompt,
                 PromptWindow::new(Arc::clone(&app_context))
                     .with_name(ComponentName::Prompt.to_string())
-                    .with_focused_key(app_context.keymap_config().get_key_of_single_action(
-                        ComponentName::CoreWindow,
-                        Action::FocusComponent(ComponentName::Prompt),
-                    ))
+                    .new_boxed(),
+            ),
+            (
+                ComponentName::ReplyMessage,
+                ReplyMessage::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::ReplyMessage.to_string())
                     .new_boxed(),
             ),
         ];
@@ -83,10 +91,12 @@ impl CoreWindow {
         let components: HashMap<ComponentName, Box<dyn Component>> =
             components_iter.into_iter().collect();
         let size_prompt = 3;
+        let size_message_reply = 2;
         let size_chat_list = 20;
         let small_area = false;
         let component_focused = None;
         let focused = true;
+        let show_reply_message = false;
 
         CoreWindow {
             app_context,
@@ -95,9 +105,11 @@ impl CoreWindow {
             components,
             size_chat_list,
             size_prompt,
+            size_message_reply,
             small_area,
             component_focused,
             focused,
+            show_reply_message,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -208,6 +220,7 @@ impl Component for CoreWindow {
             }
             Action::UnfocusComponent => {
                 self.component_focused = None;
+                self.show_reply_message = false;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
                 }
@@ -236,6 +249,9 @@ impl Component for CoreWindow {
                         .unwrap_or_else(|_| panic!("Failed to send action Quit from CoreWindow"));
                 }
             }
+            Action::ChatWindowReply => {
+                self.show_reply_message = true;
+            }
             _ => {}
         }
 
@@ -263,7 +279,17 @@ impl Component for CoreWindow {
 
         let sub_core_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(self.size_prompt)])
+            .constraints([
+                Constraint::Fill(1),
+                {
+                    if self.show_reply_message {
+                        Constraint::Length(self.size_message_reply)
+                    } else {
+                        Constraint::Length(0)
+                    }
+                },
+                Constraint::Length(self.size_prompt),
+            ])
             .split(core_layout[1]);
 
         self.components
@@ -271,10 +297,18 @@ impl Component for CoreWindow {
             .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
             .draw(frame, sub_core_layout[0])?;
 
+        if self.show_reply_message {
+            self.components
+                .get_mut(&ComponentName::ReplyMessage)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", ComponentName::ReplyMessage)
+                })
+                .draw(frame, sub_core_layout[1])?;
+        }
         self.components
             .get_mut(&ComponentName::Prompt)
             .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
-            .draw(frame, sub_core_layout[1])?;
+            .draw(frame, sub_core_layout[2])?;
 
         Ok(())
     }

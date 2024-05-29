@@ -76,7 +76,7 @@ impl ChatWindow {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
                     if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        let from_message_id = *self.app_context.tg_context().from_message_id();
+                        let from_message_id = self.app_context.tg_context().from_message_id();
                         event_tx
                             .send(Event::GetChatHistory(from_message_id, 0, 100))
                             .unwrap();
@@ -100,7 +100,7 @@ impl ChatWindow {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
                     if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        let from_message_id = *self.app_context.tg_context().from_message_id();
+                        let from_message_id = self.app_context.tg_context().from_message_id();
                         event_tx
                             .send(Event::GetChatHistory(from_message_id, 0, 100))
                             .unwrap();
@@ -170,8 +170,17 @@ impl ChatWindow {
         }
     }
 
+    /// Reply to the selected message item in the list.
     fn reply_selected(&self) {
-        todo!()
+        if let Some(selected) = self.message_list_state.selected() {
+            let message_id = self.message_list[selected].id();
+            let text = self.message_list[selected].message_content_to_string();
+            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                event_tx
+                    .send(Event::ReplyMessage(message_id, text))
+                    .unwrap();
+            }
+        }
     }
 }
 

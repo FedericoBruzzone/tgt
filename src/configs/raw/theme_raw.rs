@@ -31,4 +31,6 @@ pub struct ThemeRaw {
     pub status_bar: Option<HashMap<String, ThemeEntry>>,
     /// The theme for the title bar.
     pub title_bar: Option<HashMap<String, ThemeEntry>>,
+    /// The theme for the reply message.
+    pub reply_message: Option<HashMap<String, ThemeEntry>>,
 }

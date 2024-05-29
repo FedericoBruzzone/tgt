@@ -264,6 +264,14 @@ impl AppContext {
         message_preview_text
     );
 
+    // ===== REPLY MESSAGE =====
+    theme_style_generate!(style_reply_message, reply_message, self);
+    theme_style_generate!(
+        style_reply_message_message_text,
+        reply_message,
+        message_text
+    );
+
     // ===== STATUS BAR =====
     theme_style_generate!(style_status_bar, status_bar, self);
     theme_style_generate!(style_status_bar_size_info_text, status_bar, size_info_text);
