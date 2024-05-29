@@ -70,13 +70,13 @@ jobs:
         if: runner.arch == 'x64' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
         run: |
           cp -r ./td/tdlib ./
-          cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
+          # cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
       - name: Extract TDLib ARM64
         if: runner.arch == 'ARM64' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
         run: |
           sudo mkdir -p /usr/local/lib
           sudo cp -r ./td/tdlib ./
-          sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
+          # sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
       - name: Set PKG_CONFIG_PATH and DYLD_LIBRARY_PATH
         if: matrix.feature == 'pkg-config'
         run: |
