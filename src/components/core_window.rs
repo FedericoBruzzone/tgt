@@ -249,8 +249,11 @@ impl Component for CoreWindow {
                         .unwrap_or_else(|_| panic!("Failed to send action Quit from CoreWindow"));
                 }
             }
-            Action::ChatWindowReply => {
+            Action::ShowChatWindowReply => {
                 self.show_reply_message = true;
+            }
+            Action::HideChatWindowReply => {
+                self.show_reply_message = false;
             }
             _ => {}
         }

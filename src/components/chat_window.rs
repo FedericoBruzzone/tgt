@@ -213,7 +213,7 @@ impl Component for ChatWindow {
             Action::ChatWindowDeleteForMe => self.delete_selected(false),
             Action::ChatWindowCopy => self.copy_selected(),
             Action::ChatWindowEdit => self.edit_selected(),
-            Action::ChatWindowReply => self.reply_selected(),
+            Action::ShowChatWindowReply => self.reply_selected(),
             _ => {}
         }
     }

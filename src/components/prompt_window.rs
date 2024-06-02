@@ -4,6 +4,7 @@ use crate::{
     component_name::ComponentName,
     components::component_traits::{Component, HandleFocus},
     event::Event,
+    tg::td_enums::TdMessageReplyToMessage,
 };
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
@@ -48,7 +49,7 @@ enum Mode {
     /// The reply mode of the prompt.
     /// Usually, when the prompt is replying to a message.
     /// The parameter is the message id of the message that is being replied.
-    _Reply(i64),
+    Reply(i64),
 }
 /// `InputCell` is a struct that represents a cell of the input.
 /// It is responsible for managing the input cell of the prompt.
@@ -471,7 +472,20 @@ impl Input {
                     self.set_prompt_size_to_one_focused();
                     self.mode = Mode::Normal;
                 }
-                _ => {}
+                Mode::Reply(message_id) => {
+                    event_tx
+                        .send(Event::SendMessage(
+                            self.text_to_string(),
+                            Some(TdMessageReplyToMessage {
+                                chat_id: app_context.tg_context().open_chat_id(),
+                                message_id,
+                            }),
+                        ))
+                        .unwrap();
+                    self.text = vec![vec![]];
+                    self.set_prompt_size_to_one_focused();
+                    self.mode = Mode::Normal;
+                }
             }
         }
     }
@@ -774,6 +788,9 @@ impl Component for PromptWindow {
             }
             Action::EditMessage(message_id, message) => {
                 self.input.edit_message(message_id, message);
+            }
+            Action::ReplyMessage(message_id, _) => {
+                self.input.mode = Mode::Reply(message_id);
             }
             _ => {}
         }

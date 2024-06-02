@@ -1,3 +1,4 @@
+use crate::action::Action;
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
@@ -151,6 +152,15 @@ impl TgBackend {
         message: String,
         reply_to: Option<TdMessageReplyToMessage>,
     ) {
+        self.app_context
+            .tg_context()
+            .set_reply_message(-1, "".to_string());
+
+        self.app_context
+            .action_tx()
+            .send(Action::HideChatWindowReply)
+            .unwrap();
+
         let text = InputMessageContent::InputMessageText(InputMessageText {
             text: tdlib_rs::types::FormattedText {
                 text: message,

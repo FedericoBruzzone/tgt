@@ -132,6 +132,10 @@ pub enum Action {
     Key(KeyCode, Modifiers),
     /// Update area action with a rectangular area.
     UpdateArea(Rect),
+    /// ShowChatWindowReply action.
+    ShowChatWindowReply,
+    /// HideChatWindowReply action.
+    HideChatWindowReply,
 
     /// ChatListNext action.
     ChatListNext,
@@ -158,8 +162,6 @@ pub enum Action {
     ChatWindowCopy,
     /// ChatWindowEdit action.
     ChatWindowEdit,
-    /// ChatWindowReply action.
-    ChatWindowReply,
 
     /// EditMessage action with a `String`.
     /// This action is used to edit a message.
@@ -214,7 +216,7 @@ impl FromStr for Action {
             "chat_window_delete_for_me" => Ok(Action::ChatWindowDeleteForMe),
             "chat_window_copy" => Ok(Action::ChatWindowCopy),
             "chat_window_edit" => Ok(Action::ChatWindowEdit),
-            "chat_window_reply" => Ok(Action::ChatWindowReply),
+            "chat_window_reply" => Ok(Action::ShowChatWindowReply),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }
