@@ -29,6 +29,7 @@ use crate::{
     tui::Tui,
     tui_backend::TuiBackend,
 };
+use configs::custom::telegram_custom::TelegramConfig;
 use lazy_static::lazy_static;
 use std::{
     panic::{set_hook, take_hook},
@@ -41,6 +42,7 @@ lazy_static! {
     pub static ref APP_CONFIG: AppConfig = AppConfig::get_config();
     pub static ref PALETTE_CONFIG: PaletteConfig = PaletteConfig::get_config();
     pub static ref THEME_CONFIG: ThemeConfig = ThemeConfig::get_config();
+    pub static ref TELEGRAM_CONFIG: TelegramConfig = TelegramConfig::get_config();
 }
 
 /// The main entry point for the application.
@@ -59,6 +61,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     lazy_static::initialize(&APP_CONFIG);
     lazy_static::initialize(&PALETTE_CONFIG);
     lazy_static::initialize(&THEME_CONFIG);
+    lazy_static::initialize(&TELEGRAM_CONFIG);
 
     let logger = Logger::from_config(LOGGER_CONFIG.clone());
     logger.init();
@@ -75,6 +78,9 @@ async fn tokio_main() -> Result<(), AppError<()>> {
 
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:?}", theme_config);
+
+    let telegram_config = TELEGRAM_CONFIG.clone();
+    tracing::info!("Telegram config: {:?}", telegram_config);
 
     let tg_context = TgContext::default();
     tracing::info!("Telegram context: {:?}", tg_context);
