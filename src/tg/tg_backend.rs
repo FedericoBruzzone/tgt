@@ -1,5 +1,6 @@
 use crate::action::Action;
 use crate::event::Event;
+use crate::tg::tg_backend;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};

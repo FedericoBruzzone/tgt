@@ -24,9 +24,9 @@ pub struct TgContext {
     basic_groups: Mutex<HashMap<i64, BasicGroup>>,
     supergroups: Mutex<HashMap<i64, Supergroup>>,
     secret_chats: Mutex<HashMap<i32, SecretChat>>,
-
     chats: Mutex<HashMap<i64, Chat>>,
-    // Only ordered
+
+    // Ordered
     chats_index: Mutex<BTreeSet<OrderedChat>>,
 
     users_full_info: Mutex<HashMap<i64, UserFullInfo>>,

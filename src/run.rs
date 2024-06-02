@@ -35,9 +35,11 @@ pub async fn run_app(
     tg_backend.set_logging().await;
     tg_backend.handle_authorization_state().await;
     tg_backend.get_me().await;
-    // tg_backend.disable_animated_emoji(true).await;
+    tg_backend.disable_animated_emoji(true).await;
     tg_backend.online().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
+    // TODO: prepare_to_get_chat_history for each loaded chat, and eventually check it in the main
+    // loop
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
