@@ -1,19 +1,18 @@
 # Configure the project
 
-The first this is to set the `API_HASH` and `API_ID` environment variables with the values of your Telegram application, you can get them from [here](https://my.telegram.org/) or for the development you can use the following values:
+First of all, you need to set the `API_HASH` and `API_ID` environment variables with the values of your Telegram application (you can get them from [here](https://my.telegram.org/)) or for the development phase you can use the following values:
 ```bash
 export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
 export API_ID="94575"
 ```
 
-## Using download-tdlib feature of tdlib-rs
+## Build/Run using download-tdlib feature of tdlib-rs
 
 Using the `download-tdlib` feature of [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you do not need to set any environment variable.
-Thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using
+Thanks to [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you can also compile `tgt` using that feature downloading the `tdlib` automatically and build the project.
 ```bash
 cargo build --features download-tdlib
 ```
-to download the `tdlib` automatically and build the project.
 
 Note that this way is supported only for the following platforms:
 - Linux x86_64
@@ -21,7 +20,7 @@ Note that this way is supported only for the following platforms:
 - MacOS x86_64
 - MacOS aarch64
 
-## Using your local TDLib
+## Build/Run using your local TDLib
 
 By default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory.
 
@@ -38,7 +37,6 @@ If you have the `tdlib` installed in your system, you can use the `pkg-config` t
 
 You can set the `PKG_CONFIG_PATH` environment variable in the `.bashrc` or `.zshrc` file:
 ```bash
-# pkg-config configuration
 export PKG_CONFIG_PATH="/path/to/tdlib/lib/pkgconfig:$PKG_CONFIG_PATH"
 ```
 
@@ -64,7 +62,9 @@ About the `api_id` you can get one form [https://my.telegram.org](https://my.tel
 
 Current supported TDLib version: [1.8.19](https://github.com/tdlib/td/commit/2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09).
 
-## Build TDLib
+---
+
+# Build TDLib
 
 ### MacOS (Intel)
 
@@ -114,17 +114,6 @@ Add to the `.bashrc`:
 # Warning: The API_HASH and API_ID are takern from the Telegram API
 export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
 export API_ID="94575"
-```
-
-Step 4 (not always necessary):
-
-**!The version of the library may change!**
-
-After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.1.8.19.dylib` to the `/usr/local/lib`, `/usr/lib`:
-
-```bash
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.19.dylib '/usr/local/lib/'
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.1.8.19.dylib '/usr/lib/'
 ```
 
 ### Windows
@@ -207,10 +196,7 @@ Add to the `.bashrc`:
 ```bash
 # Note that this path is there you moved the tdlib directory in the step 1
 export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
-
-# Not correct
-# export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH
-# export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$LD_LIBRARY_PATH
 ```
 
 Step 3:
@@ -223,19 +209,9 @@ export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
 export API_ID="94575"
 ```
 
-Step 4 (not always necessary):
-
-**!The version of the library may change!**
-
-After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.so.1.8.19` to the `/usr/lib`:
-
-```bash
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.so.1.8.19 '/usr/lib/'
-```
-
 ### Linux Other (using clang)
 
-- Install Git, clang >= 3.4, libc++, make, CMake >= 3.0.2, OpenSSL-dev, zlib-dev, gperf, PHP using your package manager.
+- Install Git, clang >= 3.4, libc++, make, CMake >= 3.0.2, OpenSSL-dev, zlib-dev, gperf, PHP using your package manager. For example, on Arch Linux, you can run: `sudo pacman -S git clang make cmake openssl libc++abi libc++ zlib gperf php`.
 
 ```bash
 git clone https://github.com/tdlib/td.git
@@ -266,10 +242,7 @@ Add to the `.bashrc`:
 ```bash
 # Note that this path is there you moved the tdlib directory in the step 1
 export PKG_CONFIG_PATH=~/WHERE_IS_TDLIB/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
-
-# Not correct
-# export PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$PATH
-# export PKG_CONFIG_PATH=~/WHERE_IS_TD/td/build/pkgconfig/:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=~/WHERE_IS_TDLIB/tdlib/lib/:$LD_LIBRARY_PATH
 ```
 
 Step 3:
@@ -281,14 +254,3 @@ Add to the `.bashrc`:
 export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
 export API_ID="94575"
 ```
-
-Step 4 (not always necessary):
-
-**!The version of the library may change!**
-
-After `cargo build`, if it fails, you may need to move explicitly the `libtdjson.so.1.8.19` to the `/usr/lib`:
-
-```bash
-cp ~/WHERE_IS_TDLIB/tdlib/lib/libtdjson.so.1.8.19 '/usr/lib/'
-```
-
