@@ -68,15 +68,12 @@ make COMMAND
 
 COMMAND:
   all            # Run fmt, clippy and test
-  build_local    # Build the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
-  build_download # Build the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
-  run_local      # Run the project using cargo; you need to have setup the LOCAL_TDLIB_PATH environment variable
-  run_download   # Run the project using cargo; it will download the tdlib library thanks to the tdlib-rs crate
-  fmt            # Format the code using cargo
-  clippy         # Format the code using nightly cargo
-  test           # Run clippy using cargo
-  clean          # Run tests using cargo
-  help           # Clean the project using cargo
+  build          # Build the project
+  run            # Run the project
+  test           # Run the tests
+  clippy         # Run clippy
+  fmt            # Run rustfmt
+  clean          # Clean the project
 ```
 
 ## License
