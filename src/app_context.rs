@@ -2,7 +2,7 @@ use crate::{
     action::Action,
     configs::custom::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
-        theme_custom::ThemeConfig,
+        telegram_custom::TelegramConfig, theme_custom::ThemeConfig,
     },
     tg::tg_context::TgContext,
 };
@@ -70,6 +70,8 @@ pub struct AppContext {
     theme_config: Mutex<ThemeConfig>,
     /// The palette configuration.
     palette_config: Mutex<PaletteConfig>,
+    /// The Telegram configuration.
+    tg_config: Mutex<TelegramConfig>,
     /// An unbounded receiver that receives action for processing.
     /// This is used to send actions from the main loop to the main loop.
     /// A copy of this receiver is passed to all components.
@@ -93,6 +95,7 @@ impl AppContext {
     /// * `keymap_config` - The keymap configuration.
     /// * `theme_config` - The theme configuration.
     /// * `palette_config` - The palette configuration.
+    /// * `telegram_config` - The Telegram configuration.
     /// * `tg_context` - The Telegram context.
     ///
     /// # Returns
@@ -103,6 +106,7 @@ impl AppContext {
         keymap_config: KeymapConfig,
         theme_config: ThemeConfig,
         palette_config: PaletteConfig,
+        telegram_config: TelegramConfig,
         tg_context: TgContext,
     ) -> Result<Self, io::Error> {
         let (action_tx, action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
@@ -112,6 +116,7 @@ impl AppContext {
             keymap_config: Mutex::new(keymap_config),
             palette_config: Mutex::new(palette_config),
             theme_config: Mutex::new(theme_config),
+            tg_config: Mutex::new(telegram_config),
             action_rx: Mutex::new(action_rx),
             action_tx: Mutex::new(action_tx),
             quit: AtomicBool::new(quit),
@@ -158,6 +163,16 @@ impl AppContext {
     /// * `MutexGuard<'_, PaletteConfig>` - The palette configuration.
     pub fn palette_config(&self) -> MutexGuard<'_, PaletteConfig> {
         self.palette_config.lock().unwrap()
+    }
+    /// Get the Telegram configuration.
+    /// This function takes the lock on the Telegram configuration and returns the
+    /// Telegram configuration.
+    /// The Telegram configuration is a shared resource and is protected by a mutex.
+    ///
+    /// # Returns
+    /// * `MutexGuard<'_, TelegramConfig>` - The Telegram configuration.
+    pub fn telegram_config(&self) -> MutexGuard<'_, TelegramConfig> {
+        self.tg_config.lock().unwrap()
     }
     /// Get the action receiver.
     /// This function takes the lock on the action receiver and returns the action

@@ -89,6 +89,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
         keymap_config,
         theme_config,
         palette_config,
+        telegram_config,
         tg_context,
     )?);
     tracing::info!("App context: {:?}", app_context);

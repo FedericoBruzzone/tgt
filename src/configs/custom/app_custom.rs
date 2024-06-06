@@ -131,6 +131,8 @@ mod tests {
         assert!(app_config.show_title_bar);
         assert!(app_config.theme_enable);
         assert_eq!(app_config.theme_filename, "theme.toml");
+        assert!(!app_config.take_api_id_from_telegram_config);
+        assert!(!app_config.take_api_hash_from_telegram_config);
     }
 
     #[test]

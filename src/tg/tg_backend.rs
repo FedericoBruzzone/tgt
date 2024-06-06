@@ -262,12 +262,34 @@ impl TgBackend {
                 .app_config()
                 .take_api_id_from_telegram_config
             {
-                env!("API_ID").parse().unwrap()
+                // `env!("API_ID").parse().unwrap()` generates a compile time error
+                if let Ok(api_id) = std::env::var("API_ID") {
+                    api_id.parse().unwrap()
+                } else {
+                    tracing::error!("API_ID not found in environment");
+                    "-1".parse().unwrap() // This will throw the tdlib-rs error message
+                }
             } else {
-                todo!()
+                self.app_context.telegram_config().api_id.parse().unwrap()
             }
         };
-        let api_hash: String = env!("API_HASH").into();
+        let api_hash: String = {
+            if !self
+                .app_context
+                .app_config()
+                .take_api_hash_from_telegram_config
+            {
+                // `env!("API_HASH").into()` generates a compile time error
+                if let Ok(api_hash) = std::env::var("API_HASH") {
+                    api_hash
+                } else {
+                    tracing::error!("API_HASH not found in environment");
+                    "".into() // This will throw the tdlib-rs error message
+                }
+            } else {
+                self.app_context.telegram_config().api_hash.clone()
+            }
+        };
 
         while let Some(state) = self.auth_rx.recv().await {
             match state {
