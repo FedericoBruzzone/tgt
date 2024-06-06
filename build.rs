@@ -17,7 +17,9 @@
 //     }
 // }
 //
-fn main() {
-    // empty_tgt_folder();
-    // move_config_folder_to_home_dottgt();
-}
+// fn main() {
+//     empty_tgt_folder();
+//     move_config_folder_to_home_dottgt();
+// }
+
+fn main() {}

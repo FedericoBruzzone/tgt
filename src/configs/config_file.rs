@@ -1,6 +1,6 @@
 use {
     crate::configs::{self, config_type::ConfigType},
-    crate::utils::{TGT_CONFIG_HOME, TGT_PROGRAM_NAME},
+    crate::utils::{TGT, TGT_CONFIG_HOME},
     lazy_static::lazy_static,
     serde::de::DeserializeOwned,
     std::path::PathBuf,
@@ -24,7 +24,7 @@ lazy_static! {
             dirs::config_dir()
         } {
             let mut p = p;
-            p.push(TGT_PROGRAM_NAME);
+            p.push(TGT);
             if p.is_dir() {
                 config_dirs.push(p.clone());
             }

@@ -255,6 +255,20 @@ impl TgBackend {
 
     pub async fn handle_authorization_state(&mut self) {
         tracing::info!("Handling authorization state");
+
+        let api_id: i32 = {
+            if !self
+                .app_context
+                .app_config()
+                .take_api_id_from_telegram_config
+            {
+                env!("API_ID").parse().unwrap()
+            } else {
+                todo!()
+            }
+        };
+        let api_hash: String = env!("API_HASH").into();
+
         while let Some(state) = self.auth_rx.recv().await {
             match state {
                 AuthorizationState::WaitTdlibParameters => {
@@ -267,8 +281,8 @@ impl TgBackend {
                         false,
                         true, // Cache chats
                         false,
-                        env!("API_ID").parse().unwrap(),
-                        env!("API_HASH").into(),
+                        api_id,
+                        api_hash.clone(),
                         "en".into(),
                         "Desktop".into(),
                         String::new(),

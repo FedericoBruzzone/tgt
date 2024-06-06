@@ -20,4 +20,10 @@ pub struct AppRaw {
     pub theme_enable: Option<bool>,
     /// The name of the theme file that should be used.
     pub theme_filename: Option<String>,
+    /// A boolean flag that represents whether the API_ID should be taken from
+    /// the Telegram configuration or from environment variable `API_ID`.
+    pub take_api_id_from_telegram_config: Option<bool>,
+    /// A boolean flag that represents whether the API_HASH should be taken from
+    /// the Telegram configuration or from environment variables `API_HASH`.
+    pub take_api_hash_from_telegram_config: Option<bool>,
 }

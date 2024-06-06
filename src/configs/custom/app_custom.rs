@@ -21,6 +21,10 @@ pub struct AppConfig {
     pub theme_enable: bool,
     /// The theme filename.
     pub theme_filename: String,
+    /// Take the API ID from the Telegram configuration.
+    pub take_api_id_from_telegram_config: bool,
+    /// Take the API HASH from the Telegram configuration.
+    pub take_api_hash_from_telegram_config: bool,
 }
 /// The application configuration implementation.
 impl AppConfig {
@@ -72,6 +76,16 @@ impl ConfigFile for AppConfig {
                 if let Some(theme_filename) = other.theme_filename {
                     self.theme_filename = theme_filename;
                 }
+                if let Some(take_api_id_from_telegram_config) =
+                    other.take_api_id_from_telegram_config
+                {
+                    self.take_api_id_from_telegram_config = take_api_id_from_telegram_config;
+                }
+                if let Some(take_api_hash_from_telegram_config) =
+                    other.take_api_hash_from_telegram_config
+                {
+                    self.take_api_hash_from_telegram_config = take_api_hash_from_telegram_config;
+                }
                 self.clone()
             }
         }
@@ -95,6 +109,8 @@ impl From<AppRaw> for AppConfig {
             show_title_bar: raw.show_title_bar.unwrap(),
             theme_enable: raw.theme_enable.unwrap(),
             theme_filename: raw.theme_filename.unwrap(),
+            take_api_id_from_telegram_config: raw.take_api_id_from_telegram_config.unwrap(),
+            take_api_hash_from_telegram_config: raw.take_api_hash_from_telegram_config.unwrap(),
         }
     }
 }
@@ -127,6 +143,8 @@ mod tests {
             show_title_bar: Some(true),
             theme_enable: Some(true),
             theme_filename: Some("test".to_string()),
+            take_api_id_from_telegram_config: Some(true),
+            take_api_hash_from_telegram_config: Some(true),
         };
         let app_config = AppConfig::from(app_raw);
         assert!(app_config.mouse_support);
@@ -148,6 +166,8 @@ mod tests {
             show_title_bar: Some(true),
             theme_enable: Some(true),
             theme_filename: Some("test".to_string()),
+            take_api_id_from_telegram_config: Some(true),
+            take_api_hash_from_telegram_config: Some(true),
         });
         let app_raw = AppRaw {
             mouse_support: Some(false),
@@ -157,6 +177,8 @@ mod tests {
             show_title_bar: None,
             theme_enable: None,
             theme_filename: None,
+            take_api_id_from_telegram_config: None,
+            take_api_hash_from_telegram_config: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(!app_config.mouse_support);
@@ -184,6 +206,8 @@ mod tests {
             show_title_bar: None,
             theme_enable: None,
             theme_filename: None,
+            take_api_id_from_telegram_config: None,
+            take_api_hash_from_telegram_config: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(app_config.mouse_support);
@@ -193,6 +217,8 @@ mod tests {
         assert!(app_config.show_title_bar);
         assert!(app_config.theme_enable);
         assert_eq!(app_config.theme_filename, "theme.toml");
+        assert!(!app_config.take_api_id_from_telegram_config);
+        assert!(!app_config.take_api_hash_from_telegram_config);
     }
 
     #[test]

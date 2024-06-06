@@ -1,7 +1,7 @@
 use crate::{
     app_error::AppError,
     configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::logger_raw::LoggerRaw},
-    utils::project_dir,
+    utils::tgt_dir,
 };
 use std::path::Path;
 
@@ -68,7 +68,7 @@ impl Default for LoggerConfig {
 impl From<LoggerRaw> for LoggerConfig {
     fn from(raw: LoggerRaw) -> Self {
         Self {
-            log_folder: project_dir()
+            log_folder: tgt_dir()
                 .unwrap()
                 .join(raw.log_folder.unwrap())
                 .to_string_lossy()
@@ -85,14 +85,14 @@ impl From<LoggerRaw> for LoggerConfig {
 mod tests {
     use crate::configs::config_file::ConfigFile;
     use crate::configs::{custom::logger_custom::LoggerConfig, raw::logger_raw::LoggerRaw};
-    use crate::utils::project_dir;
+    use crate::utils::tgt_dir;
 
     #[test]
     fn test_logger_config_default() {
         let logger_config = LoggerConfig::default();
         assert_eq!(
             logger_config.log_folder,
-            project_dir()
+            tgt_dir()
                 .unwrap()
                 .join(".data")
                 .to_string_lossy()
@@ -114,7 +114,7 @@ mod tests {
         let logger_config = LoggerConfig::from(logger_raw);
         assert_eq!(
             logger_config.log_folder,
-            project_dir()
+            tgt_dir()
                 .unwrap()
                 .join(".data_raw")
                 .to_string_lossy()
@@ -145,7 +145,7 @@ mod tests {
         logger_config = logger_config.merge(Some(logger_raw));
         assert_eq!(
             logger_config.log_folder,
-            project_dir()
+            tgt_dir()
                 .unwrap()
                 .join(".data_raw")
                 .to_string_lossy()
@@ -175,7 +175,7 @@ mod tests {
         logger_config = logger_config.merge(Some(logger_raw));
         assert_eq!(
             logger_config.log_folder,
-            project_dir()
+            tgt_dir()
                 .unwrap()
                 .join(".data")
                 .to_string_lossy()

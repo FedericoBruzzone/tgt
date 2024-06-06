@@ -1,21 +1,28 @@
+use dirs;
 use std::{env, io, path::PathBuf};
 
-pub const TGT_PROGRAM_NAME: &str = "tgt";
+pub const TGT: &str = "tgt";
 pub const TGT_CONFIG_HOME: &str = "TGT_CONFIG_HOME";
 
 /// Get the project directory.
 ///
 /// # Returns
 /// The project directory.
-pub fn project_dir() -> io::Result<PathBuf> {
+pub fn tgt_dir() -> io::Result<PathBuf> {
+    let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
+    let tgt = format!("{}/.tgt", home);
+    // Check if the directory exists
+    if PathBuf::from(&tgt).exists() {
+        return Ok(PathBuf::from(&tgt));
+    }
     env::current_dir()
 }
 /// Get the default configuration directory.
 ///
 /// # Returns
 /// The default configuration directory.
-pub fn default_config_dir() -> io::Result<PathBuf> {
-    Ok(project_dir()?.join("config"))
+pub fn tgt_config_dir() -> io::Result<PathBuf> {
+    Ok(tgt_dir()?.join("config"))
 }
 
 /// Fail with an error message and exit the application.

@@ -1,4 +1,4 @@
-use {super::config_type::ConfigType, crate::utils::default_config_dir, std::io};
+use {super::config_type::ConfigType, crate::utils::tgt_config_dir, std::io};
 
 pub mod app_custom;
 pub mod keymap_custom;
@@ -16,7 +16,7 @@ pub mod theme_custom;
 /// # Returns
 /// The default configuration file path of the specified configuration type.
 fn default_config_file_path_of(config_type: ConfigType) -> io::Result<String> {
-    Ok(default_config_dir()?
+    Ok(tgt_config_dir()?
         .join(config_type.as_default_filename())
         .to_str()
         .unwrap()

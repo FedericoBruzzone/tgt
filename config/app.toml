@@ -18,3 +18,9 @@ theme_enable = true
 # `theme_filename` is the name of the file that contains the theme.
 # The default filename is "theme.toml".
 theme_filename = "theme.toml"
+# `take_api_id_from_telegram_config` enables taking the API_ID from the Telegram configuration file
+# or from the environment variable `API_ID`.
+take_api_id_from_telegram_config = false
+# `take_api_hash_from_telegram_config` enables taking the API_HASH from the Telegram configuration file
+# or from the environment variable `API_HASH`.
+take_api_hash_from_telegram_config = false
