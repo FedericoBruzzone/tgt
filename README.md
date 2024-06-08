@@ -41,14 +41,14 @@
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
 For more information, do not hesitate to contact us (see the [Contact](#contact) section).
 
-Using the `download-tdlib` feature of [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you do not need to set any environment variable. Then you can compile `tgt` using `cargo build --features download-tdlib`.
-Instead, by default `tgt` assume that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory. Or you can use `pkg-config` to find the path of the library, in this case see the [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file for more information.
+**Build instructions**
 
-Remember to set the `API_HASH` and `API_ID` environment variables with the values of your Telegram application, you can get them from [here](https://my.telegram.org/) or for the development you can use the following values:
-```bash
-export API_HASH="a3406de8d171bb422bb6ddf3bbd800e2"
-export API_ID="94575"
-```
+There are three ways to build `tgt`:
+
+1. Using the `download-tdlib` feature of [tdlib-rs](https://github.com/FedericoBruzzone/tdlib-rs) you do not need to set any environment variable. Then you can compile `tgt` using `cargo build --features download-tdlib`.
+2. By default, `tgt` assumes that you have the tdlib built and the `LOCAL_TDLIB_PATH` environment variable set to the path of the `tdlib` directory. You can set the environment variable with the following command: `export LOCAL_TDLIB_PATH="/path/to/tdlib"`. Then you can compile `tgt` using `cargo build` or `cargo build --feature default`.
+3. You can use `pkg-config` to find the path of the library. In this case see the [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file for more information. Then you can compile `tgt` using `cargo build --features pkg-config`.
+
 
 The [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBUTING.md) file contains information for building `tgt` and the steps to configure the `tdlib` in your local environment, starting from the compilation to the configuration of the environment variables.
 
@@ -56,7 +56,7 @@ The [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBU
 
 You can find the road map of the project [here](https://github.com/FedericoBruzzone/tg-tui/issues/1) (in the pinned issues).
 
-## Building
+## Commands
 
 You can use `just`, `make` or `cargo`,  as build tools.
 If you want to use `cargo`, please make sure to read the `Justfile` or the `Makefile` to understand the flags used for each command.
