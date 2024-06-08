@@ -26,6 +26,12 @@ pub struct TelegramConfig {
     pub use_chat_info_database: bool,
     /// A flag that indicates if the message database should be used.
     pub use_message_database: bool,
+    /// A language code.
+    pub system_language_code: String,
+    /// The model of the device.
+    pub device_model: String,
+    /// A flag that indicates if the original file names should be ignored.
+    pub ignore_file_names: bool,
 }
 /// The telegram configuration implementation.
 impl TelegramConfig {
@@ -71,6 +77,15 @@ impl ConfigFile for TelegramConfig {
                 if let Some(use_chat_info_database) = _other.use_chat_info_database {
                     self.use_chat_info_database = use_chat_info_database;
                 }
+                if let Some(use_message_database) = _other.use_message_database {
+                    self.use_message_database = use_message_database;
+                }
+                if let Some(system_language_code) = _other.system_language_code {
+                    self.system_language_code = system_language_code;
+                }
+                if let Some(device_model) = _other.device_model {
+                    self.device_model = device_model;
+                }
                 self.clone()
             }
         }
@@ -97,6 +112,9 @@ impl From<TelegramRaw> for TelegramConfig {
             use_file_database: raw.use_file_database.unwrap(),
             use_chat_info_database: raw.use_chat_info_database.unwrap(),
             use_message_database: raw.use_message_database.unwrap(),
+            system_language_code: raw.system_language_code.unwrap(),
+            device_model: raw.device_model.unwrap(),
+            ignore_file_names: raw.ignore_file_names.unwrap(),
         }
     }
 }
@@ -127,6 +145,9 @@ mod tests {
             use_file_database: Some(true),
             use_chat_info_database: Some(true),
             use_message_database: Some(true),
+            system_language_code: Some("system_language_code".to_string()),
+            device_model: Some("device_model".to_string()),
+            ignore_file_names: Some(true),
         };
         let telegram_config = TelegramConfig::from(telegram_raw);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -142,6 +163,9 @@ mod tests {
         assert!(telegram_config.use_file_database);
         assert!(telegram_config.use_chat_info_database);
         assert!(telegram_config.use_message_database);
+        assert_eq!(telegram_config.system_language_code, "system_language_code");
+        assert_eq!(telegram_config.device_model, "device_model");
+        assert!(telegram_config.ignore_file_names);
     }
 
     #[test]
@@ -153,6 +177,9 @@ mod tests {
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
+            system_language_code: "system_language_code".to_string(),
+            device_model: "device_model".to_string(),
+            ignore_file_names: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -161,6 +188,9 @@ mod tests {
             use_file_database: Some(true),
             use_chat_info_database: Some(true),
             use_message_database: Some(true),
+            system_language_code: Some("system_language_code_2".to_string()),
+            device_model: Some("device_model_2".to_string()),
+            ignore_file_names: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -168,7 +198,13 @@ mod tests {
         assert_eq!(telegram_config.database_dir, "database_dir_2");
         assert!(telegram_config.use_file_database);
         assert!(telegram_config.use_chat_info_database);
-        assert!(!telegram_config.use_message_database);
+        assert!(telegram_config.use_message_database);
+        assert_eq!(
+            telegram_config.system_language_code,
+            "system_language_code_2"
+        );
+        assert_eq!(telegram_config.device_model, "device_model_2");
+        assert!(!telegram_config.ignore_file_names);
     }
 
     #[test]
@@ -180,6 +216,9 @@ mod tests {
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
+            system_language_code: "system_language_code".to_string(),
+            device_model: "device_model".to_string(),
+            ignore_file_names: false,
         };
         let telegram_config = telegram_config.merge(None);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -188,6 +227,9 @@ mod tests {
         assert!(!telegram_config.use_file_database);
         assert!(!telegram_config.use_chat_info_database);
         assert!(!telegram_config.use_message_database);
+        assert_eq!(telegram_config.system_language_code, "system_language_code");
+        assert_eq!(telegram_config.device_model, "device_model");
+        assert!(!telegram_config.ignore_file_names);
     }
 
     #[test]
@@ -199,6 +241,9 @@ mod tests {
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
+            system_language_code: "system_language_code".to_string(),
+            device_model: "device_model".to_string(),
+            ignore_file_names: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -207,6 +252,9 @@ mod tests {
             use_file_database: None,
             use_chat_info_database: None,
             use_message_database: None,
+            system_language_code: None,
+            device_model: None,
+            ignore_file_names: None,
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -215,6 +263,9 @@ mod tests {
         assert!(!telegram_config.use_file_database);
         assert!(!telegram_config.use_chat_info_database);
         assert!(!telegram_config.use_message_database);
+        assert_eq!(telegram_config.system_language_code, "system_language_code");
+        assert_eq!(telegram_config.device_model, "device_model");
+        assert!(!telegram_config.ignore_file_names);
     }
 
     #[test]
@@ -231,6 +282,9 @@ mod tests {
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
+            system_language_code: "system_language_code".to_string(),
+            device_model: "device_model".to_string(),
+            ignore_file_names: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -239,6 +293,9 @@ mod tests {
             use_file_database: Some(true),
             use_chat_info_database: Some(true),
             use_message_database: Some(true),
+            system_language_code: Some("system_language_code_2".to_string()),
+            device_model: Some("device_model_2".to_string()),
+            ignore_file_names: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -246,7 +303,13 @@ mod tests {
         assert_eq!(telegram_config.database_dir, "database_dir_2");
         assert!(telegram_config.use_file_database);
         assert!(telegram_config.use_chat_info_database);
-        assert!(!telegram_config.use_message_database);
+        assert!(telegram_config.use_message_database);
+        assert_eq!(
+            telegram_config.system_language_code,
+            "system_language_code_2"
+        );
+        assert_eq!(telegram_config.device_model, "device_model_2");
+        assert!(!telegram_config.ignore_file_names);
     }
 
     #[test]

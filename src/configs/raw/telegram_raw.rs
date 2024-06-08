@@ -19,4 +19,10 @@ pub struct TelegramRaw {
     pub use_chat_info_database: Option<bool>,
     /// A flag that indicates if the message database should be used.
     pub use_message_database: Option<bool>,
+    /// A language code.
+    pub system_language_code: Option<String>,
+    /// The model of the device.
+    pub device_model: Option<String>,
+    /// A flag that indicates if the original file names should be ignored.
+    pub ignore_file_names: Option<bool>,
 }

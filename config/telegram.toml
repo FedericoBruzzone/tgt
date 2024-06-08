@@ -15,3 +15,9 @@ use_file_database = true
 use_chat_info_database = true
 # Pass true to keep cache of chats and messages between restarts. Implies use_chat_info_database
 use_message_database = true
+# IETF language tag of the user's operating system language; must be non-empty
+system_language_code = "en"
+# Model of the device the application is being run on; must be non-empty
+device_model = "Desktop"
+# Pass true to ignore original file names for downloaded files. Otherwise, downloaded files are saved under names as close as possible to the original name
+ignore_file_names = true

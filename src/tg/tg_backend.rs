@@ -295,6 +295,9 @@ impl TgBackend {
         let use_file_database = telegram_config.use_file_database;
         let use_chat_info_database = telegram_config.use_chat_info_database;
         let use_message_database = telegram_config.use_message_database;
+        let system_language_code = telegram_config.system_language_code.clone();
+        let device_model = telegram_config.device_model.clone();
+        let ignore_file_names = telegram_config.ignore_file_names;
 
         while let Some(state) = self.auth_rx.recv().await {
             match state {
@@ -310,12 +313,12 @@ impl TgBackend {
                         false,
                         api_id,
                         api_hash.clone(),
-                        "en".into(),
-                        "Desktop".into(),
+                        system_language_code.clone(),
+                        device_model.clone(),
                         String::new(),
                         env!("CARGO_PKG_VERSION").into(),
                         false,
-                        true,
+                        ignore_file_names,
                         self.client_id,
                     )
                     .await;
