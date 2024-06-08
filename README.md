@@ -15,7 +15,7 @@
 [creates-io-downloads-shield]: https://img.shields.io/crates/d/tgt.svg
 
 > [!WARNING]
-> This project is still in development and is not ready for use.
+> The project is almost ready for use but is still under development.
 
 <p align="center">
     <img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/logo.png" alt="logo" />
