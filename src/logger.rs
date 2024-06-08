@@ -13,7 +13,7 @@ use {
 /// This struct is used to initialize the logger for the application.
 pub struct Logger {
     /// The log folder.
-    log_folder: String,
+    log_dir: String,
     /// The log file.
     log_file: String,
     /// The rotation frequency.
@@ -57,7 +57,7 @@ impl Logger {
 
         let file_appender = tracing_appender::rolling::RollingFileAppender::new(
             self.rotation_frequency.clone(),
-            self.log_folder.clone(),
+            self.log_dir.clone(),
             self.log_file.clone(),
         );
 
@@ -88,7 +88,7 @@ impl Logger {
     /// # Returns
     /// * `Result<(), AppError>` - The result of the operation.
     fn delete_old_log_files(&self) -> Result<(), AppError<()>> {
-        let mut logs: Vec<_> = fs::read_dir(&self.log_folder)?
+        let mut logs: Vec<_> = fs::read_dir(&self.log_dir)?
             .filter_map(Result::ok)
             .map(|entry| entry.path())
             .filter(|path| {
@@ -126,7 +126,7 @@ impl Logger {
 impl From<LoggerConfig> for Logger {
     fn from(config: LoggerConfig) -> Self {
         Self {
-            log_folder: config.log_folder,
+            log_dir: config.log_dir,
             log_file: config.log_file,
             rotation_frequency: match config.rotation_frequency.as_str() {
                 "minutely" => tracing_appender::rolling::Rotation::MINUTELY,

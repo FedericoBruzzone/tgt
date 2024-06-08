@@ -5,7 +5,7 @@ use crate::{
     },
     utils,
 };
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug)]
 /// The telegram configuration.
@@ -75,6 +75,9 @@ impl ConfigFile for TelegramConfig {
                     self.api_hash = api_hash;
                 }
                 if let Some(database_dir) = _other.database_dir {
+                    if !Path::new(&database_dir).exists() {
+                        std::fs::create_dir_all(&database_dir).unwrap();
+                    }
                     self.database_dir = database_dir;
                 }
                 if let Some(use_file_database) = _other.use_file_database {
@@ -99,6 +102,10 @@ impl ConfigFile for TelegramConfig {
                     self.verbosity_level = verbosity_level;
                 }
                 if let Some(log_path) = _other.log_path {
+                    if !Path::new(&log_path).exists() {
+                        std::fs::create_dir_all(PathBuf::from(&log_path).parent().unwrap())
+                            .unwrap();
+                    }
                     self.log_path = log_path;
                 }
                 if let Some(redirect_stderr) = _other.redirect_stderr {
@@ -119,14 +126,27 @@ impl Default for TelegramConfig {
 /// configuration.
 impl From<TelegramRaw> for TelegramConfig {
     fn from(raw: TelegramRaw) -> Self {
+        let database_dir = utils::tgt_dir()
+            .unwrap()
+            .join(raw.database_dir.unwrap())
+            .to_string_lossy()
+            .to_string();
+        let log_path = utils::tgt_dir()
+            .unwrap()
+            .join(raw.log_path.unwrap())
+            .to_string_lossy()
+            .to_string();
+        if !Path::new(&database_dir).exists() {
+            std::fs::create_dir_all(&database_dir).unwrap();
+        }
+        if !Path::new(&log_path).exists() {
+            std::fs::create_dir_all(PathBuf::from(&log_path).parent().unwrap()).unwrap();
+        }
+
         Self {
             api_id: raw.api_id.unwrap(),
             api_hash: raw.api_hash.unwrap(),
-            database_dir: utils::tgt_dir()
-                .unwrap()
-                .join(raw.database_dir.unwrap())
-                .to_string_lossy()
-                .to_string(),
+            database_dir,
             use_file_database: raw.use_file_database.unwrap(),
             use_chat_info_database: raw.use_chat_info_database.unwrap(),
             use_message_database: raw.use_message_database.unwrap(),
@@ -134,11 +154,7 @@ impl From<TelegramRaw> for TelegramConfig {
             device_model: raw.device_model.unwrap(),
             ignore_file_names: raw.ignore_file_names.unwrap(),
             verbosity_level: raw.verbosity_level.unwrap(),
-            log_path: utils::tgt_dir()
-                .unwrap()
-                .join(raw.log_path.unwrap())
-                .to_string_lossy()
-                .to_string(),
+            log_path,
             redirect_stderr: raw.redirect_stderr.unwrap(),
         }
     }

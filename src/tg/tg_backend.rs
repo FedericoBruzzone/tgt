@@ -446,7 +446,6 @@ impl TgBackend {
         }
     }
     pub async fn set_logging(&self) {
-        // TODO read data from config file
         let verbosity_level = self.app_context.telegram_config().verbosity_level;
         let log_path = self.app_context.telegram_config().log_path.clone();
         let redirect_stderr = self.app_context.telegram_config().redirect_stderr;

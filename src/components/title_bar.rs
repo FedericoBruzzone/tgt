@@ -3,12 +3,14 @@ use {
         action::Action,
         app_context::AppContext,
         components::component_traits::{Component, HandleFocus},
+        utils::tgt_dir,
     },
     ratatui::{
-        layout::{Alignment, Rect},
+        layout::{Alignment, Constraint, Direction, Layout, Rect},
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
+    ratatui_image::{picker::Picker, protocol::Protocol, Resize},
     std::{io, sync::Arc},
     tokio::sync::mpsc,
 };
@@ -24,6 +26,8 @@ pub struct TitleBar {
     command_tx: Option<mpsc::UnboundedSender<Action>>,
     /// Indicates whether the `TitleBar` is focused or not.
     focused: bool,
+    /// The image of the `TitleBar`.
+    _image_state: Box<dyn Protocol>, // Box<dyn StatefulProtocol>,
 }
 /// Implementation of `TitleBar` struct.
 impl TitleBar {
@@ -31,11 +35,31 @@ impl TitleBar {
         let command_tx = None;
         let name = "".to_string();
         let focused = false;
+
+        let mut picker = Picker::new((8, 12));
+        picker.guess_protocol();
+        let dyn_img = image::io::Reader::open(
+            tgt_dir()
+                .unwrap()
+                .join("imgs")
+                .join("logo.png")
+                .to_string_lossy()
+                .to_string(),
+        )
+        .unwrap()
+        .decode()
+        .unwrap();
+        // let image = picker.new_resize_protocol(dyn_img);
+        // let image_state: Box<dyn StatefulProtocol> = image.into();
+        let image_state = picker
+            .new_protocol(dyn_img.clone(), Rect::new(0, 0, 30, 30), Resize::Fit(None))
+            .unwrap();
         TitleBar {
             app_context,
             command_tx,
             name,
             focused,
+            _image_state: image_state,
         }
     }
     /// Set the name of the `TitleBar`.
@@ -72,6 +96,11 @@ impl Component for TitleBar {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(0), Constraint::Percentage(100)].as_ref())
+            .split(area);
+
         let name: Vec<char> = self.name.chars().collect::<Vec<char>>();
         // Span::raw(" - A TUI for Telegram"),
         let text = vec![Line::from(vec![
@@ -104,13 +133,19 @@ impl Component for TitleBar {
             Span::styled("a", self.app_context.style_title_bar_title3()),
             Span::styled("m", self.app_context.style_title_bar_title1()),
         ])];
+        let block = Block::new().borders(Borders::ALL);
         let paragraph = Paragraph::new(text)
-            .block(Block::new().borders(Borders::ALL))
+            .block(block.clone())
             .style(self.app_context.style_title_bar())
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });
 
-        frame.render_widget(paragraph, area);
+        // let statefull_image = StatefulImage::new(None);
+        // frame.render_stateful_widget(statefull_image, chunks[0], &mut self.image_state);
+        // let image = Image::new(self.image_state.as_ref());
+        // frame.render_widget(image, chunks[0]);
+
+        frame.render_widget(paragraph, chunks[1]);
 
         Ok(())
     }

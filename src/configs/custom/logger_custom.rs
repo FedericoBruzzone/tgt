@@ -9,15 +9,15 @@ use std::path::Path;
 /// The logger configuration.
 pub struct LoggerConfig {
     /// The folder where the log file is stored.
-    pub log_folder: String,
+    pub log_dir: String,
     /// The name of the log file.
     pub log_file: String,
     /// The rotation frequency of the log.
     /// The log rotation frequency can be one of the following:
-    /// * minutely: A new log file in the format of log_folder/log_file.yyyy-MM-dd-HH-mm will be created minutely (once per minute)
-    /// * hourly: A new log file in the format of log_folder/log_file.yyyy-MM-dd-HH will be created hourly
-    /// * daily: A new log file in the format of log_folder/log_file.yyyy-MM-dd will be created daily
-    /// * never: This will result in log file located at log_folder/log_file
+    /// * minutely: A new log file in the format of log_dir/log_file.yyyy-MM-dd-HH-mm will be created minutely (once per minute)
+    /// * hourly: A new log file in the format of log_dir/log_file.yyyy-MM-dd-HH will be created hourly
+    /// * daily: A new log file in the format of log_dir/log_file.yyyy-MM-dd will be created daily
+    /// * never: This will result in log file located at log_dir/log_file
     pub rotation_frequency: String,
     /// The maximum number of old log files that will be stored
     pub max_old_log_files: usize,
@@ -60,8 +60,11 @@ impl ConfigFile for LoggerConfig {
             None => self.clone(),
             Some(other) => {
                 tracing::info!("Merging logger config");
-                if let Some(log_folder) = other.log_folder {
-                    self.log_folder = log_folder;
+                if let Some(log_dir) = other.log_dir {
+                    if !Path::new(&log_dir).exists() {
+                        std::fs::create_dir_all(&log_dir).unwrap();
+                    }
+                    self.log_dir = log_dir;
                 }
                 if let Some(log_file) = other.log_file {
                     self.log_file = log_file;
@@ -90,12 +93,17 @@ impl Default for LoggerConfig {
 /// configuration.
 impl From<LoggerRaw> for LoggerConfig {
     fn from(raw: LoggerRaw) -> Self {
+        let log_dir = utils::tgt_dir()
+            .unwrap()
+            .join(raw.log_dir.unwrap())
+            .to_string_lossy()
+            .to_string();
+        if !Path::new(&log_dir).exists() {
+            std::fs::create_dir_all(&log_dir).unwrap();
+        }
+
         Self {
-            log_folder: utils::tgt_dir()
-                .unwrap()
-                .join(raw.log_folder.unwrap())
-                .to_string_lossy()
-                .to_string(),
+            log_dir,
             log_file: raw.log_file.unwrap(),
             rotation_frequency: raw.rotation_frequency.unwrap(),
             max_old_log_files: raw.max_old_log_files.unwrap(),
@@ -114,7 +122,7 @@ mod tests {
     fn test_logger_config_default() {
         let logger_config = LoggerConfig::default();
         assert_eq!(
-            logger_config.log_folder,
+            logger_config.log_dir,
             tgt_dir()
                 .unwrap()
                 .join(".data/logs")
@@ -128,7 +136,7 @@ mod tests {
     #[test]
     fn test_logger_config_from_raw() {
         let logger_raw = LoggerRaw {
-            log_folder: Some(".data_raw".to_string()),
+            log_dir: Some(".data_raw".to_string()),
             log_file: Some("tgt_raw.log".to_string()),
             rotation_frequency: Some("hourly".to_string()),
             max_old_log_files: Some(3),
@@ -136,7 +144,7 @@ mod tests {
         };
         let logger_config = LoggerConfig::from(logger_raw);
         assert_eq!(
-            logger_config.log_folder,
+            logger_config.log_dir,
             tgt_dir()
                 .unwrap()
                 .join(".data_raw")
@@ -152,14 +160,14 @@ mod tests {
     #[test]
     fn test_logger_config_merge() {
         let mut logger_config = LoggerConfig::from(LoggerRaw {
-            log_folder: Some(".data_raw".to_string()),
+            log_dir: Some(".data_raw".to_string()),
             log_file: Some("tgt_raw.log".to_string()),
             rotation_frequency: Some("never".to_string()),
             max_old_log_files: Some(5),
             log_level: Some("info".to_string()),
         });
         let logger_raw = LoggerRaw {
-            log_folder: None,
+            log_dir: None,
             log_file: None,
             rotation_frequency: None,
             max_old_log_files: None,
@@ -167,7 +175,7 @@ mod tests {
         };
         logger_config = logger_config.merge(Some(logger_raw));
         assert_eq!(
-            logger_config.log_folder,
+            logger_config.log_dir,
             tgt_dir()
                 .unwrap()
                 .join(".data_raw")
@@ -189,7 +197,7 @@ mod tests {
     fn test_merge_all_fields() {
         let mut logger_config = LoggerConfig::default();
         let logger_raw = LoggerRaw {
-            log_folder: None,
+            log_dir: None,
             log_file: None,
             rotation_frequency: None,
             max_old_log_files: None,
@@ -197,7 +205,7 @@ mod tests {
         };
         logger_config = logger_config.merge(Some(logger_raw));
         assert_eq!(
-            logger_config.log_folder,
+            logger_config.log_dir,
             tgt_dir()
                 .unwrap()
                 .join(".data/logs")

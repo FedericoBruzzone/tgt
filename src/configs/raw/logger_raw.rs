@@ -4,7 +4,7 @@ use serde::Deserialize;
 /// The raw logger configuration.
 pub struct LoggerRaw {
     /// The folder where the log file is stored.
-    pub log_folder: Option<String>,
+    pub log_dir: Option<String>,
     /// The name of the log file.
     pub log_file: Option<String>,
     /// The rotation frequency of the log.
