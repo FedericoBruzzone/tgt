@@ -1,5 +1,5 @@
 # `log_folder` is the folder where the log file will be created
-log_folder = ".data"
+log_folder = ".data/logs"
 # `log_file` is the name of the log file
 log_file = "tgt.log"
 # The rotation frequency of the log.

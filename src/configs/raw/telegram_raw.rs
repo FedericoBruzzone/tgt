@@ -11,4 +11,6 @@ pub struct TelegramRaw {
     /// Note that the this field is used only if the `take_api_hash_from_telegram_config` is `true`
     /// in the application configuration (`app.toml`).
     pub api_hash: Option<String>,
+    /// The directory where the database is stored.
+    pub database_dir: Option<String>,
 }

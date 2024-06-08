@@ -1,7 +1,7 @@
 use crate::{
     app_error::AppError,
     configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::logger_raw::LoggerRaw},
-    utils::tgt_dir,
+    utils,
 };
 use std::path::Path;
 
@@ -52,6 +52,12 @@ impl ConfigFile for LoggerConfig {
                 if let Some(log_level) = other.log_level {
                     self.log_level = log_level;
                 }
+                if let Some(rotation_frequency) = other.rotation_frequency {
+                    self.rotation_frequency = rotation_frequency;
+                }
+                if let Some(max_old_log_files) = other.max_old_log_files {
+                    self.max_old_log_files = max_old_log_files;
+                }
                 self.clone()
             }
         }
@@ -68,7 +74,7 @@ impl Default for LoggerConfig {
 impl From<LoggerRaw> for LoggerConfig {
     fn from(raw: LoggerRaw) -> Self {
         Self {
-            log_folder: tgt_dir()
+            log_folder: utils::tgt_dir()
                 .unwrap()
                 .join(raw.log_folder.unwrap())
                 .to_string_lossy()
@@ -94,7 +100,7 @@ mod tests {
             logger_config.log_folder,
             tgt_dir()
                 .unwrap()
-                .join(".data")
+                .join(".data/logs")
                 .to_string_lossy()
                 .to_string()
         );
@@ -177,7 +183,7 @@ mod tests {
             logger_config.log_folder,
             tgt_dir()
                 .unwrap()
-                .join(".data")
+                .join(".data/logs")
                 .to_string_lossy()
                 .to_string()
         );

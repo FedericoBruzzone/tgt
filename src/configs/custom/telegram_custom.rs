@@ -3,6 +3,7 @@ use crate::{
     configs::{
         self, config_file::ConfigFile, config_type::ConfigType, raw::telegram_raw::TelegramRaw,
     },
+    utils,
 };
 use std::path::Path;
 
@@ -17,6 +18,8 @@ pub struct TelegramConfig {
     /// Note that the this field is used only if the `take_api_hash_from_telegram_config` is `true`
     /// in the application configuration (`app.toml`).
     pub api_hash: String,
+    /// The directory where the database is stored.
+    pub database_dir: String,
 }
 /// The telegram configuration implementation.
 impl TelegramConfig {
@@ -53,6 +56,9 @@ impl ConfigFile for TelegramConfig {
                 if let Some(api_hash) = _other.api_hash {
                     self.api_hash = api_hash;
                 }
+                if let Some(database_dir) = _other.database_dir {
+                    self.database_dir = database_dir;
+                }
                 self.clone()
             }
         }
@@ -67,19 +73,27 @@ impl Default for TelegramConfig {
 /// The conversion from the raw telegram configuration to the telegram
 /// configuration.
 impl From<TelegramRaw> for TelegramConfig {
-    fn from(_raw: TelegramRaw) -> Self {
+    fn from(raw: TelegramRaw) -> Self {
         Self {
-            api_id: _raw.api_id.unwrap(),
-            api_hash: _raw.api_hash.unwrap(),
+            api_id: raw.api_id.unwrap(),
+            api_hash: raw.api_hash.unwrap(),
+            database_dir: utils::tgt_dir()
+                .unwrap()
+                .join(raw.database_dir.unwrap())
+                .to_string_lossy()
+                .to_string(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::configs::{
-        config_file::ConfigFile, custom::telegram_custom::TelegramConfig,
-        raw::telegram_raw::TelegramRaw,
+    use crate::{
+        configs::{
+            config_file::ConfigFile, custom::telegram_custom::TelegramConfig,
+            raw::telegram_raw::TelegramRaw,
+        },
+        utils,
     };
 
     #[test]
@@ -94,10 +108,19 @@ mod tests {
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id".to_string()),
             api_hash: Some("api_hash".to_string()),
+            database_dir: Some("database_dir".to_string()),
         };
         let telegram_config = TelegramConfig::from(telegram_raw);
         assert_eq!(telegram_config.api_id, "api_id");
         assert_eq!(telegram_config.api_hash, "api_hash");
+        assert_eq!(
+            telegram_config.database_dir,
+            utils::tgt_dir()
+                .unwrap()
+                .join("database_dir")
+                .to_string_lossy()
+                .to_string()
+        );
     }
 
     #[test]
@@ -105,14 +128,17 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
+            database_dir: "database_dir".to_string(),
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: Some("api_hash_2".to_string()),
+            database_dir: Some("database_dir_2".to_string()),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash_2");
+        assert_eq!(telegram_config.database_dir, "database_dir_2");
     }
 
     #[test]
@@ -120,10 +146,12 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
+            database_dir: "database_dir".to_string(),
         };
         let telegram_config = telegram_config.merge(None);
         assert_eq!(telegram_config.api_id, "api_id");
         assert_eq!(telegram_config.api_hash, "api_hash");
+        assert_eq!(telegram_config.database_dir, "database_dir");
     }
 
     #[test]
@@ -131,14 +159,17 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
+            database_dir: "database_dir".to_string(),
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: None,
+            database_dir: None,
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash");
+        assert_eq!(telegram_config.database_dir, "database_dir");
     }
 
     #[test]
@@ -151,14 +182,17 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
+            database_dir: "database_dir".to_string(),
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: Some("api_hash_2".to_string()),
+            database_dir: Some("database_dir_2".to_string()),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash_2");
+        assert_eq!(telegram_config.database_dir, "database_dir_2");
     }
 
     #[test]

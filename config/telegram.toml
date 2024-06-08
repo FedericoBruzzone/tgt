@@ -1,4 +1,11 @@
-# Telegram API_ID
+# Application identifier for Telegram API access, which can be obtained at https:my.telegram.org
 api_id = "94575"
-# Telegram API_HASH
+# Application identifier hash for Telegram API access, which can be obtained at https:my.telegram.org
 api_hash = "a3406de8d171bb422bb6ddf3bbd800e2"
+# The path to the directory for the persistent database; if empty, the current working directory will be used
+# If is not overridden, the database will be in the `tgt` directory.
+# In Linux and MacOS, the path is:
+# $HOME/tgt/.data/tg
+# In Windows, the path is:
+# C:\Users\YourUsername\tgt\.data\tg
+database_dir = ".data/tg"

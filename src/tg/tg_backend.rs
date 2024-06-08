@@ -253,9 +253,10 @@ impl TgBackend {
         }
     }
 
+    #[allow(clippy::await_holding_lock)]
     pub async fn handle_authorization_state(&mut self) {
         tracing::info!("Handling authorization state");
-
+        let telegram_config = self.app_context.telegram_config();
         let api_id: i32 = {
             if !self
                 .app_context
@@ -270,7 +271,7 @@ impl TgBackend {
                     "-1".parse().unwrap() // This will throw the tdlib-rs error message
                 }
             } else {
-                self.app_context.telegram_config().api_id.parse().unwrap()
+                telegram_config.api_id.parse().unwrap()
             }
         };
         let api_hash: String = {
@@ -287,16 +288,17 @@ impl TgBackend {
                     "".into() // This will throw the tdlib-rs error message
                 }
             } else {
-                self.app_context.telegram_config().api_hash.clone()
+                telegram_config.api_hash.clone()
             }
         };
+        let database_dir = telegram_config.database_dir.clone();
 
         while let Some(state) = self.auth_rx.recv().await {
             match state {
                 AuthorizationState::WaitTdlibParameters => {
                     let response = functions::set_tdlib_parameters(
                         false,
-                        ".data/tg".into(),
+                        database_dir.clone(),
                         String::new(),
                         String::new(),
                         false,
