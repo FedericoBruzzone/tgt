@@ -531,6 +531,23 @@ impl TgBackend {
     }
 
     async fn handle_authorization_state(&mut self) {
+        let api_id: i32 = {
+            // `env!("API_ID").parse().unwrap()` generates a compile time error
+            if let Ok(api_id) = std::env::var("API_ID") {
+                api_id.parse().unwrap()
+            } else {
+                tracing::error!("API_ID not found in environment");
+                "94575".parse().unwrap() // This will throw the tdlib-rs error message
+            }
+        };
+        let api_hash: String = {
+            // `env!("API_HASH").into()` generates a compile time error
+            if let Ok(api_hash) = std::env::var("API_HASH") {
+                api_hash
+            } else {
+                "a3406de8d171bb422bb6ddf3bbd800e2".into() // This will throw the tdlib-rs error message
+            }
+        };
         while let Some(state) = self.auth_rx.recv().await {
             match state {
                 AuthorizationState::WaitTdlibParameters => {
@@ -543,8 +560,8 @@ impl TgBackend {
                         false,
                         false,
                         false,
-                        env!("API_ID").parse().unwrap(),
-                        env!("API_HASH").into(),
+                        api_id,
+                        api_hash.clone(),
                         "en".into(),
                         "Desktop".into(),
                         String::new(),

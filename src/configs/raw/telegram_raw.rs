@@ -25,4 +25,10 @@ pub struct TelegramRaw {
     pub device_model: Option<String>,
     /// A flag that indicates if the original file names should be ignored.
     pub ignore_file_names: Option<bool>,
+    /// The verbosity level of the logging.
+    pub verbosity_level: Option<i32>,
+    /// The path to the working directory.
+    pub log_path: Option<String>,
+    /// A flag that indicates if the log to stderr should be also redirected.
+    pub redirect_stderr: Option<bool>,
 }

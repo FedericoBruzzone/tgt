@@ -21,3 +21,22 @@ system_language_code = "en"
 device_model = "Desktop"
 # Pass true to ignore original file names for downloaded files. Otherwise, downloaded files are saved under names as close as possible to the original name
 ignore_file_names = true
+# =========== logging ===========
+# New value of the verbosity level for logging.
+# Value 0 corresponds to fatal errors,
+# value 1 corresponds to errors,
+# value 2 corresponds to warnings and debug warnings,
+# value 3 corresponds to informational,
+# value 4 corresponds to debug,
+# value 5 corresponds to verbose debug,
+# value greater than 5 and up to 1023 can be used to enable even more logging
+verbosity_level = 2
+# Path to the file to where the internal TDLib log will be written
+# If is not overridden, the log will be in the `tgt` directory.
+# In Linux and MacOS, the path is:
+# $HOME/tgt/.data/tdlib_rs/tdlib_rs.log
+# In Windows, the path is:
+# C:\Users\YourUsername\tgt\.data\tdlib_rs\tdlib_rs.log
+log_path = ".data/tdlib_rs/tdlib_rs.log"
+# Pass true to additionally redirect stderr to the log file. Ignored on Windows
+redirect_stderr = true

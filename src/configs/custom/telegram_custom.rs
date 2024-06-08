@@ -32,6 +32,12 @@ pub struct TelegramConfig {
     pub device_model: String,
     /// A flag that indicates if the original file names should be ignored.
     pub ignore_file_names: bool,
+    /// The verbosity level of the logging.
+    pub verbosity_level: i32,
+    /// The path to the working directory.
+    pub log_path: String,
+    /// A flag that indicates if the log to stderr should be also redirected.
+    pub redirect_stderr: bool,
 }
 /// The telegram configuration implementation.
 impl TelegramConfig {
@@ -86,6 +92,18 @@ impl ConfigFile for TelegramConfig {
                 if let Some(device_model) = _other.device_model {
                     self.device_model = device_model;
                 }
+                if let Some(ignore_file_names) = _other.ignore_file_names {
+                    self.ignore_file_names = ignore_file_names;
+                }
+                if let Some(verbosity_level) = _other.verbosity_level {
+                    self.verbosity_level = verbosity_level;
+                }
+                if let Some(log_path) = _other.log_path {
+                    self.log_path = log_path;
+                }
+                if let Some(redirect_stderr) = _other.redirect_stderr {
+                    self.redirect_stderr = redirect_stderr;
+                }
                 self.clone()
             }
         }
@@ -115,6 +133,13 @@ impl From<TelegramRaw> for TelegramConfig {
             system_language_code: raw.system_language_code.unwrap(),
             device_model: raw.device_model.unwrap(),
             ignore_file_names: raw.ignore_file_names.unwrap(),
+            verbosity_level: raw.verbosity_level.unwrap(),
+            log_path: utils::tgt_dir()
+                .unwrap()
+                .join(raw.log_path.unwrap())
+                .to_string_lossy()
+                .to_string(),
+            redirect_stderr: raw.redirect_stderr.unwrap(),
         }
     }
 }
@@ -148,6 +173,9 @@ mod tests {
             system_language_code: Some("system_language_code".to_string()),
             device_model: Some("device_model".to_string()),
             ignore_file_names: Some(true),
+            verbosity_level: Some(1),
+            log_path: Some("log_path".to_string()),
+            redirect_stderr: Some(true),
         };
         let telegram_config = TelegramConfig::from(telegram_raw);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -166,6 +194,16 @@ mod tests {
         assert_eq!(telegram_config.system_language_code, "system_language_code");
         assert_eq!(telegram_config.device_model, "device_model");
         assert!(telegram_config.ignore_file_names);
+        assert_eq!(telegram_config.verbosity_level, 1);
+        assert_eq!(
+            telegram_config.log_path,
+            utils::tgt_dir()
+                .unwrap()
+                .join("log_path")
+                .to_string_lossy()
+                .to_string()
+        );
+        assert!(telegram_config.redirect_stderr);
     }
 
     #[test]
@@ -180,6 +218,9 @@ mod tests {
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
             ignore_file_names: false,
+            verbosity_level: 1,
+            log_path: "log_path".to_string(),
+            redirect_stderr: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -191,6 +232,9 @@ mod tests {
             system_language_code: Some("system_language_code_2".to_string()),
             device_model: Some("device_model_2".to_string()),
             ignore_file_names: Some(true),
+            verbosity_level: Some(2),
+            log_path: Some("log_path_2".to_string()),
+            redirect_stderr: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -204,7 +248,10 @@ mod tests {
             "system_language_code_2"
         );
         assert_eq!(telegram_config.device_model, "device_model_2");
-        assert!(!telegram_config.ignore_file_names);
+        assert!(telegram_config.ignore_file_names);
+        assert_eq!(telegram_config.verbosity_level, 2);
+        assert_eq!(telegram_config.log_path, "log_path_2");
+        assert!(telegram_config.redirect_stderr);
     }
 
     #[test]
@@ -219,6 +266,9 @@ mod tests {
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
             ignore_file_names: false,
+            verbosity_level: 1,
+            log_path: "log_path".to_string(),
+            redirect_stderr: false,
         };
         let telegram_config = telegram_config.merge(None);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -230,6 +280,9 @@ mod tests {
         assert_eq!(telegram_config.system_language_code, "system_language_code");
         assert_eq!(telegram_config.device_model, "device_model");
         assert!(!telegram_config.ignore_file_names);
+        assert_eq!(telegram_config.verbosity_level, 1);
+        assert_eq!(telegram_config.log_path, "log_path");
+        assert!(!telegram_config.redirect_stderr);
     }
 
     #[test]
@@ -244,6 +297,9 @@ mod tests {
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
             ignore_file_names: false,
+            verbosity_level: 1,
+            log_path: "log_path".to_string(),
+            redirect_stderr: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -255,6 +311,9 @@ mod tests {
             system_language_code: None,
             device_model: None,
             ignore_file_names: None,
+            verbosity_level: None,
+            log_path: None,
+            redirect_stderr: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -266,6 +325,9 @@ mod tests {
         assert_eq!(telegram_config.system_language_code, "system_language_code");
         assert_eq!(telegram_config.device_model, "device_model");
         assert!(!telegram_config.ignore_file_names);
+        assert_eq!(telegram_config.verbosity_level, 1);
+        assert_eq!(telegram_config.log_path, "log_path");
+        assert!(telegram_config.redirect_stderr);
     }
 
     #[test]
@@ -285,6 +347,9 @@ mod tests {
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
             ignore_file_names: false,
+            verbosity_level: 1,
+            log_path: "log_path".to_string(),
+            redirect_stderr: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -296,6 +361,9 @@ mod tests {
             system_language_code: Some("system_language_code_2".to_string()),
             device_model: Some("device_model_2".to_string()),
             ignore_file_names: Some(true),
+            verbosity_level: Some(2),
+            log_path: Some("log_path_2".to_string()),
+            redirect_stderr: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -309,7 +377,10 @@ mod tests {
             "system_language_code_2"
         );
         assert_eq!(telegram_config.device_model, "device_model_2");
-        assert!(!telegram_config.ignore_file_names);
+        assert!(telegram_config.ignore_file_names);
+        assert_eq!(telegram_config.verbosity_level, 2);
+        assert_eq!(telegram_config.log_path, "log_path_2");
+        assert!(telegram_config.redirect_stderr);
     }
 
     #[test]

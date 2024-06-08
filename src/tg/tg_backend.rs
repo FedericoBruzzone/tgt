@@ -447,19 +447,22 @@ impl TgBackend {
     }
     pub async fn set_logging(&self) {
         // TODO read data from config file
+        let verbosity_level = self.app_context.telegram_config().verbosity_level;
+        let log_path = self.app_context.telegram_config().log_path.clone();
+        let redirect_stderr = self.app_context.telegram_config().redirect_stderr;
 
         // Set a fairly low verbosity level. We mainly do this because tdlib_rs
         // requires to perform a random request with the client to start
         // receiving updates for it.
-        functions::set_log_verbosity_level(2, self.client_id)
+        functions::set_log_verbosity_level(verbosity_level, self.client_id)
             .await
             .unwrap();
 
         // Create log file
         let log_stream_file = LogStreamFile {
-            path: ".data/tdlib_rs.log".into(),
+            path: log_path,
             max_file_size: 1 << 27,
-            redirect_stderr: false,
+            redirect_stderr,
         };
 
         // Set log stream to file
