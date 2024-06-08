@@ -20,6 +20,12 @@ pub struct TelegramConfig {
     pub api_hash: String,
     /// The directory where the database is stored.
     pub database_dir: String,
+    /// A flag that indicates if the user database should be used.
+    pub use_file_database: bool,
+    /// A flag that indicates if the chat info database should be used.
+    pub use_chat_info_database: bool,
+    /// A flag that indicates if the message database should be used.
+    pub use_message_database: bool,
 }
 /// The telegram configuration implementation.
 impl TelegramConfig {
@@ -59,6 +65,12 @@ impl ConfigFile for TelegramConfig {
                 if let Some(database_dir) = _other.database_dir {
                     self.database_dir = database_dir;
                 }
+                if let Some(use_file_database) = _other.use_file_database {
+                    self.use_file_database = use_file_database;
+                }
+                if let Some(use_chat_info_database) = _other.use_chat_info_database {
+                    self.use_chat_info_database = use_chat_info_database;
+                }
                 self.clone()
             }
         }
@@ -82,6 +94,9 @@ impl From<TelegramRaw> for TelegramConfig {
                 .join(raw.database_dir.unwrap())
                 .to_string_lossy()
                 .to_string(),
+            use_file_database: raw.use_file_database.unwrap(),
+            use_chat_info_database: raw.use_chat_info_database.unwrap(),
+            use_message_database: raw.use_message_database.unwrap(),
         }
     }
 }
@@ -109,6 +124,9 @@ mod tests {
             api_id: Some("api_id".to_string()),
             api_hash: Some("api_hash".to_string()),
             database_dir: Some("database_dir".to_string()),
+            use_file_database: Some(true),
+            use_chat_info_database: Some(true),
+            use_message_database: Some(true),
         };
         let telegram_config = TelegramConfig::from(telegram_raw);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -121,6 +139,9 @@ mod tests {
                 .to_string_lossy()
                 .to_string()
         );
+        assert!(telegram_config.use_file_database);
+        assert!(telegram_config.use_chat_info_database);
+        assert!(telegram_config.use_message_database);
     }
 
     #[test]
@@ -129,16 +150,25 @@ mod tests {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
             database_dir: "database_dir".to_string(),
+            use_file_database: false,
+            use_chat_info_database: false,
+            use_message_database: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: Some("api_hash_2".to_string()),
             database_dir: Some("database_dir_2".to_string()),
+            use_file_database: Some(true),
+            use_chat_info_database: Some(true),
+            use_message_database: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash_2");
         assert_eq!(telegram_config.database_dir, "database_dir_2");
+        assert!(telegram_config.use_file_database);
+        assert!(telegram_config.use_chat_info_database);
+        assert!(!telegram_config.use_message_database);
     }
 
     #[test]
@@ -147,11 +177,17 @@ mod tests {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
             database_dir: "database_dir".to_string(),
+            use_file_database: false,
+            use_chat_info_database: false,
+            use_message_database: false,
         };
         let telegram_config = telegram_config.merge(None);
         assert_eq!(telegram_config.api_id, "api_id");
         assert_eq!(telegram_config.api_hash, "api_hash");
         assert_eq!(telegram_config.database_dir, "database_dir");
+        assert!(!telegram_config.use_file_database);
+        assert!(!telegram_config.use_chat_info_database);
+        assert!(!telegram_config.use_message_database);
     }
 
     #[test]
@@ -160,16 +196,25 @@ mod tests {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
             database_dir: "database_dir".to_string(),
+            use_file_database: false,
+            use_chat_info_database: false,
+            use_message_database: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: None,
             database_dir: None,
+            use_file_database: None,
+            use_chat_info_database: None,
+            use_message_database: None,
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash");
         assert_eq!(telegram_config.database_dir, "database_dir");
+        assert!(!telegram_config.use_file_database);
+        assert!(!telegram_config.use_chat_info_database);
+        assert!(!telegram_config.use_message_database);
     }
 
     #[test]
@@ -183,16 +228,25 @@ mod tests {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
             database_dir: "database_dir".to_string(),
+            use_file_database: false,
+            use_chat_info_database: false,
+            use_message_database: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: Some("api_hash_2".to_string()),
             database_dir: Some("database_dir_2".to_string()),
+            use_file_database: Some(true),
+            use_chat_info_database: Some(true),
+            use_message_database: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash_2");
         assert_eq!(telegram_config.database_dir, "database_dir_2");
+        assert!(telegram_config.use_file_database);
+        assert!(telegram_config.use_chat_info_database);
+        assert!(!telegram_config.use_message_database);
     }
 
     #[test]

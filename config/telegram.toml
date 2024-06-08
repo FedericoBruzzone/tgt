@@ -9,3 +9,9 @@ api_hash = "a3406de8d171bb422bb6ddf3bbd800e2"
 # In Windows, the path is:
 # C:\Users\YourUsername\tgt\.data\tg
 database_dir = ".data/tg"
+# Pass true to keep information about downloaded and uploaded files between application restarts
+use_file_database = true
+# Pass true to keep cache of users, basic groups, supergroups, channels and secret chats between restarts. Implies use_file_database
+use_chat_info_database = true
+# Pass true to keep cache of chats and messages between restarts. Implies use_chat_info_database
+use_message_database = true

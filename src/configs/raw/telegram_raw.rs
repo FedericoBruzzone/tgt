@@ -13,4 +13,10 @@ pub struct TelegramRaw {
     pub api_hash: Option<String>,
     /// The directory where the database is stored.
     pub database_dir: Option<String>,
+    /// A flag that indicates if the user database should be used.
+    pub use_file_database: Option<bool>,
+    /// A flag that indicates if the chat info database should be used.
+    pub use_chat_info_database: Option<bool>,
+    /// A flag that indicates if the message database should be used.
+    pub use_message_database: Option<bool>,
 }

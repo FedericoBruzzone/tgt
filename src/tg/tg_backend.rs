@@ -292,6 +292,9 @@ impl TgBackend {
             }
         };
         let database_dir = telegram_config.database_dir.clone();
+        let use_file_database = telegram_config.use_file_database;
+        let use_chat_info_database = telegram_config.use_chat_info_database;
+        let use_message_database = telegram_config.use_message_database;
 
         while let Some(state) = self.auth_rx.recv().await {
             match state {
@@ -301,9 +304,9 @@ impl TgBackend {
                         database_dir.clone(),
                         String::new(),
                         String::new(),
-                        false,
-                        false,
-                        true, // Cache chats
+                        use_file_database,
+                        use_chat_info_database,
+                        use_message_database,
                         false,
                         api_id,
                         api_hash.clone(),
