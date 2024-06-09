@@ -247,6 +247,7 @@ impl MessageEntry {
             let mut lines = Vec::new();
             let mut current_line = Line::default();
             let mut current_line_length = 0;
+            // for span in self.message_content.iter().flat_map(|l| l.iter()) {
             for span in self.message_content.iter().flat_map(|l| l.iter()) {
                 for c in span.content.chars() {
                     if c == ' ' && current_line_length >= wrap_width {
@@ -260,8 +261,10 @@ impl MessageEntry {
                     ));
                     current_line_length += 1;
                 }
+                lines.push(current_line);
+                current_line = Line::default();
+                current_line_length = 0;
             }
-            lines.push(current_line);
             lines
         }
     }
