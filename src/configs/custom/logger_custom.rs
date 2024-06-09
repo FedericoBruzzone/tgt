@@ -136,8 +136,8 @@ mod tests {
     #[test]
     fn test_logger_config_from_raw() {
         let logger_raw = LoggerRaw {
-            log_dir: Some(".data_raw".to_string()),
-            log_file: Some("tgt_raw.log".to_string()),
+            log_dir: Some(".data/logs".to_string()),
+            log_file: Some("tgt.log".to_string()),
             rotation_frequency: Some("hourly".to_string()),
             max_old_log_files: Some(3),
             log_level: Some("debug".to_string()),
@@ -147,11 +147,11 @@ mod tests {
             logger_config.log_dir,
             tgt_dir()
                 .unwrap()
-                .join(".data_raw")
+                .join(".data/logs")
                 .to_string_lossy()
                 .to_string()
         );
-        assert_eq!(logger_config.log_file, "tgt_raw.log");
+        assert_eq!(logger_config.log_file, "tgt.log");
         assert_eq!(logger_config.rotation_frequency, "hourly");
         assert_eq!(logger_config.max_old_log_files, 3);
         assert_eq!(logger_config.log_level, "debug");
@@ -160,8 +160,8 @@ mod tests {
     #[test]
     fn test_logger_config_merge() {
         let mut logger_config = LoggerConfig::from(LoggerRaw {
-            log_dir: Some(".data_raw".to_string()),
-            log_file: Some("tgt_raw.log".to_string()),
+            log_dir: Some(".data/logs".to_string()),
+            log_file: Some("tgt.log".to_string()),
             rotation_frequency: Some("never".to_string()),
             max_old_log_files: Some(5),
             log_level: Some("info".to_string()),
@@ -178,11 +178,11 @@ mod tests {
             logger_config.log_dir,
             tgt_dir()
                 .unwrap()
-                .join(".data_raw")
+                .join(".data/logs")
                 .to_string_lossy()
                 .to_string()
         );
-        assert_eq!(logger_config.log_file, "tgt_raw.log");
+        assert_eq!(logger_config.log_file, "tgt.log");
         assert_eq!(logger_config.rotation_frequency, "never");
         assert_eq!(logger_config.max_old_log_files, 5);
         assert_eq!(logger_config.log_level, "debug");
