@@ -245,6 +245,8 @@ impl Component for ChatWindow {
 
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;
+        let wrap_width = (area.width / 2) as i32;
+        // TODO: refactor
         let items = self.message_list.iter().map(|message_entry| {
             let (me, name_style, content_style, alignment) = if message_entry.sender_id()
                 == self.app_context.tg_context().me()
@@ -280,19 +282,32 @@ impl Component for ChatWindow {
                                 Some(true),
                                 name_style,
                                 content_style,
+                                wrap_width,
                             )
                             .alignment(alignment),
                     );
                 }
                 return ListItem::new(
                     message_entry
-                        .get_text_styled(&self.app_context, Some(false), name_style, content_style)
+                        .get_text_styled(
+                            &self.app_context,
+                            Some(false),
+                            name_style,
+                            content_style,
+                            wrap_width,
+                        )
                         .alignment(alignment),
                 );
             }
             ListItem::new(
                 message_entry
-                    .get_text_styled(&self.app_context, None, name_style, content_style)
+                    .get_text_styled(
+                        &self.app_context,
+                        None,
+                        name_style,
+                        content_style,
+                        wrap_width,
+                    )
                     .alignment(alignment),
             )
         });

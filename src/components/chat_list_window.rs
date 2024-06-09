@@ -95,6 +95,7 @@ impl ChatListEntry {
             "".to_string()
         };
 
+        let preview_lines = -1;
         let mut entry = Text::default();
         entry.extend(vec![Line::from(vec![
             Span::raw(online_symbol),
@@ -115,8 +116,11 @@ impl ChatListEntry {
             }),
         ])]);
         entry.extend(self.last_message.as_ref().map_or_else(Line::default, |e| {
-            e.get_lines_styled_with_style(app_context.style_chat_list_item_message_content())[0]
-                .clone()
+            e.get_lines_styled_with_style(
+                app_context.style_chat_list_item_message_content(),
+                preview_lines,
+            )[0]
+            .clone()
         }));
 
         entry

@@ -81,6 +81,7 @@ impl MessageEntry {
         is_unread: Option<bool>,
         name_style: Style,
         content_style: Style,
+        wrap_width: i32,
     ) -> Text {
         let reply_text = match &self.reply_to {
             Some(reply_to) => match reply_to {
@@ -119,11 +120,11 @@ impl MessageEntry {
                             {
                                 Some(m) => m.get_lines_styled_with_style(
                                     app_context.style_chat_message_reply_content(),
+                                    wrap_width,
                                 ),
                                 None => vec![Line::from("")],
                             },
                         );
-                        // entry.extend(vec![Line::from("")]);
                         Some(entry)
                     } else {
                         None
@@ -135,7 +136,6 @@ impl MessageEntry {
                         Span::styled("↩️ Reply to: ", app_context.style_chat_message_reply_text()),
                         Span::styled("Story", app_context.style_chat_message_reply_name()),
                     ])]);
-                    // entry.extend(vec![Line::from("")]);
                     Some(entry)
                 }
             },
@@ -174,7 +174,7 @@ impl MessageEntry {
             self.timestamp.get_span_styled(app_context),
         ])]);
         entry.extend(reply_text.unwrap_or_default());
-        entry.extend(self.get_lines_styled_with_style(content_style));
+        entry.extend(self.get_lines_styled_with_style(content_style, wrap_width));
         entry
     }
 
@@ -222,20 +222,48 @@ impl MessageEntry {
         }
     }
 
-    pub fn get_lines_styled_with_style(&self, content_style: Style) -> Vec<Line<'static>> {
-        self.message_content
-            .iter()
-            .map(|l| {
-                l.iter()
-                    .map(|s| {
-                        Span::styled(
-                            s.content.clone(),
-                            Self::merge_two_style(s.style, content_style),
-                        )
-                    })
-                    .collect()
-            })
-            .collect::<Vec<Line>>()
+    pub fn get_lines_styled_with_style(
+        &self,
+        content_style: Style,
+        wrap_width: i32,
+    ) -> Vec<Line<'static>> {
+        if wrap_width == -1 {
+            // No wrap
+            self.message_content
+                .iter()
+                .map(|l| {
+                    l.iter()
+                        .map(|s| {
+                            Span::styled(
+                                s.content.clone(),
+                                Self::merge_two_style(s.style, content_style),
+                            )
+                        })
+                        .collect()
+                })
+                .collect::<Vec<Line>>()
+        } else {
+            // Wrap the text
+            let mut lines = Vec::new();
+            let mut current_line = Line::default();
+            let mut current_line_length = 0;
+            for span in self.message_content.iter().flat_map(|l| l.iter()) {
+                for c in span.content.chars() {
+                    if c == ' ' && current_line_length >= wrap_width {
+                        lines.push(current_line);
+                        current_line = Line::default();
+                        current_line_length = 0;
+                    }
+                    current_line.spans.push(Span::styled(
+                        c.to_string(),
+                        Self::merge_two_style(span.style, content_style),
+                    ));
+                    current_line_length += 1;
+                }
+            }
+            lines.push(current_line);
+            lines
+        }
     }
 
     fn format_message_content(message: &FormattedText) -> Vec<Line<'static>> {
