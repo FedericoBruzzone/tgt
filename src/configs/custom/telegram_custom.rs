@@ -5,7 +5,8 @@ use crate::{
     },
     utils,
 };
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 /// The telegram configuration.
@@ -136,6 +137,7 @@ impl From<TelegramRaw> for TelegramConfig {
             .join(raw.log_path.unwrap())
             .to_string_lossy()
             .to_string();
+
         if !Path::new(&database_dir).exists() {
             std::fs::create_dir_all(&database_dir).unwrap();
         }
@@ -182,7 +184,7 @@ mod tests {
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id".to_string()),
             api_hash: Some("api_hash".to_string()),
-            database_dir: Some("database_dir".to_string()),
+            database_dir: Some(".data/tg".to_string()),
             use_file_database: Some(true),
             use_chat_info_database: Some(true),
             use_message_database: Some(true),
@@ -190,7 +192,7 @@ mod tests {
             device_model: Some("device_model".to_string()),
             ignore_file_names: Some(true),
             verbosity_level: Some(1),
-            log_path: Some("log_path".to_string()),
+            log_path: Some(".data/tdlib_rs/tdlib_rs.log".to_string()),
             redirect_stderr: Some(true),
         };
         let telegram_config = TelegramConfig::from(telegram_raw);
@@ -200,7 +202,7 @@ mod tests {
             telegram_config.database_dir,
             utils::tgt_dir()
                 .unwrap()
-                .join("database_dir")
+                .join(".data/tg")
                 .to_string_lossy()
                 .to_string()
         );
@@ -215,7 +217,7 @@ mod tests {
             telegram_config.log_path,
             utils::tgt_dir()
                 .unwrap()
-                .join("log_path")
+                .join(".data/tdlib_rs/tdlib_rs.log")
                 .to_string_lossy()
                 .to_string()
         );
@@ -227,7 +229,7 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
-            database_dir: "database_dir".to_string(),
+            database_dir: ".data/tg".to_string(),
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
@@ -235,13 +237,13 @@ mod tests {
             device_model: "device_model".to_string(),
             ignore_file_names: false,
             verbosity_level: 1,
-            log_path: "log_path".to_string(),
+            log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: Some("api_hash_2".to_string()),
-            database_dir: Some("database_dir_2".to_string()),
+            database_dir: None,
             use_file_database: Some(true),
             use_chat_info_database: Some(true),
             use_message_database: Some(true),
@@ -249,13 +251,13 @@ mod tests {
             device_model: Some("device_model_2".to_string()),
             ignore_file_names: Some(true),
             verbosity_level: Some(2),
-            log_path: Some("log_path_2".to_string()),
+            log_path: None,
             redirect_stderr: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash_2");
-        assert_eq!(telegram_config.database_dir, "database_dir_2");
+        assert_eq!(telegram_config.database_dir, ".data/tg");
         assert!(telegram_config.use_file_database);
         assert!(telegram_config.use_chat_info_database);
         assert!(telegram_config.use_message_database);
@@ -266,7 +268,7 @@ mod tests {
         assert_eq!(telegram_config.device_model, "device_model_2");
         assert!(telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 2);
-        assert_eq!(telegram_config.log_path, "log_path_2");
+        assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(telegram_config.redirect_stderr);
     }
 
@@ -275,7 +277,7 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
-            database_dir: "database_dir".to_string(),
+            database_dir: ".data/tg".to_string(),
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
@@ -283,13 +285,13 @@ mod tests {
             device_model: "device_model".to_string(),
             ignore_file_names: false,
             verbosity_level: 1,
-            log_path: "log_path".to_string(),
+            log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
         };
         let telegram_config = telegram_config.merge(None);
         assert_eq!(telegram_config.api_id, "api_id");
         assert_eq!(telegram_config.api_hash, "api_hash");
-        assert_eq!(telegram_config.database_dir, "database_dir");
+        assert_eq!(telegram_config.database_dir, ".data/tg");
         assert!(!telegram_config.use_file_database);
         assert!(!telegram_config.use_chat_info_database);
         assert!(!telegram_config.use_message_database);
@@ -297,7 +299,7 @@ mod tests {
         assert_eq!(telegram_config.device_model, "device_model");
         assert!(!telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 1);
-        assert_eq!(telegram_config.log_path, "log_path");
+        assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(!telegram_config.redirect_stderr);
     }
 
@@ -306,7 +308,7 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
-            database_dir: "database_dir".to_string(),
+            database_dir: ".data/tg".to_string(),
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
@@ -314,7 +316,7 @@ mod tests {
             device_model: "device_model".to_string(),
             ignore_file_names: false,
             verbosity_level: 1,
-            log_path: "log_path".to_string(),
+            log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
         };
         let telegram_raw = TelegramRaw {
@@ -334,7 +336,7 @@ mod tests {
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash");
-        assert_eq!(telegram_config.database_dir, "database_dir");
+        assert_eq!(telegram_config.database_dir, ".data/tg");
         assert!(!telegram_config.use_file_database);
         assert!(!telegram_config.use_chat_info_database);
         assert!(!telegram_config.use_message_database);
@@ -342,7 +344,7 @@ mod tests {
         assert_eq!(telegram_config.device_model, "device_model");
         assert!(!telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 1);
-        assert_eq!(telegram_config.log_path, "log_path");
+        assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(telegram_config.redirect_stderr);
     }
 
@@ -356,7 +358,7 @@ mod tests {
         let mut telegram_config = TelegramConfig {
             api_id: "api_id".to_string(),
             api_hash: "api_hash".to_string(),
-            database_dir: "database_dir".to_string(),
+            database_dir: ".data/tg".to_string(),
             use_file_database: false,
             use_chat_info_database: false,
             use_message_database: false,
@@ -364,13 +366,13 @@ mod tests {
             device_model: "device_model".to_string(),
             ignore_file_names: false,
             verbosity_level: 1,
-            log_path: "log_path".to_string(),
+            log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
             api_hash: Some("api_hash_2".to_string()),
-            database_dir: Some("database_dir_2".to_string()),
+            database_dir: None,
             use_file_database: Some(true),
             use_chat_info_database: Some(true),
             use_message_database: Some(true),
@@ -378,13 +380,13 @@ mod tests {
             device_model: Some("device_model_2".to_string()),
             ignore_file_names: Some(true),
             verbosity_level: Some(2),
-            log_path: Some("log_path_2".to_string()),
+            log_path: None,
             redirect_stderr: Some(true),
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
         assert_eq!(telegram_config.api_hash, "api_hash_2");
-        assert_eq!(telegram_config.database_dir, "database_dir_2");
+        assert_eq!(telegram_config.database_dir, ".data/tg");
         assert!(telegram_config.use_file_database);
         assert!(telegram_config.use_chat_info_database);
         assert!(telegram_config.use_message_database);
@@ -395,7 +397,7 @@ mod tests {
         assert_eq!(telegram_config.device_model, "device_model_2");
         assert!(telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 2);
-        assert_eq!(telegram_config.log_path, "log_path_2");
+        assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(telegram_config.redirect_stderr);
     }
 
