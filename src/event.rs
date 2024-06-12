@@ -48,14 +48,8 @@ pub enum Event {
     /// Send message edited event with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),
-    /// Prepare chat history event.
-    /// We need to call this function because telegram the first time we want to
-    /// get the chat history send only one message.
-    PrepareChatHistory,
     /// Get chat history event.
-    /// The first parameter is the `from_message_id`, the second parameter
-    /// is the `offset` and the third parameter is the `limit`.
-    GetChatHistory(i64, i32, i32),
+    GetChatHistory,
     /// Delete messages event with a `Vec<i64>` and a `bool`.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
@@ -186,13 +180,8 @@ impl Display for Event {
             Event::SendMessageEdited(message_id, s) => {
                 write!(f, "SendMessageEdited({}, {})", message_id, s)
             }
-            Event::PrepareChatHistory => write!(f, "PrepareChatHistory"),
-            Event::GetChatHistory(from_message_id, offset, limit) => {
-                write!(
-                    f,
-                    "GetChatHistory({}, {}, {})",
-                    from_message_id, offset, limit
-                )
+            Event::GetChatHistory => {
+                write!(f, "GetChatHistory")
             }
             Event::DeleteMessages(message_ids, revoke) => {
                 write!(f, "DeleteMessages({:?}, {})", message_ids, revoke)

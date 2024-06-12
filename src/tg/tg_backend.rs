@@ -110,41 +110,7 @@ impl TgBackend {
     }
 
     #[allow(clippy::await_holding_lock)]
-    pub async fn get_chat_history(
-        &mut self,
-        chat_id: i64,
-        from_message_id: i64,
-        offset: i32,
-        limit: i32,
-    ) {
-        // match functions::get_chat_history(
-        //     chat_id,
-        //     from_message_id,
-        //     offset,
-        //     limit,
-        //     false,
-        //     self.client_id,
-        // )
-        // .await
-        // {
-        //     Ok(Messages::Messages(messages)) => {
-        //         let message_flatten = messages.messages.into_iter().flatten();
-        //         for message in message_flatten.clone() {
-        //             // TODO: Take lock before for
-        //             self.app_context
-        //                 .tg_context()
-        //                 .open_chat_messages()
-        //                 .push(MessageEntry::from(&message));
-        //         }
-        //         if let Some(message) = message_flatten.last() {
-        //             self.app_context
-        //                 .tg_context()
-        //                 .set_from_message_id(message.id);
-        //         }
-        //     }
-        //     Err(e) => tracing::error!("Failed to get chat history: {e:?}"),
-        // }
-
+    pub async fn get_chat_history(&mut self, chat_id: i64) {
         let start_open_chat_messages_len = self.app_context.tg_context().open_chat_messages().len();
         let mut mut_open_chat_messages_len =
             self.app_context.tg_context().open_chat_messages().len();
@@ -152,8 +118,15 @@ impl TgBackend {
 
         while mut_open_chat_messages_len < start_open_chat_messages_len + win_size {
             let from_message_id = self.app_context.tg_context().from_message_id();
-            match functions::get_chat_history(chat_id, from_message_id, 0, 50, false, self.client_id)
-                .await
+            match functions::get_chat_history(
+                chat_id,
+                from_message_id,
+                0,
+                50,
+                false,
+                self.client_id,
+            )
+            .await
             {
                 Ok(Messages::Messages(messages)) => {
                     let message_flatten = messages.messages.into_iter().flatten();

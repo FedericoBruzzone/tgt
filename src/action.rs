@@ -98,14 +98,8 @@ pub enum Action {
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),
-    /// Prepare chat history action.
-    /// We need to call this function because telegram the first time we want to
-    /// get the chat history send only one message.
-    PrepareChatHistory,
     /// GetChatHistory action.
-    /// The first parameter is the `from_message_id`, the second parameter
-    /// is the `offset` and the third parameter is the `limit`.
-    GetChatHistory(i64, i32, i32),
+    GetChatHistory,
     /// DeleteMessages action.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.

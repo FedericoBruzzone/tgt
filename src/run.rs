@@ -38,8 +38,6 @@ pub async fn run_app(
     tg_backend.disable_animated_emoji(true).await;
     tg_backend.online().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
-    // TODO: prepare_to_get_chat_history for each loaded chat, and eventually check it in the main
-    // loop
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
@@ -97,15 +95,8 @@ async fn handle_tg_backend_events(
                     .action_tx()
                     .send(Action::SendMessageEdited(message_id, message))?;
             }
-            Event::PrepareChatHistory => {
-                app_context.action_tx().send(Action::PrepareChatHistory)?;
-            }
-            Event::GetChatHistory(from_message_id, offset, limit) => {
-                app_context.action_tx().send(Action::GetChatHistory(
-                    from_message_id,
-                    offset,
-                    limit,
-                ))?;
+            Event::GetChatHistory => {
+                app_context.action_tx().send(Action::GetChatHistory)?;
             }
             Event::DeleteMessages(message_ids, revoke) => {
                 app_context
@@ -283,19 +274,9 @@ pub async fn handle_app_actions(
                     .send_message_edited(message_id, message.to_string())
                     .await;
             }
-            Action::PrepareChatHistory => {
+            Action::GetChatHistory => {
                 tg_backend
-                    .prepare_to_get_chat_history(app_context.tg_context().open_chat_id())
-                    .await;
-            }
-            Action::GetChatHistory(from_message_id, offset, limit) => {
-                tg_backend
-                    .get_chat_history(
-                        app_context.tg_context().open_chat_id(),
-                        from_message_id,
-                        offset,
-                        limit,
-                    )
+                    .get_chat_history(app_context.tg_context().open_chat_id())
                     .await;
             }
             Action::DeleteMessages(ref message_ids, revoke) => {

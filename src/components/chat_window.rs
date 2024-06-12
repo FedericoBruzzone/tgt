@@ -76,10 +76,7 @@ impl ChatWindow {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
                     if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        let from_message_id = self.app_context.tg_context().from_message_id();
-                        event_tx
-                            .send(Event::GetChatHistory(from_message_id, 0, 100))
-                            .unwrap();
+                        event_tx.send(Event::GetChatHistory).unwrap();
                     }
                 }
 
@@ -100,10 +97,7 @@ impl ChatWindow {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
                     if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        let from_message_id = self.app_context.tg_context().from_message_id();
-                        event_tx
-                            .send(Event::GetChatHistory(from_message_id, 0, 100))
-                            .unwrap();
+                        event_tx.send(Event::GetChatHistory).unwrap();
                     }
                 }
 

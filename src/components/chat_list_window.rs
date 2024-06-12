@@ -245,7 +245,7 @@ impl ChatListWindow {
                     // event_tx.send(Event::PrepareChatHistory).unwrap();
                     // event_tx.send(Event::PrepareChatHistory).unwrap();
                     // sleep(Duration::from_millis(100));
-                    event_tx.send(Event::GetChatHistory(0, 0, 100)).unwrap();
+                    event_tx.send(Event::GetChatHistory).unwrap();
 
                     // Mark all unread messages as read
                     event_tx.send(Event::ViewAllMessages).unwrap();
