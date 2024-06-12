@@ -12,8 +12,6 @@ use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::Duration;
 use tdlib_rs::enums::{ChatList, UserStatus};
 use tdlib_rs::types::User;
 use tokio::sync::mpsc::UnboundedSender;
@@ -235,8 +233,18 @@ impl ChatListWindow {
 
                 if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                     // Load chat history
-                    event_tx.send(Event::PrepareChatHistory).unwrap();
-                    sleep(Duration::from_millis(100));
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // event_tx.send(Event::PrepareChatHistory).unwrap();
+                    // sleep(Duration::from_millis(100));
                     event_tx.send(Event::GetChatHistory(0, 0, 100)).unwrap();
 
                     // Mark all unread messages as read

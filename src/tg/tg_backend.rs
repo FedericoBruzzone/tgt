@@ -117,32 +117,64 @@ impl TgBackend {
         offset: i32,
         limit: i32,
     ) {
-        match functions::get_chat_history(
-            chat_id,
-            from_message_id,
-            offset,
-            limit,
-            false,
-            self.client_id,
-        )
-        .await
-        {
-            Ok(Messages::Messages(messages)) => {
-                let message_flatten = messages.messages.into_iter().flatten();
-                for message in message_flatten.clone() {
-                    // TODO: Take lock before for
-                    self.app_context
-                        .tg_context()
-                        .open_chat_messages()
-                        .push(MessageEntry::from(&message));
+        // match functions::get_chat_history(
+        //     chat_id,
+        //     from_message_id,
+        //     offset,
+        //     limit,
+        //     false,
+        //     self.client_id,
+        // )
+        // .await
+        // {
+        //     Ok(Messages::Messages(messages)) => {
+        //         let message_flatten = messages.messages.into_iter().flatten();
+        //         for message in message_flatten.clone() {
+        //             // TODO: Take lock before for
+        //             self.app_context
+        //                 .tg_context()
+        //                 .open_chat_messages()
+        //                 .push(MessageEntry::from(&message));
+        //         }
+        //         if let Some(message) = message_flatten.last() {
+        //             self.app_context
+        //                 .tg_context()
+        //                 .set_from_message_id(message.id);
+        //         }
+        //     }
+        //     Err(e) => tracing::error!("Failed to get chat history: {e:?}"),
+        // }
+
+        let start_open_chat_messages_len = self.app_context.tg_context().open_chat_messages().len();
+        let mut mut_open_chat_messages_len =
+            self.app_context.tg_context().open_chat_messages().len();
+        let win_size = 100;
+
+        while mut_open_chat_messages_len < start_open_chat_messages_len + win_size {
+            let from_message_id = self.app_context.tg_context().from_message_id();
+            match functions::get_chat_history(chat_id, from_message_id, 0, 50, false, self.client_id)
+                .await
+            {
+                Ok(Messages::Messages(messages)) => {
+                    let message_flatten = messages.messages.into_iter().flatten();
+                    for message in message_flatten.clone() {
+                        self.app_context
+                            .tg_context()
+                            .open_chat_messages()
+                            .push(MessageEntry::from(&message));
+                        mut_open_chat_messages_len += 1;
+                    }
+                    if let Some(message) = message_flatten.last() {
+                        self.app_context
+                            .tg_context()
+                            .set_from_message_id(message.id);
+                    }
                 }
-                if let Some(message) = message_flatten.last() {
-                    self.app_context
-                        .tg_context()
-                        .set_from_message_id(message.id);
+                Err(e) => {
+                    tracing::error!("Failed to get chat history: {e:?}");
+                    break;
                 }
             }
-            Err(e) => tracing::error!("Failed to get chat history: {e:?}"),
         }
     }
 

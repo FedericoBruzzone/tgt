@@ -2845,6 +2845,7 @@ dependencies = [
  "ratatui",
  "ratatui-image",
  "serde",
+ "signal-hook",
  "tdlib-rs",
  "tokio",
  "tracing",

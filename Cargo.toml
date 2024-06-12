@@ -54,6 +54,7 @@ arboard = { version = "3.4.0", features = ["wayland-data-control", "wl-clipboard
 chrono = "0.4.38"
 ratatui-image = "^1.0.0"
 image = "0.25.1"
+signal-hook = "0.3.17"
 
 [build-dependencies]
 dirs = "5.0.1"
