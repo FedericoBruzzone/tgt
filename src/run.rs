@@ -51,9 +51,9 @@ pub async fn run_app(
         handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
 
         if app_context.quit_acquire() {
+            futures::join!(tg_backend.offline());
             tg_backend.need_quit = true;
             tg_backend.have_authorization = false;
-            tg_backend.offline().await;
             tg_backend.close().await;
             tui_backend.exit();
             tg_backend.handle_authorization_state().await;
