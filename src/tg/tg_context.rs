@@ -143,9 +143,9 @@ impl TgContext {
                         DateTimeEntry::convert_time(offline.was_online)
                     )
                 }
-                tdlib_rs::enums::UserStatus::Recently => "Last seen recently ".to_string(),
-                tdlib_rs::enums::UserStatus::LastWeek => "Last seen LastWeek".to_string(),
-                tdlib_rs::enums::UserStatus::LastMonth => "Last seen LastMonth ".to_string(),
+                tdlib_rs::enums::UserStatus::Recently(_) => "Last seen recently ".to_string(),
+                tdlib_rs::enums::UserStatus::LastWeek(_) => "Last seen LastWeek".to_string(),
+                tdlib_rs::enums::UserStatus::LastMonth(_) => "Last seen LastMonth ".to_string(),
             };
         }
         "".to_string()

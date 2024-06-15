@@ -19,8 +19,6 @@ use_message_database = true
 system_language_code = "en"
 # Model of the device the application is being run on; must be non-empty
 device_model = "Desktop"
-# Pass true to ignore original file names for downloaded files. Otherwise, downloaded files are saved under names as close as possible to the original name
-ignore_file_names = true
 # =========== logging ===========
 # New value of the verbosity level for logging.
 # Value 0 corresponds to fatal errors,

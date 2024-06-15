@@ -29,11 +29,12 @@ pub struct TdMessageReplyToMessage {
     pub message_id: i64,
 }
 
-impl From<&TdMessageReplyToMessage> for tdlib_rs::types::MessageReplyToMessage {
+impl From<&TdMessageReplyToMessage> for tdlib_rs::types::InputMessageReplyToMessage {
     fn from(reply_to_message: &TdMessageReplyToMessage) -> Self {
-        tdlib_rs::types::MessageReplyToMessage {
+        tdlib_rs::types::InputMessageReplyToMessage {
             chat_id: reply_to_message.chat_id,
             message_id: reply_to_message.message_id,
+            quote: None,
         }
     }
 }

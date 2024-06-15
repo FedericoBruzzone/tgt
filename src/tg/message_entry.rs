@@ -380,6 +380,12 @@ impl MessageEntry {
                         Style::default().add_modifier(Modifier::UNDERLINED),
                     ));
                 }
+                tdlib_rs::enums::TextEntityType::BlockQuote => {
+                    message_vec.push(Span::styled(
+                        text.chars().skip(offset).take(length).collect::<String>(),
+                        Style::default().add_modifier(Modifier::DIM),
+                    ));
+                }
                 tdlib_rs::enums::TextEntityType::Spoiler => {}
                 tdlib_rs::enums::TextEntityType::MediaTimestamp(_) => {}
                 tdlib_rs::enums::TextEntityType::CustomEmoji(_) => {}

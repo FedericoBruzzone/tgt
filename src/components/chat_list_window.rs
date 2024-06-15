@@ -81,9 +81,9 @@ impl ChatListEntry {
                 UserStatus::Online(_) => "🟢 ",
                 UserStatus::Offline(_) => "",
                 UserStatus::Empty => "",
-                UserStatus::Recently => "",
-                UserStatus::LastWeek => "",
-                UserStatus::LastMonth => "",
+                UserStatus::Recently(_) => "",
+                UserStatus::LastWeek(_) => "",
+                UserStatus::LastMonth(_) => "",
             };
             verificated_symbol = if user.is_verified { "✅" } else { "" };
         }

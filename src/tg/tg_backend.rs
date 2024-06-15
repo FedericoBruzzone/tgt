@@ -5,8 +5,8 @@ use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib_rs::enums::{
-    self, AuthorizationState, ChatList, InputMessageContent, LogStream, MessageReplyTo, Messages,
-    OptionValue, Update, User,
+    self, AuthorizationState, ChatList, InputMessageContent, InputMessageReplyTo, LogStream,
+    Messages, OptionValue, Update, User,
 };
 use tdlib_rs::functions;
 use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
@@ -171,11 +171,11 @@ impl TgBackend {
                 text: message,
                 entities: vec![], // TODO: Add entities
             },
-            disable_web_page_preview: false,
+            link_preview_options: None,
             clear_draft: true,
         });
-        let reply_to: Option<MessageReplyTo> =
-            reply_to.map(|reply_to| MessageReplyTo::Message((&reply_to).into()));
+        let reply_to: Option<InputMessageReplyTo> =
+            reply_to.map(|reply_to| InputMessageReplyTo::Message((&reply_to).into()));
         if let Err(e) = functions::send_message(
             self.app_context.tg_context().open_chat_id(),
             0,
@@ -196,7 +196,7 @@ impl TgBackend {
                 text: message,
                 entities: vec![],
             },
-            disable_web_page_preview: false,
+            link_preview_options: None,
             clear_draft: true,
         });
         match functions::edit_message_text(
@@ -302,7 +302,6 @@ impl TgBackend {
         let use_message_database = telegram_config.use_message_database;
         let system_language_code = telegram_config.system_language_code.clone();
         let device_model = telegram_config.device_model.clone();
-        let ignore_file_names = telegram_config.ignore_file_names;
 
         while let Some(state) = self.auth_rx.recv().await {
             match state {
@@ -322,8 +321,6 @@ impl TgBackend {
                         device_model.clone(),
                         String::new(),
                         env!("CARGO_PKG_VERSION").into(),
-                        false,
-                        ignore_file_names,
                         self.client_id,
                     )
                     .await;
@@ -389,7 +386,7 @@ impl TgBackend {
                     // x useless but contains the TOS if we want to show it
                     let first_name = ask_user("Please enter your first name: ");
                     let last_name = ask_user("Please enter your last name: ");
-                    functions::register_user(first_name, last_name, self.client_id)
+                    functions::register_user(first_name, last_name, false, self.client_id)
                         .await
                         .unwrap();
                 }

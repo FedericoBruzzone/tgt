@@ -31,8 +31,6 @@ pub struct TelegramConfig {
     pub system_language_code: String,
     /// The model of the device.
     pub device_model: String,
-    /// A flag that indicates if the original file names should be ignored.
-    pub ignore_file_names: bool,
     /// The verbosity level of the logging.
     pub verbosity_level: i32,
     /// The path to the working directory.
@@ -96,9 +94,6 @@ impl ConfigFile for TelegramConfig {
                 if let Some(device_model) = _other.device_model {
                     self.device_model = device_model;
                 }
-                if let Some(ignore_file_names) = _other.ignore_file_names {
-                    self.ignore_file_names = ignore_file_names;
-                }
                 if let Some(verbosity_level) = _other.verbosity_level {
                     self.verbosity_level = verbosity_level;
                 }
@@ -154,7 +149,6 @@ impl From<TelegramRaw> for TelegramConfig {
             use_message_database: raw.use_message_database.unwrap(),
             system_language_code: raw.system_language_code.unwrap(),
             device_model: raw.device_model.unwrap(),
-            ignore_file_names: raw.ignore_file_names.unwrap(),
             verbosity_level: raw.verbosity_level.unwrap(),
             log_path,
             redirect_stderr: raw.redirect_stderr.unwrap(),
@@ -190,7 +184,6 @@ mod tests {
             use_message_database: Some(true),
             system_language_code: Some("system_language_code".to_string()),
             device_model: Some("device_model".to_string()),
-            ignore_file_names: Some(true),
             verbosity_level: Some(1),
             log_path: Some(".data/tdlib_rs/tdlib_rs.log".to_string()),
             redirect_stderr: Some(true),
@@ -235,7 +228,6 @@ mod tests {
             use_message_database: false,
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
-            ignore_file_names: false,
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
@@ -249,7 +241,6 @@ mod tests {
             use_message_database: Some(true),
             system_language_code: Some("system_language_code_2".to_string()),
             device_model: Some("device_model_2".to_string()),
-            ignore_file_names: Some(true),
             verbosity_level: Some(2),
             log_path: None,
             redirect_stderr: Some(true),
@@ -283,7 +274,6 @@ mod tests {
             use_message_database: false,
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
-            ignore_file_names: false,
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
@@ -314,7 +304,6 @@ mod tests {
             use_message_database: false,
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
-            ignore_file_names: false,
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
@@ -328,7 +317,6 @@ mod tests {
             use_message_database: None,
             system_language_code: None,
             device_model: None,
-            ignore_file_names: None,
             verbosity_level: None,
             log_path: None,
             redirect_stderr: Some(true),
@@ -364,7 +352,6 @@ mod tests {
             use_message_database: false,
             system_language_code: "system_language_code".to_string(),
             device_model: "device_model".to_string(),
-            ignore_file_names: false,
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
@@ -378,7 +365,6 @@ mod tests {
             use_message_database: Some(true),
             system_language_code: Some("system_language_code_2".to_string()),
             device_model: Some("device_model_2".to_string()),
-            ignore_file_names: Some(true),
             verbosity_level: Some(2),
             log_path: None,
             redirect_stderr: Some(true),
