@@ -62,8 +62,6 @@ async fn handle_authorization_state(
                     "Desktop".into(),
                     String::new(),
                     env!("CARGO_PKG_VERSION").into(),
-                    false,
-                    true,
                     client_id,
                 )
                 .await;

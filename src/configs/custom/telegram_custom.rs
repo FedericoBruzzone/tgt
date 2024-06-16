@@ -204,7 +204,6 @@ mod tests {
         assert!(telegram_config.use_message_database);
         assert_eq!(telegram_config.system_language_code, "system_language_code");
         assert_eq!(telegram_config.device_model, "device_model");
-        assert!(telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 1);
         assert_eq!(
             telegram_config.log_path,
@@ -257,7 +256,6 @@ mod tests {
             "system_language_code_2"
         );
         assert_eq!(telegram_config.device_model, "device_model_2");
-        assert!(telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 2);
         assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(telegram_config.redirect_stderr);
@@ -287,7 +285,6 @@ mod tests {
         assert!(!telegram_config.use_message_database);
         assert_eq!(telegram_config.system_language_code, "system_language_code");
         assert_eq!(telegram_config.device_model, "device_model");
-        assert!(!telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 1);
         assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(!telegram_config.redirect_stderr);
@@ -330,7 +327,6 @@ mod tests {
         assert!(!telegram_config.use_message_database);
         assert_eq!(telegram_config.system_language_code, "system_language_code");
         assert_eq!(telegram_config.device_model, "device_model");
-        assert!(!telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 1);
         assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(telegram_config.redirect_stderr);
@@ -381,7 +377,6 @@ mod tests {
             "system_language_code_2"
         );
         assert_eq!(telegram_config.device_model, "device_model_2");
-        assert!(telegram_config.ignore_file_names);
         assert_eq!(telegram_config.verbosity_level, 2);
         assert_eq!(telegram_config.log_path, ".data/tdlib_rs/tdlib_rs.log");
         assert!(telegram_config.redirect_stderr);

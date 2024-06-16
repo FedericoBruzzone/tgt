@@ -22,7 +22,10 @@ export RUST_BACKTRACE := 1
 #   telegram
 #   get_me
 
-all: fmt clippy test
+all:
+	$(MAKE) fmt
+	$(MAKE) clippy ARGS="--features download-tdlib"
+	$(MAKE) test ARGS="--features download-tdlib"
 
 # Example 1: make build ARGS="--features download-tdlib"
 # Example 2: make build ARGS="--features download-tdlib --bin telegram"

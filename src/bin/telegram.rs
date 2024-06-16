@@ -566,8 +566,6 @@ impl TgBackend {
                         "Desktop".into(),
                         String::new(),
                         env!("CARGO_PKG_VERSION").into(),
-                        false,
-                        true,
                         self.client_id,
                     )
                     .await;
@@ -633,7 +631,7 @@ impl TgBackend {
                     // x useless but contains the TOS if we want to show it
                     let first_name = ask_user("Please enter your first name: ");
                     let last_name = ask_user("Please enter your last name: ");
-                    functions::register_user(first_name, last_name, self.client_id)
+                    functions::register_user(first_name, last_name, false, self.client_id)
                         .await
                         .unwrap();
                 }
@@ -733,7 +731,7 @@ impl TgBackend {
                         text: commands[2].into(),
                         entities: Vec::new(),
                     },
-                    disable_web_page_preview: false,
+                    link_preview_options: None,
                     clear_draft: true,
                 });
                 match functions::send_message(

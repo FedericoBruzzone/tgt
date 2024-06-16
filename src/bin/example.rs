@@ -54,7 +54,7 @@ async fn get_command(client_id: i32) -> bool {
                     text: commands[2].into(),
                     entities: Vec::new(),
                 },
-                disable_web_page_preview: false,
+                link_preview_options: None,
                 clear_draft: true,
             });
             match functions::send_message(
@@ -217,8 +217,6 @@ async fn handle_authorization_state(
                     "Desktop".into(),
                     String::new(),
                     env!("CARGO_PKG_VERSION").into(),
-                    false,
-                    true,
                     client_id,
                 )
                 .await;
@@ -255,7 +253,7 @@ async fn handle_authorization_state(
                 // x useless but contains the TOS if we want to show it
                 let first_name = ask_user("Please enter your first name: ");
                 let last_name = ask_user("Please enter your last name: ");
-                functions::register_user(first_name, last_name, client_id)
+                functions::register_user(first_name, last_name, false, client_id)
                     .await
                     .unwrap();
             }
