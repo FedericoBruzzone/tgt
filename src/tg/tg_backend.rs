@@ -129,6 +129,11 @@ impl TgBackend {
             .await
             {
                 Ok(Messages::Messages(messages)) => {
+                    if messages.messages.is_empty() {
+                        tracing::info!("No more messages to get");
+                        break;
+                    }
+
                     let message_flatten = messages.messages.into_iter().flatten();
                     for message in message_flatten.clone() {
                         self.app_context
