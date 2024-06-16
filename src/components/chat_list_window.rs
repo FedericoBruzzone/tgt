@@ -232,19 +232,8 @@ impl ChatListWindow {
                     .unwrap();
 
                 if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    self.app_context.tg_context().set_from_message_id(0);
                     // Load chat history
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // event_tx.send(Event::PrepareChatHistory).unwrap();
-                    // sleep(Duration::from_millis(100));
                     event_tx.send(Event::GetChatHistory).unwrap();
 
                     // Mark all unread messages as read
