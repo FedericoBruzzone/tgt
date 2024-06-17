@@ -1,4 +1,4 @@
-# tgt.toml
+# app.toml
 
 ## Default application configuration
 
@@ -18,12 +18,40 @@ frame_rate = 60.0
 show_status_bar = true
 # `show_title_bar` enables the title bar at the top of the terminal.
 show_title_bar = true
+# `theme_enable` enables the theme.
+theme_enable = true
+# `theme_filename` is the name of the file that contains the theme.
+# This file must be in the configuration directory.
+theme_filename = "theme.toml"
+# `take_api_id_from_telegram_config` enables taking the API_ID from the Telegram configuration file
+# or from the environment variable `API_ID`.
+take_api_id_from_telegram_config = true
+# `take_api_hash_from_telegram_config` enables taking the API_HASH from the Telegram configuration file
+# or from the environment variable `API_HASH`.
+take_api_hash_from_telegram_config = true
 ```
 
-## Example of a custom application configuration
+## Custom application configuration
 
-This is an example of a custom application configuration. This configuration will be merged with the default configuration.
-It means that the default configuration will be overwritten by the custom configuration.
+### How create a custom configuration file
+
+`tgt` by default reads its **default** configurations from:
+- Linux: `/home/<name>/.tgt/config/`
+- macOS: `/Users/<name>/.tgt/config/`
+- Windows: `C:\Users\<name>\.tgt\config/`
+
+We suggest you to not modify these files, but to create your own **custom** configuration files in the following directories (in order of precedence):
+
+- `$TGT_CONFIG_DIR` (if set)
+- `$HOME/.config/tgt/` (for Linux and macOS) and `C:\Users\<name>\AppData\Roaming\tgt\` (for Windows)
+
+Reading configurations from the following directories will override the fields defined in the default configuration files.
+It means that the fields that are not present in the custom configuration will be taken from the default configuration, while the fields that are present in the custom configuration will override the default configuration.
+Note that after the finding the first configuration file, `tgt` stops looking for more configurations, it is short-circuited.
+
+### Example of a custom application configuration
+
+Example of `app.toml`:
 
 ```toml
 show_status_bar = false

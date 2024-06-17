@@ -1,6 +1,6 @@
 use {
     crate::configs::{self, config_type::ConfigType},
-    crate::utils::{TGT, TGT_CONFIG_HOME},
+    crate::utils::{TGT, TGT_CONFIG_DIR},
     lazy_static::lazy_static,
     serde::de::DeserializeOwned,
     std::path::PathBuf,
@@ -10,12 +10,12 @@ lazy_static! {
     static ref CONFIG_DIR_HIERARCHY: Vec<PathBuf> = {
         let mut config_dirs = vec![];
 
-        if let Ok(p) = std::env::var(TGT_CONFIG_HOME) {
+        if let Ok(p) = std::env::var(TGT_CONFIG_DIR) {
             let p = PathBuf::from(p);
             if p.is_dir() {
                 config_dirs.push(p);
             }
-            tracing::info!("Using {} for config", TGT_CONFIG_HOME);
+            tracing::info!("Using {} for config", TGT_CONFIG_DIR);
         }
 
         if let Some(p) = if cfg!(target_os = "macos") {
@@ -25,6 +25,10 @@ lazy_static! {
         } {
             let mut p = p;
             p.push(TGT);
+            if p.is_dir() {
+                config_dirs.push(p.clone());
+            }
+            p.push("config");
             if p.is_dir() {
                 config_dirs.push(p.clone());
             }

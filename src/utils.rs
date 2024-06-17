@@ -2,13 +2,14 @@ use dirs;
 use std::{env, io, path::PathBuf};
 
 pub const TGT: &str = "tgt";
-pub const TGT_CONFIG_HOME: &str = "TGT_CONFIG_HOME";
+pub const TGT_CONFIG_DIR: &str = "TGT_CONFIG_DIR";
 
 /// Get the project directory.
 ///
 /// # Returns
 /// The project directory.
 pub fn tgt_dir() -> io::Result<PathBuf> {
+    // TODO: Do it only in debug mode
     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
     let tgt = format!("{}/.tgt", home);
     // Check if the directory exists
