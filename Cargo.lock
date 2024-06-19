@@ -2987,8 +2987,6 @@ checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 [[package]]
 name = "tdlib-rs"
 version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3ef777bcdad96225f88bed5dde5192de380c72cf42736eb3fd09eeb53c9aedc"
 dependencies = [
  "futures-channel",
  "log",
@@ -3006,8 +3004,6 @@ dependencies = [
 [[package]]
 name = "tdlib-rs-gen"
 version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3533b936d4d5bc8190df1072bf6ed4227366230c51b607f3c4ced16d50ff70f4"
 dependencies = [
  "tdlib-rs-parser",
 ]
@@ -3015,8 +3011,6 @@ dependencies = [
 [[package]]
 name = "tdlib-rs-parser"
 version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e32b13c17d84768e2fee65166ec22781c99f262d8d4752816fd5af53e161c52"
 
 [[package]]
 name = "tempfile"
@@ -3044,6 +3038,7 @@ dependencies = [
  "lazy_static",
  "ratatui",
  "ratatui-image",
+ "reqwest",
  "serde",
  "signal-hook",
  "tdlib-rs",
@@ -3052,6 +3047,7 @@ dependencies = [
  "tracing-appender",
  "tracing-error",
  "tracing-subscriber",
+ "zip",
 ]
 
 [[package]]

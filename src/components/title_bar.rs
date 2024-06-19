@@ -3,14 +3,13 @@ use {
         action::Action,
         app_context::AppContext,
         components::component_traits::{Component, HandleFocus},
-        utils::tgt_dir,
     },
     ratatui::{
         layout::{Alignment, Constraint, Direction, Layout, Rect},
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
-    ratatui_image::{picker::Picker, protocol::Protocol, Resize},
+    ratatui_image::picker::Picker,
     std::{io, sync::Arc},
     tokio::sync::mpsc,
 };
@@ -26,8 +25,8 @@ pub struct TitleBar {
     command_tx: Option<mpsc::UnboundedSender<Action>>,
     /// Indicates whether the `TitleBar` is focused or not.
     focused: bool,
-    /// The image of the `TitleBar`.
-    _image_state: Box<dyn Protocol>, // Box<dyn StatefulProtocol>,
+    // The image of the `TitleBar`.
+    // _image_state: Box<dyn Protocol>, // Box<dyn StatefulProtocol>,
 }
 /// Implementation of `TitleBar` struct.
 impl TitleBar {
@@ -38,28 +37,28 @@ impl TitleBar {
 
         let mut picker = Picker::new((8, 12));
         picker.guess_protocol();
-        let dyn_img = image::io::Reader::open(
-            tgt_dir()
-                .unwrap()
-                .join("imgs")
-                .join("logo.png")
-                .to_string_lossy()
-                .to_string(),
-        )
-        .unwrap()
-        .decode()
-        .unwrap();
+        // let dyn_img = image::io::Reader::open(
+        //     tgt_dir()
+        //         .unwrap()
+        //         .join("imgs")
+        //         .join("logo.png")
+        //         .to_string_lossy()
+        //         .to_string(),
+        // )
+        // .unwrap()
+        // .decode()
+        // .unwrap();
         // let image = picker.new_resize_protocol(dyn_img);
         // let image_state: Box<dyn StatefulProtocol> = image.into();
-        let image_state = picker
-            .new_protocol(dyn_img.clone(), Rect::new(0, 0, 30, 30), Resize::Fit(None))
-            .unwrap();
+        // let image_state = picker
+        //     .new_protocol(dyn_img.clone(), Rect::new(0, 0, 30, 30), Resize::Fit(None))
+        //     .unwrap();
         TitleBar {
             app_context,
             command_tx,
             name,
             focused,
-            _image_state: image_state,
+            // _image_state: image_state,
         }
     }
     /// Set the name of the `TitleBar`.
