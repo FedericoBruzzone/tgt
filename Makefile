@@ -28,12 +28,12 @@ all:
 	$(MAKE) test ARGS="--features download-tdlib"
 
 # Example 1: make build ARGS="--features download-tdlib"
-# Example 2: make build ARGS="--features download-tdlib --bin telegram"
+# Example 2: make build ARGS="--features download-tdlib --example telegram"
 build:
 	cargo build --verbose $(ARGS)
 
 # Example 1: make run ARGS="--features download-tdlib"
-# Example 2: make run ARGS="--features download-tdlib --bin telegram"
+# Example 2: make run ARGS="--features download-tdlib --example telegram"
 run:
 	cargo run $(ARGS)
 

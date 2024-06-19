@@ -14,7 +14,6 @@ pub enum ComponentName {
     Prompt,
     /// The reply message window.
     ReplyMessage,
-
     /// The title bar.
     TitleBar,
     /// The status bar.

@@ -34,11 +34,11 @@ all: fmt clippy test
 
 # Build the project
 build FEATURES="default" BIN_NAME="tgt":
-  cargo build --verbose --features {{FEATURES}} --bin {{BIN_NAME}}
+  cargo build --verbose --features {{FEATURES}} --example {{BIN_NAME}}
 
 # Run the project
 run FEATURES="default" BIN_NAME="tgt":
-  cargo run --features {{FEATURES}} --bin {{BIN_NAME}}
+  cargo run --features {{FEATURES}} --example {{BIN_NAME}}
 
 # Run the tests
 test FEATURES="default":

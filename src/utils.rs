@@ -9,14 +9,20 @@ pub const TGT_CONFIG_DIR: &str = "TGT_CONFIG_DIR";
 /// # Returns
 /// The project directory.
 pub fn tgt_dir() -> io::Result<PathBuf> {
-    // TODO: Do it only in debug mode
+    // Debug
+    if cfg!(debug_assertions) {
+        return env::current_dir();
+    }
+
+    // Release
     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
     let tgt = format!("{}/.tgt", home);
     // Check if the directory exists
     if PathBuf::from(&tgt).exists() {
         return Ok(PathBuf::from(&tgt));
+    } else {
+        panic!("The directory {} does not exist.", tgt);
     }
-    env::current_dir()
 }
 /// Get the default configuration directory.
 ///
