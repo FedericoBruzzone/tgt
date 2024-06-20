@@ -32,21 +32,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        feature: [default, pkg-config, download-tdlib]
+        feature: [local-tdlib, pkg-config, download-tdlib]
 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Restore cache TDLib
-        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
         uses: actions/cache/restore@v4
         with:
           path: td/
           key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         run: |
           sudo apt-get update
           sudo apt-get -y upgrade
@@ -60,13 +60,13 @@ jobs:
           CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v4
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Extract TDLib
-        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         run: |
           cp -r ./td/tdlib ./
           sudo cp ./tdlib/lib/libtdjson.so.* /usr/lib/
@@ -76,7 +76,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
       - name: Set LOCAL_TDLIB_PATH
-        if: matrix.feature == 'default'
+        if: matrix.feature == 'local-tdlib'
         run: echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
       # - name: Cache cargo
       #   uses: actions/cache@v4
@@ -90,11 +90,11 @@ jobs:
       #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       #     restore-keys: ${{ runner.os }}-cargo-
       - name: Run cargo build
-        run: cargo build --verbose --features ${{ matrix.feature }}
+        run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
       - name: Run cargo test
-        run: cargo test --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
       - name: Run cargo clippy
-        run: cargo clippy --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       # - name: Upload artifact

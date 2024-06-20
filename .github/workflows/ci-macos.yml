@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-13, macos-14]
-        feature: [default, download-tdlib, pkg-config]
+        feature: [local-tdlib, download-tdlib, pkg-config]
 
     runs-on: ${{ matrix.os }}
 
@@ -41,14 +41,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Restore cache TDLib
-        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
         uses: actions/cache/restore@v4
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           brew install gperf cmake openssl
@@ -61,18 +61,18 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl/' || '/usr/local/opt/openssl/' }} -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v4
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Extract TDLib x86_64
-        if: runner.arch == 'x64' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: runner.arch == 'x64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         run: |
           cp -r ./td/tdlib ./
           # cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
       - name: Extract TDLib ARM64
-        if: runner.arch == 'ARM64' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: runner.arch == 'ARM64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         run: |
           sudo mkdir -p /usr/local/lib
           sudo cp -r ./td/tdlib ./
@@ -83,7 +83,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
       - name: Set LOCAL_TDLIB_PATH
-        if: matrix.feature == 'default'
+        if: matrix.feature == 'local-tdlib'
         run: |
           echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
       # - name: Cache cargo
@@ -98,11 +98,11 @@ jobs:
       #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       #     restore-keys: ${{ runner.os }}-cargo-
       - name: Run cargo build
-        run: cargo build --verbose --features ${{ matrix.feature }}
+        run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
       - name: Run cargo test
-        run: cargo test --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
       - name: Run cargo clippy
-        run: cargo clippy --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       # - name: Upload artifact

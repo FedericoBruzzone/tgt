@@ -33,6 +33,7 @@ categories = []
 [features]
 # By deafult you need to set the `LOCAL_TDLIB_PATH` environment variable to the path of the TDLib library. See CONTRIBUTING.md for more information.
 default = ["download-tdlib"]
+local-tdlib = ["tdlib-rs/local-tdlib"]
 download-tdlib = ["tdlib-rs/download-tdlib"]
 pkg-config = ["tdlib-rs/pkg-config"]
 
@@ -48,7 +49,7 @@ lazy_static = "1.4.0"
 ratatui = "0.26.3"
 serde = "1.0.203"
 # tdlib-rs = "1.0.3"
-tdlib-rs = { path = "/home/fcb/Documents/tdlib-rs/tdlib-rs/" }
+tdlib-rs = { git = "https://github.com/FedericoBruzzone/tdlib-rs" }
 tokio = { version = "1.38.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-error = "0.2.0"
@@ -64,7 +65,7 @@ signal-hook = "0.3.17"
 dirs = "5.0.1"
 reqwest = { version = "0.12.4", features = ["blocking"] }
 zip = { version = "2.0.0" }
-tdlib-rs = { path = "/home/fcb/Documents/tdlib-rs/tdlib-rs/" }
+tdlib-rs = { git = "https://github.com/FedericoBruzzone/tdlib-rs" }
 
 [profile.dev]
 

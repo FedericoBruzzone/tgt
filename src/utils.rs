@@ -19,7 +19,7 @@ pub fn tgt_dir() -> io::Result<PathBuf> {
     let tgt = format!("{}/.tgt", home);
     // Check if the directory exists
     if PathBuf::from(&tgt).exists() {
-        return Ok(PathBuf::from(&tgt));
+        Ok(PathBuf::from(&tgt))
     } else {
         panic!("The directory {} does not exist.", tgt);
     }

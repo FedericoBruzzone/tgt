@@ -32,21 +32,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        feature: [default, pkg-config, download-tdlib]
+        feature: [local-tdlib, pkg-config, download-tdlib]
 
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Restore cache TDLib
-        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
         uses: actions/cache/restore@v4
         with:
           path: td/
           key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         run: |
           git clone https://github.com/tdlib/td.git
           cd td
@@ -64,13 +64,13 @@ jobs:
           cmake --build . --target install --config Release
         shell: bash
       - name: Save cache TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'default' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v4
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Extract TDLib
-        if: matrix.feature == 'default' || matrix.feature == 'pkg-config'
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         run: cp -r ./td/tdlib ./
         shell: bash
       - name: Install pkg-config
@@ -95,7 +95,7 @@ jobs:
           echo "$((Get-Item .).FullName)\tdlib\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         shell: pwsh
       - name: Set LOCAL_TDLIB_PATH
-        if: matrix.feature == 'default'
+        if: matrix.feature == 'local-tdlib'
         run: echo "LOCAL_TDLIB_PATH=$((Get-Item .).FullName)\tdlib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       # - name: Cache cargo
       #   uses: actions/cache@v4
@@ -109,11 +109,11 @@ jobs:
       #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       #     restore-keys: ${{ runner.os }}-cargo-
       - name: Run cargo build
-        run: cargo build --verbose --features ${{ matrix.feature }}
+        run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
       - name: Run cargo test
-        run: cargo test --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
       - name: Run cargo clippy
-        run: cargo clippy --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       # - name: Upload artifact

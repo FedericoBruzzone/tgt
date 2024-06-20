@@ -24,8 +24,8 @@ export RUST_BACKTRACE := 1
 
 all:
 	$(MAKE) fmt
-	$(MAKE) clippy ARGS="--features download-tdlib"
-	$(MAKE) test ARGS="--features download-tdlib"
+	$(MAKE) clippy # ARGS="--features download-tdlib"
+	$(MAKE) test # ARGS="--features download-tdlib"
 
 # Example 1: make build ARGS="--features download-tdlib"
 # Example 2: make build ARGS="--features download-tdlib --example telegram"
