@@ -48,8 +48,7 @@ futures = "0.3.30"
 lazy_static = "1.5.0"
 ratatui = "0.26.3"
 serde = "1.0.203"
-# tdlib-rs = "1.0.3"
-tdlib-rs = { git = "https://github.com/FedericoBruzzone/tdlib-rs" }
+tdlib-rs = "1.0.4"
 tokio = { version = "1.38.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-error = "0.2.0"
@@ -57,7 +56,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
 arboard = { version = "3.4.0", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.38"
-ratatui-image = "^1.0.0"
+ratatui-image = "1.0.0"
 image = "0.25.1"
 signal-hook = "0.3.17"
 
@@ -65,7 +64,7 @@ signal-hook = "0.3.17"
 dirs = "5.0.1"
 reqwest = { version = "0.12.4", features = ["blocking"] }
 zip = { version = "2.0.0" }
-tdlib-rs = { git = "https://github.com/FedericoBruzzone/tdlib-rs" }
+tdlib-rs = "1.0.4"
 
 [profile.dev]
 
