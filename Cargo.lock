@@ -2843,8 +2843,8 @@ checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 
 [[package]]
 name = "tdlib-rs"
-version = "1.0.3"
-source = "git+https://github.com/FedericoBruzzone/tdlib-rs#46d71e5418965230d5a98353ebd4afd86411911f"
+version = "1.0.4"
+source = "git+https://github.com/FedericoBruzzone/tdlib-rs#2a874c4b6369bc4e9aea1aa9194aa8dd90f823dc"
 dependencies = [
  "futures-channel",
  "log",
@@ -2861,16 +2861,16 @@ dependencies = [
 
 [[package]]
 name = "tdlib-rs-gen"
-version = "1.0.3"
-source = "git+https://github.com/FedericoBruzzone/tdlib-rs#46d71e5418965230d5a98353ebd4afd86411911f"
+version = "1.0.4"
+source = "git+https://github.com/FedericoBruzzone/tdlib-rs#2a874c4b6369bc4e9aea1aa9194aa8dd90f823dc"
 dependencies = [
  "tdlib-rs-parser",
 ]
 
 [[package]]
 name = "tdlib-rs-parser"
-version = "1.0.3"
-source = "git+https://github.com/FedericoBruzzone/tdlib-rs#46d71e5418965230d5a98353ebd4afd86411911f"
+version = "1.0.4"
+source = "git+https://github.com/FedericoBruzzone/tdlib-rs#2a874c4b6369bc4e9aea1aa9194aa8dd90f823dc"
 
 [[package]]
 name = "tempfile"
