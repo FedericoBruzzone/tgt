@@ -28,7 +28,8 @@
 [![GitHub CI Linux][github-ci-linux-shield]][github-ci-linux]
 [![GitHub CI Windows][github-ci-windows-shield]][github-ci-windows]
 [![GitHub CI macOS][github-ci-macos-shield]][github-ci-macos]
-[![GitHub License][github-license-shield]][github-license-apache]
+<!-- [![GitHub License][github-license-shield]][github-license-apache] -->
+![license](https://img.shields.io/crates/l/tgt)
 [![Crates.io Downloads][creates-io-downloads-shield]][creates-io-downloads]
 [![][total-lines-shield]][total-lines]
 

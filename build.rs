@@ -186,57 +186,49 @@ fn move_config_folder_to_home_dottgt() {
 // }
 
 fn main() -> std::io::Result<()> {
+    // if cfg!(debug_assertions) {
+    //     tdlib_rs::build::check_features();
+    //     tdlib_rs::build::set_rerun_if();
+    //
+    //     #[cfg(feature = "pkg-config")]
+    //     tdlib_rs::build::build_pkg_config();
+    //
+    //     #[cfg(feature = "download-tdlib")]
+    //     tdlib_rs::build::build_download_tdlib(None);
+    //
+    //     #[cfg(not(any(feature = "docs", feature = "pkg-config", feature = "download-tdlib")))]
+    //     tdlib_rs::build::build_local_tdlib();
+    //
+    //     return Ok(());
+    // }
+    //
+    // empty_tgt_folder();
+    // move_config_folder_to_home_dottgt();
+    //
+    // #[cfg(feature = "pkg-config")]
+    // tdlib_rs::build::build_pkg_config();
+    //
+    // #[cfg(feature = "download-tdlib")]
+    // {
+    //     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
+    //     let dest = format!("{}/.tgt/tdlib", home);
+    //     tdlib_rs::build::build_download_tdlib(Some(dest));
+    // }
+    //
+    // #[cfg(not(any(feature = "docs", feature = "pkg-config", feature = "download-tdlib")))]
+    // tdlib_rs::build::build_local_tdlib();
+
+
     if cfg!(debug_assertions) {
-        tdlib_rs::build::check_features();
-        tdlib_rs::build::set_rerun_if();
-
-        #[cfg(feature = "pkg-config")]
-        tdlib_rs::build::build_pkg_config();
-
-        #[cfg(feature = "download-tdlib")]
-        tdlib_rs::build::build_download_tdlib(None);
-
-        #[cfg(not(any(feature = "docs", feature = "pkg-config", feature = "download-tdlib")))]
-        tdlib_rs::build::build_local_tdlib();
-
+        tdlib_rs::build::build(None);
         return Ok(());
     }
 
     empty_tgt_folder();
     move_config_folder_to_home_dottgt();
-
-    #[cfg(feature = "pkg-config")]
-    tdlib_rs::build::build_pkg_config();
-
-    #[cfg(feature = "download-tdlib")]
-    {
-        let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
-        let dest = format!("{}/.tgt/tdlib", home);
-        tdlib_rs::build::build_download_tdlib(Some(dest));
-    }
-
-    #[cfg(not(any(feature = "docs", feature = "pkg-config", feature = "download-tdlib")))]
-    tdlib_rs::build::build_local_tdlib();
-
-    // // Prevent linking libraries to avoid documentation failure
-    // #[cfg(not(feature = "docs"))]
-    // {
-    //     // It requires the following variables to be set:
-    //     // - export PKG_CONFIG_PATH=$HOME/lib/tdlib/lib/pkgconfig/:$PKG_CONFIG_PATH
-    //     // - export LD_LIBRARY_PATH=$HOME/lib/tdlib/lib/:$LD_LIBRARY_PATH
-    //     #[cfg(feature = "pkg-config")]
-    //     system_deps::Config::new().probe().unwrap();
-    //
-    //     #[cfg(feature = "download-tdlib")]
-    //     download_tdlib();
-    //
-    //     #[cfg(not(feature = "pkg-config"))]
-    //     {
-    //         #[cfg(not(feature = "download-tdlib"))]
-    //         copy_local_tdlib();
-    //         generic_build();
-    //     }
-    // }
+    let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
+    let dest = format!("{}/.tgt/tdlib", home);
+    tdlib_rs::build::build(Some(dest));
 
     Ok(())
 }

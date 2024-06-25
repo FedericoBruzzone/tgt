@@ -12,7 +12,7 @@ export RUST_BACKTRACE := 1
 #   clean
 #
 # Available features:
-#   default
+#   local-tdlib
 #   download-tdlib
 #   pkg-config
 #
@@ -27,21 +27,24 @@ all:
 	$(MAKE) clippy # ARGS="--features download-tdlib"
 	$(MAKE) test # ARGS="--features download-tdlib"
 
+build_local:
+	cargo build --no-default-features --features local-tdlib
+
 # Example 1: make build ARGS="--features download-tdlib"
 # Example 2: make build ARGS="--features download-tdlib --example telegram"
 build:
-	cargo build --verbose $(ARGS)
+	cargo build --no-default-features $(ARGS)
 
 # Example 1: make run ARGS="--features download-tdlib"
 # Example 2: make run ARGS="--features download-tdlib --example telegram"
 run:
-	cargo run $(ARGS)
+	cargo run --no-default-features $(ARGS)
 
 test:
-	cargo test --verbose $(ARGS) -- --nocapture --test-threads=1
+	cargo test --no-default-features --verbose $(ARGS) -- --nocapture --test-threads=1
 
 clippy:
-	cargo clippy --all-targets $(ARGS) -- -D warnings
+	cargo clippy --no-default-features --all-targets $(ARGS) -- -D warnings
 
 fmt:
 	cargo fmt --all
@@ -65,4 +68,3 @@ help:
 
 # Each entry of .PHONY is a target that is not a file
 .PHONY: build run test clean
-
