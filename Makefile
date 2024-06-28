@@ -27,6 +27,9 @@ all:
 	$(MAKE) clippy # ARGS="--features download-tdlib"
 	$(MAKE) test # ARGS="--features download-tdlib"
 
+run_local:
+	cargo run --no-default-features --features local-tdlib
+
 build_local:
 	cargo build --no-default-features --features local-tdlib
 
