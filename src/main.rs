@@ -1,6 +1,7 @@
 pub mod action;
 pub mod app_context;
 pub mod app_error;
+pub mod cli;
 pub mod component_name;
 pub mod event;
 pub mod logger;
@@ -142,6 +143,11 @@ fn init_panic_hook(mouse: bool, paste: bool) {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError<()>> {
+    // let args = cli::Args::parse();
+    //
+    // println!("{:?}", args);
+    // std::process::exit(0);
+
     if let Err(e) = tokio_main().await {
         tracing::error!("Something went wrong: {}", e);
         Err(e)

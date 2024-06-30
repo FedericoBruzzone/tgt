@@ -24,8 +24,8 @@ export RUST_BACKTRACE := 1
 
 all:
 	$(MAKE) fmt
-	$(MAKE) clippy # ARGS="--features download-tdlib"
-	$(MAKE) test # ARGS="--features download-tdlib"
+	$(MAKE) clippy ARGS="--features local-tdlib"
+	$(MAKE) test ARGS="--features local-tdlib"
 
 run_local:
 	cargo run --no-default-features --features local-tdlib
@@ -44,7 +44,7 @@ run:
 	cargo run --no-default-features $(ARGS)
 
 test:
-	cargo test --no-default-features --verbose $(ARGS) -- --nocapture --test-threads=1
+	cargo test --no-default-features $(ARGS) -- --nocapture --test-threads=1
 
 clippy:
 	cargo clippy --no-default-features --all-targets $(ARGS) -- -D warnings
