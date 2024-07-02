@@ -42,6 +42,16 @@ pub async fn run_app(
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
 
+    if app_context.cli_args().telegram_cli().logout() {
+        futures::join!(tg_backend.offline());
+        tg_backend.have_authorization = false;
+        tg_backend.close().await;
+        tui_backend.exit();
+        tg_backend.log_out().await;
+        tg_backend.handle_authorization_state().await;
+        return Ok(());
+    }
+
     // Main loop
     while tg_backend.have_authorization {
         handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
@@ -50,7 +60,6 @@ pub async fn run_app(
 
         if app_context.quit_acquire() {
             futures::join!(tg_backend.offline());
-            tg_backend.need_quit = true;
             tg_backend.have_authorization = false;
             tg_backend.close().await;
             tui_backend.exit();

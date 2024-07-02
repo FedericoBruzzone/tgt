@@ -30,6 +30,7 @@ use crate::{
     tui::Tui,
     tui_backend::TuiBackend,
 };
+use clap::Parser;
 use configs::custom::telegram_custom::TelegramConfig;
 use lazy_static::lazy_static;
 use std::{
@@ -64,6 +65,9 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     lazy_static::initialize(&THEME_CONFIG);
     lazy_static::initialize(&TELEGRAM_CONFIG);
 
+    let cli_args = cli::CliArgs::parse();
+    tracing::info!("Parsed CLI arguments: {:?}", cli_args);
+
     let logger = Logger::from_config(LOGGER_CONFIG.clone());
     logger.init();
     tracing::info!("Logger initialized with config: {:?}", logger);
@@ -92,6 +96,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
         palette_config,
         telegram_config,
         tg_context,
+        cli_args,
     )?);
     tracing::info!("App context: {:?}", app_context);
 
@@ -143,11 +148,6 @@ fn init_panic_hook(mouse: bool, paste: bool) {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError<()>> {
-    // let args = cli::Args::parse();
-    //
-    // println!("{:?}", args);
-    // std::process::exit(0);
-
     if let Err(e) = tokio_main().await {
         tracing::error!("Something went wrong: {}", e);
         Err(e)

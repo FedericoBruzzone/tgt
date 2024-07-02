@@ -1,37 +1,60 @@
-// use clap::ArgGroup;
 use clap::Parser;
-use clap::Subcommand;
+// use clap::Subcommand;
 
 /// The CLI arguments for the application.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-pub struct Args {
-    /// It allows to logout from the tgt
-    #[arg(short, long, help = "Logout from the tgt")]
+pub struct CliArgs {
+    #[command(flatten)]
+    telegram_cli: TelegramCli,
+    // #[command(subcommand)]
+    // telegram: Option<Telegram>,
+}
+
+impl CliArgs {
+    /// Get the Telegram CLI arguments.
+    pub fn telegram_cli(&self) -> &TelegramCli {
+        &self.telegram_cli
+    }
+}
+
+#[derive(Parser, Debug)]
+/// The Telegram commands.
+pub struct TelegramCli {
+    #[arg(
+        short,
+        long,
+        visible_alias = "lo",
+        help = "Logout from the tgt",
+        default_value_t = false
+    )]
     logout: bool,
 
-    #[arg(short, long, number_of_values = 2, value_names = &["CHAT_NAME", "MESSAGE"], help = "Send a message to a chat", alias = "sm")]
+    #[arg(
+        short,
+        long,
+        visible_alias = "sm",
+        number_of_values = 2,
+        value_names = &["CHAT_NAME", "MESSAGE"],
+        help = "Send a message to a chat"
+    )]
     send_message: Option<Vec<String>>,
-
-    #[command(subcommand)]
-    telegram: Option<TelegramSubcommand>,
-    // /// Number of times to greet
-    // #[arg(short, long, default_value_t = 1)]
-    // count: u8,
 }
 
-/// The subcommands for the telegram command.
+impl TelegramCli {
+    /// Get the logout flag.
+    pub fn logout(&self) -> bool {
+        self.logout
+    }
+    /// Get the send message arguments.
+    pub fn send_message(&self) -> Option<&Vec<String>> {
+        self.send_message.as_ref()
+    }
+}
+
 // #[derive(Parser, Debug)]
-#[derive(Subcommand, Debug)]
-pub enum TelegramSubcommand {
-    /// The subcommand to start the telegram bot.
-    Test(TelegramStartSubcommand),
-}
-
-/// The subcommand to start the telegram bot.
-#[derive(Parser, Debug)]
-pub struct TelegramStartSubcommand {
-    /// The token for the telegram bot.
-    #[arg(short, long)]
-    token: String,
-}
+// // #[derive(Subcommand, Debug)]
+// pub enum Telegram {
+//     Test(TelegramStartSubcommand),
+//     Add { name: Option<String> }
+// }

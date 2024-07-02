@@ -114,12 +114,16 @@ impl TuiBackend {
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn force_exit(mouse: bool, paste: bool) -> Result<(), std::io::Error> {
         crossterm::terminal::disable_raw_mode()?;
+        tracing::info!("Raw mode disabled");
         crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
+        tracing::info!("Alternate screen disabled");
         if mouse {
             crossterm::execute!(std::io::stderr(), DisableMouseCapture)?;
+            tracing::info!("Mouse disabled");
         }
         if paste {
             crossterm::execute!(std::io::stderr(), DisableBracketedPaste)?;
+            tracing::info!("Paste disabled");
         }
         Ok(())
     }

@@ -24,7 +24,6 @@ pub struct TgBackend {
     pub event_tx: UnboundedSender<Event>,
     pub client_id: i32,
     pub have_authorization: bool,
-    pub need_quit: bool,
     pub can_quit: Arc<AtomicBool>,
     pub app_context: Arc<AppContext>,
     full_chats_list: bool,
@@ -38,7 +37,6 @@ impl TgBackend {
         let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         let client_id = tdlib_rs::create_client();
         let have_authorization = false;
-        let need_quit = false;
         let can_quit = Arc::new(AtomicBool::new(false));
         let full_chats_list = false;
         app_context.tg_context().set_event_tx(event_tx.clone());
@@ -52,7 +50,6 @@ impl TgBackend {
             event_rx,
             client_id,
             have_authorization,
-            need_quit,
             can_quit,
             app_context,
             full_chats_list,
@@ -263,6 +260,15 @@ impl TgBackend {
         }
     }
 
+    pub async fn log_out(&mut self) {
+        match functions::log_out(self.client_id).await {
+            Ok(_) => {
+                tracing::info!("Logged out");
+            }
+            Err(error) => tracing::error!("Error logging out: {error:?}"),
+        }
+    }
+
     #[allow(clippy::await_holding_lock)]
     pub async fn handle_authorization_state(&mut self) {
         tracing::info!("Handling authorization state");
@@ -416,7 +422,7 @@ impl TgBackend {
                 }
                 AuthorizationState::Closed => {
                     tracing::info!("Closed");
-                    if self.need_quit {
+                    if !self.have_authorization {
                         self.can_quit.store(true, Ordering::Release);
                     }
                     break;

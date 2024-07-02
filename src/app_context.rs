@@ -1,5 +1,6 @@
 use crate::{
     action::Action,
+    cli::CliArgs,
     configs::custom::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
         telegram_custom::TelegramConfig, theme_custom::ThemeConfig,
@@ -85,6 +86,8 @@ pub struct AppContext {
     quit: AtomicBool,
     /// The Telegram context.
     tg_context: Arc<TgContext>,
+    /// The CLI arguments for the application.
+    cli_args: Mutex<CliArgs>,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -108,6 +111,7 @@ impl AppContext {
         palette_config: PaletteConfig,
         telegram_config: TelegramConfig,
         tg_context: TgContext,
+        cli_args: CliArgs,
     ) -> Result<Self, io::Error> {
         let (action_tx, action_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
         let quit = false;
@@ -121,6 +125,7 @@ impl AppContext {
             action_tx: Mutex::new(action_tx),
             quit: AtomicBool::new(quit),
             tg_context: Arc::new(tg_context),
+            cli_args: Mutex::new(cli_args),
         })
     }
     /// Get the application configuration.
@@ -215,6 +220,13 @@ impl AppContext {
     /// protected by a Mutex.
     pub fn tg_context(&self) -> Arc<TgContext> {
         Arc::clone(&self.tg_context)
+    }
+    /// Get the CLI arguments.
+    /// This function takes the lock on the CLI arguments and returns the CLI
+    /// arguments.
+    /// The CLI arguments are a shared resource and are protected by a mutex.
+    pub fn cli_args(&self) -> MutexGuard<'_, CliArgs> {
+        self.cli_args.lock().unwrap()
     }
 
     // ===== COMMON ======
