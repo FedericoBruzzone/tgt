@@ -42,14 +42,9 @@ pub async fn run_app(
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
 
-    if app_context.cli_args().telegram_cli().logout() {
-        futures::join!(tg_backend.offline());
-        tg_backend.have_authorization = false;
-        tg_backend.close().await;
-        tui_backend.exit();
-        tg_backend.log_out().await;
-        tg_backend.handle_authorization_state().await;
-        return Ok(());
+    match handle_cli(Arc::clone(&app_context), tg_backend, tui_backend).await {
+        HandleCliOutcome::Quit => return Ok(()),
+        HandleCliOutcome::Continue => {}
     }
 
     // Main loop
@@ -59,15 +54,8 @@ pub async fn run_app(
         handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
 
         if app_context.quit_acquire() {
-            futures::join!(tg_backend.offline());
-            tg_backend.have_authorization = false;
-            tg_backend.close().await;
-            tui_backend.exit();
-            tg_backend.handle_authorization_state().await;
-
-            // Clear the terminal and move the cursor to the top left corner
-            io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
-
+            quit(tg_backend, tui_backend).await;
+            tracing::info!("Quitting");
             return Ok(());
         }
     }
@@ -311,4 +299,50 @@ pub async fn handle_app_actions(
         tui.update(action.clone())
     }
     Ok(())
+}
+
+/// An enum to represent the outcome of the handle_cli function.
+enum HandleCliOutcome {
+    /// The application should quit.
+    Quit,
+    /// The application should continue.
+    Continue,
+}
+
+/// Handle the command line arguments.
+/// This function will handle the command line arguments.
+///
+/// # Arguments
+/// * `app_context` - An Arc wrapped AppContext struct.
+/// * `tui_backend` - A mutable reference to the TuiBackend struct.
+/// * `tg_backend` - A mutable reference to the TgBackend struct.
+async fn handle_cli(
+    app_context: Arc<AppContext>,
+    tg_backend: &mut TgBackend,
+    tui_backend: &mut TuiBackend,
+) -> HandleCliOutcome {
+    if app_context.cli_args().telegram_cli().logout() {
+        quit(tg_backend, tui_backend).await;
+        tracing::info!("Logging out");
+        return HandleCliOutcome::Quit;
+    }
+    HandleCliOutcome::Continue
+}
+
+/// Quit the application.
+///
+/// # Arguments
+/// * `tg_backend` - A mutable reference to the TgBackend struct.
+/// * `tui_backend` - A mutable reference to the TuiBackend struct.
+/// * `app_context` - An Arc wrapped AppContext struct.
+async fn quit(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
+    futures::join!(tg_backend.offline());
+    tg_backend.have_authorization = false;
+    tg_backend.close().await;
+    tui_backend.exit();
+    tg_backend.log_out().await;
+    tg_backend.handle_authorization_state().await;
+
+    // Clear the terminal and move the cursor to the top left corner
+    io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
 }

@@ -76,6 +76,19 @@ impl TgBackend {
         }
     }
 
+    pub async fn search_chats(
+        &self,
+        username: String,
+    ) -> Result<tdlib_rs::types::Chats, tdlib_rs::types::Error> {
+        match functions::search_chats(username.clone(), 50, self.client_id).await {
+            Ok(tdlib_rs::enums::Chats::Chats(chats)) => Ok(chats),
+            Err(e) => {
+                tracing::error!("Failed to search chats: {:?} with query: {}", e, username);
+                Err(e)
+            }
+        }
+    }
+
     pub async fn close(&self) {
         match functions::close(self.client_id).await {
             Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
