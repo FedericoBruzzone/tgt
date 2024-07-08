@@ -170,6 +170,7 @@ impl TgBackend {
     pub async fn send_message(
         &mut self,
         message: String,
+        chat_id: i64,
         reply_to: Option<TdMessageReplyToMessage>,
     ) {
         self.app_context
@@ -192,7 +193,7 @@ impl TgBackend {
         let reply_to: Option<InputMessageReplyTo> =
             reply_to.map(|reply_to| InputMessageReplyTo::Message((&reply_to).into()));
         if let Err(e) = functions::send_message(
-            self.app_context.tg_context().open_chat_id(),
+            chat_id, // self.app_context.tg_context().open_chat_id(),
             0,
             reply_to,
             None,
@@ -471,6 +472,7 @@ impl TgBackend {
             }
         }
     }
+
     pub async fn set_logging(&self) {
         let verbosity_level = self.app_context.telegram_config().verbosity_level;
         let log_path = self.app_context.telegram_config().log_path.clone();

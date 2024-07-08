@@ -26,7 +26,7 @@ pub async fn run_app(
     tui_backend: &mut TuiBackend,
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
-    tracing::info!("Starting run_app");
+    tracing::debug!("Starting run_app");
 
     // Clear the terminal and move the cursor to the top left corner
     io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
@@ -34,18 +34,19 @@ pub async fn run_app(
     tg_backend.start();
     tg_backend.set_logging().await;
     tg_backend.handle_authorization_state().await;
+
+    match handle_cli(Arc::clone(&app_context), tg_backend).await {
+        HandleCliOutcome::Quit => return Ok(()),
+        HandleCliOutcome::Continue => {}
+    }
+
+    tg_backend.online().await;
     tg_backend.get_me().await;
     tg_backend.disable_animated_emoji(true).await;
-    tg_backend.online().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
-
-    match handle_cli(Arc::clone(&app_context), tg_backend, tui_backend).await {
-        HandleCliOutcome::Quit => return Ok(()),
-        HandleCliOutcome::Continue => {}
-    }
 
     // Main loop
     while tg_backend.have_authorization {
@@ -55,7 +56,7 @@ pub async fn run_app(
 
         if app_context.quit_acquire() {
             quit(tg_backend, tui_backend).await;
-            tracing::info!("Quitting");
+            tracing::debug!("Quitting");
             return Ok(());
         }
     }
@@ -263,7 +264,11 @@ pub async fn handle_app_actions(
             }
             Action::SendMessage(ref message, ref reply_to) => {
                 tg_backend
-                    .send_message(message.to_string(), reply_to.clone())
+                    .send_message(
+                        message.to_string(),
+                        app_context.tg_context().open_chat_id(),
+                        reply_to.clone(),
+                    )
                     .await;
             }
             Action::SendMessageEdited(message_id, ref message) => {
@@ -309,6 +314,7 @@ enum HandleCliOutcome {
     Continue,
 }
 
+#[allow(clippy::await_holding_lock)]
 /// Handle the command line arguments.
 /// This function will handle the command line arguments.
 ///
@@ -316,15 +322,45 @@ enum HandleCliOutcome {
 /// * `app_context` - An Arc wrapped AppContext struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn handle_cli(
-    app_context: Arc<AppContext>,
-    tg_backend: &mut TgBackend,
-    tui_backend: &mut TuiBackend,
-) -> HandleCliOutcome {
+async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) -> HandleCliOutcome {
     if app_context.cli_args().telegram_cli().logout() {
-        quit(tg_backend, tui_backend).await;
-        tracing::info!("Logging out");
+        log_out(tg_backend).await;
         return HandleCliOutcome::Quit;
+    }
+    if let Some(chat) = app_context.cli_args().telegram_cli().send_message() {
+        let [chat_name, message] = chat.as_slice() else {
+            tracing::debug!("Invalid number of arguments for send message");
+            eprintln!("Invalid number of arguments for send message");
+            return HandleCliOutcome::Quit;
+        };
+        match tg_backend.search_chats(chat_name.to_string()).await {
+            Ok(chat) => {
+                let total_chats = chat.total_count;
+                let chats_vec = chat.chat_ids;
+                if total_chats == 0 {
+                    tracing::debug!("No chat found with the name: {}", chat_name);
+                    eprintln!("No chat found with the name: {}", chat_name);
+                    return HandleCliOutcome::Quit;
+                }
+                if total_chats > 1 {
+                    tracing::debug!("Multiple chats found with the name: {}", chat_name);
+                    eprintln!("Multiple chats found with the name: {}", chat_name);
+                    return HandleCliOutcome::Quit;
+                }
+                let chat_id = chats_vec[0];
+                tracing::debug!("Sending message to chat: {}", chat_name);
+                tracing::debug!("Sending message to chat_id: {}", chat_id);
+                tg_backend
+                    .send_message(message.to_string(), chat_id, None)
+                    .await;
+                return HandleCliOutcome::Quit;
+            }
+            Err(e) => {
+                tracing::error!("Error searching for chat: {:?}", e);
+                eprintln!("Error searching for chat: {:?}", e);
+                return HandleCliOutcome::Quit;
+            }
+        }
     }
     HandleCliOutcome::Continue
 }
@@ -340,8 +376,27 @@ async fn quit(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
     tg_backend.have_authorization = false;
     tg_backend.close().await;
     tui_backend.exit();
+    tg_backend.handle_authorization_state().await;
+
+    // Clear the terminal and move the cursor to the top left corner
+    io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
+}
+
+/// Logout the user from the Telegram backend.
+///
+/// # Arguments
+/// * `tg_backend` - A mutable reference to the TgBackend struct.
+/// * `tui_backend` - A mutable reference to the TuiBackend struct.
+/// * `app_context` - An Arc wrapped AppContext struct.
+async fn log_out(tg_backend: &mut TgBackend) {
+    tg_backend.have_authorization = false;
     tg_backend.log_out().await;
     tg_backend.handle_authorization_state().await;
+
+    // let tgt_data_dir = tgt_dir().unwrap().join(".data");
+    // if tgt_data_dir.exists() {
+    //     std::fs::remove_dir_all(tgt_data_dir).unwrap();
+    // }
 
     // Clear the terminal and move the cursor to the top left corner
     io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
