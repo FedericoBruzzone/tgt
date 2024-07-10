@@ -41,6 +41,8 @@ pub struct TgContext {
     open_chat_messages: Mutex<Vec<MessageEntry>>,
     open_chat_user: Mutex<Option<User>>,
 
+    last_acknowledged_message_id: AtomicI64,
+
     /// The message id from which to start loading the chat history.
     from_message_id: AtomicI64,
 
@@ -96,6 +98,9 @@ impl TgContext {
     pub fn open_chat_user(&self) -> MutexGuard<'_, Option<User>> {
         self.open_chat_user.lock().unwrap()
     }
+    pub fn last_acknowledged_message_id(&self) -> i64 {
+        self.last_acknowledged_message_id.load(Ordering::Relaxed)
+    }
 
     pub fn set_open_chat_user(&self, user: Option<User>) {
         *self.open_chat_user() = user;
@@ -116,6 +121,11 @@ impl TgContext {
 
     pub fn set_me(&self, me: i64) {
         self.me.store(me, Ordering::Relaxed);
+    }
+
+    pub fn set_last_acknowledged_message_id(&self, message_id: i64) {
+        self.last_acknowledged_message_id
+            .store(message_id, Ordering::Relaxed);
     }
 
     pub fn set_event_tx(&self, event_tx: UnboundedSender<Event>) {

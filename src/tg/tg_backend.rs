@@ -172,7 +172,7 @@ impl TgBackend {
         message: String,
         chat_id: i64,
         reply_to: Option<TdMessageReplyToMessage>,
-    ) {
+    ) -> Result<tdlib_rs::types::Message, tdlib_rs::types::Error> {
         self.app_context
             .tg_context()
             .set_reply_message(-1, "".to_string());
@@ -192,17 +192,12 @@ impl TgBackend {
         });
         let reply_to: Option<InputMessageReplyTo> =
             reply_to.map(|reply_to| InputMessageReplyTo::Message((&reply_to).into()));
-        if let Err(e) = functions::send_message(
-            chat_id, // self.app_context.tg_context().open_chat_id(),
-            0,
-            reply_to,
-            None,
-            text,
-            self.client_id,
-        )
-        .await
-        {
-            tracing::error!("Failed to send message: {e:?}");
+        match functions::send_message(chat_id, 0, reply_to, None, text, self.client_id).await {
+            Ok(tdlib_rs::enums::Message::Message(message)) => Ok(message),
+            Err(e) => {
+                tracing::error!("Failed to send message: {e:?}");
+                Err(e)
+            }
         }
     }
 
@@ -232,6 +227,23 @@ impl TgBackend {
         match functions::delete_messages(chat_id, message_ids, revoke, self.client_id).await {
             Ok(_) => tracing::info!("Messages deleted"),
             Err(e) => tracing::error!("Failed to delete messages: {e:?}"),
+        }
+    }
+
+    pub async fn use_quick_ack(&self) {
+        match functions::set_option(
+            String::from("use_quick_ack"),
+            Some(OptionValue::Boolean(OptionValueBoolean { value: true })),
+            self.client_id,
+        )
+        .await
+        {
+            Ok(_) => {
+                tracing::info!("Quick ack enabled");
+            }
+            Err(e) => {
+                tracing::error!("Failed to enable quick ack: {e:?}");
+            }
         }
     }
 
@@ -436,9 +448,7 @@ impl TgBackend {
                 }
                 AuthorizationState::Closed => {
                     tracing::info!("Closed");
-                    if !self.have_authorization {
-                        self.can_quit.store(true, Ordering::Release);
-                    }
+                    self.can_quit.store(true, Ordering::Release);
                     break;
                 }
             }
@@ -517,6 +527,12 @@ impl TgBackend {
                     update_dequeue.push_back(update);
                     let update = update_dequeue.pop_front().unwrap();
                     match update.clone() {
+                        Update::MessageSendSucceeded(update_message) => {
+                            tracing::info!("Message sent: {:?}", update_message);
+                        }
+                        Update::MessageSendAcknowledged(update_message) => {
+                            tg_context.set_last_acknowledged_message_id(update_message.message_id);
+                        }
                         Update::AuthorizationState(update) => {
                             auth_tx.send(update.authorization_state).unwrap();
                         }
@@ -860,7 +876,9 @@ impl TgBackend {
                         //     tracing::info!("{:?}", option);
                         // }
                         // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
-                        _ => {}
+                        _ => {
+                            // tracing::info!("Unhandled update: {:?}", update);
+                        }
                     }
                 }
             }
