@@ -76,6 +76,12 @@ impl TgBackend {
         }
     }
 
+    pub async fn load_all_chats(&mut self) {
+        while !self.full_chats_list {
+            self.load_chats(ChatList::Main, 50).await;
+        }
+    }
+
     pub async fn search_chats(
         &self,
         username: String,

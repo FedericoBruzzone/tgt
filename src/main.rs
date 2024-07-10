@@ -84,8 +84,12 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     let theme_config = THEME_CONFIG.clone();
     tracing::info!("Theme config: {:?}", theme_config);
 
-    let telegram_config = TELEGRAM_CONFIG.clone();
+    let mut telegram_config = TELEGRAM_CONFIG.clone();
     tracing::info!("Telegram config: {:?}", telegram_config);
+    // This is used to disable the message database when running the application as a CLI.
+    // This is done to avoid that deleting a message other application in
+    // a chats causes the `--send-message` to resend the messages that were deleted.
+    telegram_config.use_message_database = std::env::args().count() <= 1;
 
     let tg_context = TgContext::default();
     tracing::info!("Telegram context: {:?}", tg_context);

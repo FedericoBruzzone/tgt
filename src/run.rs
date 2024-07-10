@@ -332,6 +332,8 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
         return HandleCliOutcome::Quit;
     }
     if let Some(chat) = app_context.cli_args().telegram_cli().send_message() {
+        futures::join!(tg_backend.load_all_chats());
+
         let [chat_name, message_text] = chat.as_slice() else {
             tracing::error!("Invalid number of arguments for send message");
             println!("Invalid number of arguments for send message");
@@ -369,7 +371,6 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                         return HandleCliOutcome::Quit;
                     }
                 }
-                // std::thread::sleep(std::time::Duration::from_secs(1));
 
                 tracing::info!(
                     "Sent message {} to chat_name {} ({})",
