@@ -43,6 +43,10 @@ pub async fn run_app(
             futures::join!(quit_cli(tg_backend));
             return Ok(());
         }
+        HandleCliOutcome::Logout => {
+            futures::join!(log_out(tg_backend));
+            return Ok(());
+        }
         HandleCliOutcome::Continue => {}
     }
 
@@ -316,6 +320,8 @@ enum HandleCliOutcome {
     Quit,
     /// The application should continue.
     Continue,
+    /// The user should be logged out.
+    Logout,
 }
 
 #[allow(clippy::await_holding_lock)]
@@ -328,8 +334,7 @@ enum HandleCliOutcome {
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
 async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) -> HandleCliOutcome {
     if app_context.cli_args().telegram_cli().logout() {
-        log_out(tg_backend).await;
-        return HandleCliOutcome::Quit;
+        return HandleCliOutcome::Logout;
     }
     if let Some(chat) = app_context.cli_args().telegram_cli().send_message() {
         futures::join!(tg_backend.load_all_chats());
@@ -390,19 +395,6 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
     HandleCliOutcome::Continue
 }
 
-/// Quit the cli.
-///
-/// # Arguments
-/// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn quit_cli(tg_backend: &mut TgBackend) {
-    tg_backend.have_authorization = false;
-    tg_backend.close().await;
-    tg_backend.handle_authorization_state().await;
-
-    // Clear the terminal and move the cursor to the top left corner
-    io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
-}
-
 /// Quit the tui.
 ///
 /// # Arguments
@@ -419,21 +411,26 @@ async fn quit_tui(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
     io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
 }
 
+/// Quit the cli.
+///
+/// # Arguments
+/// * `tg_backend` - A mutable reference to the TgBackend struct.
+async fn quit_cli(tg_backend: &mut TgBackend) {
+    tg_backend.have_authorization = false;
+    tg_backend.close().await;
+    tg_backend.handle_authorization_state().await;
+
+    // Clear the terminal and move the cursor to the top left corner
+    io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
+}
+
 /// Logout the user from the Telegram backend.
 ///
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-/// * `tui_backend` - A mutable reference to the TuiBackend struct.
-/// * `app_context` - An Arc wrapped AppContext struct.
 async fn log_out(tg_backend: &mut TgBackend) {
-    tg_backend.have_authorization = false;
     tg_backend.log_out().await;
     tg_backend.handle_authorization_state().await;
-
-    // let tgt_data_dir = tgt_dir().unwrap().join(".data");
-    // if tgt_data_dir.exists() {
-    //     std::fs::remove_dir_all(tgt_data_dir).unwrap();
-    // }
 
     // Clear the terminal and move the cursor to the top left corner
     io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
