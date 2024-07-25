@@ -15,28 +15,24 @@ pub mod configs;
 pub mod run;
 pub mod tg;
 
-use crate::{
-    app_context::AppContext,
-    app_error::AppError,
-    configs::{
-        config_file::ConfigFile,
-        custom::{
-            app_custom::AppConfig, keymap_custom::KeymapConfig, logger_custom::LoggerConfig,
-            palette_custom::PaletteConfig, theme_custom::ThemeConfig,
-        },
+use crate::app_context::AppContext;
+use crate::app_error::AppError;
+use crate::configs::{
+    config_file::ConfigFile,
+    custom::{
+        app_custom::AppConfig, keymap_custom::KeymapConfig, logger_custom::LoggerConfig,
+        palette_custom::PaletteConfig, theme_custom::ThemeConfig,
     },
-    logger::Logger,
-    tg::{tg_backend::TgBackend, tg_context::TgContext},
-    tui::Tui,
-    tui_backend::TuiBackend,
 };
+use crate::logger::Logger;
+use crate::tg::{tg_backend::TgBackend, tg_context::TgContext};
+use crate::tui::Tui;
+use crate::tui_backend::TuiBackend;
 use clap::Parser;
 use configs::custom::telegram_custom::TelegramConfig;
 use lazy_static::lazy_static;
-use std::{
-    panic::{set_hook, take_hook},
-    sync::Arc,
-};
+use std::panic::{set_hook, take_hook};
+use std::sync::Arc;
 
 lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
