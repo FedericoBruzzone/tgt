@@ -2301,9 +2301,9 @@ dependencies = [
 
 [[package]]
 name = "ratatui-image"
-version = "1.0.3"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a29a209edf32963e90c8c924d52d7ab25a6734df67a4776b78c7e71aa35e2276"
+checksum = "de94276254cb20fb7431726875bd2ac6391a6ffc26f4b8e3d23f79d1286b491e"
 dependencies = [
  "base64 0.22.1",
  "dyn-clone",
