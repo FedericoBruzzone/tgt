@@ -49,14 +49,14 @@ lazy_static = "1.5.0"
 ratatui = "0.27.0"
 serde = "1.0.204"
 tdlib-rs = "1.0.4"
-tokio = { version = "1.38.0", features = ["full"] }
+tokio = { version = "1.38.1", features = ["full"] }
 tracing = "0.1.40"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
 arboard = { version = "3.4.0", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.38"
-ratatui-image = "1.0.3"
+ratatui-image = "1.0.5"
 image = "0.25.2"
 signal-hook = "0.3.17"
 clap = { version = "4.5.9", features = ["derive"] }
@@ -64,7 +64,7 @@ clap = { version = "4.5.9", features = ["derive"] }
 [build-dependencies]
 dirs = "5.0.1"
 reqwest = { version = "0.12.4", features = ["blocking"] }
-zip = { version = "2.0.0" }
+zip = { version = "2.1.5" }
 tdlib-rs = "1.0.4"
 
 [profile.dev]
