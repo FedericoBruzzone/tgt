@@ -1,7 +1,7 @@
 fn empty_tgt_folder() {
     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
-    std::fs::remove_dir_all(format!("{}/.tgt/config", home)).unwrap();
-    std::fs::remove_dir_all(format!("{}/.tgt/tdlib", home)).unwrap();
+    let _ = std::fs::remove_dir_all(format!("{}/.tgt/config", home));
+    let _ = std::fs::remove_dir_all(format!("{}/.tgt/tdlib", home));
 }
 
 fn move_config_folder_to_home_dottgt() {
