@@ -31,7 +31,7 @@ take_api_id_from_telegram_config = true
 take_api_hash_from_telegram_config = true
 ```
 
-## Custom application configuration
+## Custom configuration
 
 ### How create a custom configuration file
 
@@ -40,7 +40,7 @@ take_api_hash_from_telegram_config = true
 - macOS: `/Users/<name>/.tgt/config/`
 - Windows: `C:\Users\<name>\.tgt\config/`
 
-We suggest you to not modify these files, but to create your own **custom** configuration files in the following directories (in order of precedence):
+We suggest you to not modify this file, but to create your own **custom** configuration file in the following directories (in order of precedence):
 
 - `$TGT_CONFIG_DIR` (if set)
 - `$HOME/.config/tgt/` (for Linux and macOS) and `C:\Users\<name>\AppData\Roaming\tgt\` (for Windows)

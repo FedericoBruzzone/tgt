@@ -49,43 +49,100 @@ The supported color formats are:
 [palette]
 black = "#000000"
 white = "#ffffff"
+background = "#000000"
 primary = "#00548e"
 primary_variant = "#0073b0"
-secondary = "#ca2504"
-secondary_variant = "#e33610"
-background = "#000000"
-surface = "#000000"
+primary_light = "#94dbf7"
+secondary = "#ca3f04"
+secondary_variant = "#e06819"
+secondary_light = "#fcac77"
+ternary = "#696969"
+ternary_variant = "#808080"
+ternary_light = "#6e7e85"
+surface = "#141414"
+on_surface = "#dcdcdc"
 error = "#D50000"
-on_primary = "#b2e3f7"
-on_secondary = "#ffcbbb"
-on_background = "#ffffff"
-on_surface = "#ffffff"
 on_error = "#FFCDD2"
-# ternary = "#efba5d"
-# on_ternary = "#f47868"
 
 [common]
-border_component_focused = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
-item_selected = { fg = "on_secondary", bg = "secondary", bold = false, underline = false, italic = true }
+border_component_focused = { fg = "secondary", bg = "background", bold = false, underline = false, italic = false }
+item_selected = { fg = "", bg = "surface", bold = true, underline = false, italic = false }
+timestamp = { fg = "ternary_light", bg = "background", bold = false, underline = false, italic = false }
 
 [chat_list]
-self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+item_selected = { fg = "", bg = "primary", bold = false, underline = false, italic = false }
+item_chat_name = { fg = "primary_light", bg = "background", bold = true, underline = false, italic = false }
+item_message_content = { fg = "secondary_light", bg = "background", bold = false, underline = false, italic = true }
+item_unread_counter = { fg = "secondary", bg = "background", bold = true, underline = false, italic = false }
 
 [chat]
-self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+chat_name = { fg = "secondary", bg = "background", bold = true, underline = false, italic = false }
+message_myself_name = { fg = "primary_light", bg = "background", bold = true, underline = false, italic = false }
+message_myself_content = { fg = "primary_variant", bg = "background", bold = false, underline = false, italic = false }
+message_other_name = { fg = "secondary_light", bg = "background", bold = true, underline = false, italic = false }
+message_other_content = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
+message_reply_text = { fg = "ternary", bg = "background", bold = false, underline = false, italic = false }
+message_reply_name = { fg = "secondary_light", bg = "background", bold = true, underline = false, italic = false }
+message_reply_content = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
 
 [prompt]
-self = { fg = "on_primary", bg = "background", bold = false, underline = false, italic = false }
+self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }
+message_text = { fg = "primary_light", bg = "background", bold = false, underline = false, italic = false }
+message_text_selected = { fg = "secondary_light", bg = "ternary", bold = false, underline = false, italic = true }
+message_preview_text = { fg = "ternary", bg = "background", bold = false, underline = false, italic = false }
+
+[reply_message]
+self = { fg = "secondary_light", bg = "background", bold = false, underline = false, italic = false }
+message_text = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
 
 [status_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
-size_info_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
-size_info_numbers = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
-press_key_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
-press_key_key = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
-message_quit_text = { fg = "on_primary", bg = "surface", bold = false, underline = false, italic = false }
-message_quit_key = { fg = "on_secondary", bg = "surface", bold = false, underline = false, italic = true }
+size_info_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+size_info_numbers = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
+press_key_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+press_key_key = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
+message_quit_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+message_quit_key = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
+open_chat_text = { fg = "primary_light", bg = "surface", bold = false, underline = false, italic = false }
+open_chat_name = { fg = "secondary_light", bg = "surface", bold = false, underline = false, italic = true }
 
 [title_bar]
 self = { fg = "on_surface", bg = "surface", bold = false, underline = false, italic = false }
+title1 = { fg = "primary_light", bg = "surface", bold = true, underline = true, italic = true }
+title2 = { fg = "secondary_light", bg = "surface", bold = true, underline = true, italic = true }
+title3 = { fg = "ternary_light", bg = "surface", bold = true, underline = true, italic = false }
 ```
+
+## Custom configuration
+
+### How create a custom configuration file
+
+`tgt` by default reads its **default** configurations from:
+- Linux: `/home/<name>/.tgt/config/`
+- macOS: `/Users/<name>/.tgt/config/`
+- Windows: `C:\Users\<name>\.tgt\config/`
+
+We suggest you to not modify this file, but to create your own **custom** configuration file in the following directories (in order of precedence):
+
+- `$TGT_CONFIG_DIR` (if set)
+- `$HOME/.config/tgt/` (for Linux and macOS) and `C:\Users\<name>\AppData\Roaming\tgt\` (for Windows)
+
+Reading configurations from the following directories will override the fields defined in the default configuration files.
+It means that the fields that are not present in the custom configuration will be taken from the default configuration, while the fields that are present in the custom configuration will override the default configuration.
+Note that after the finding the first configuration file, `tgt` stops looking for more configurations, it is short-circuited.
+
+### Example of a custom theme configuration
+
+Example of `theme.toml`:
+
+```toml
+[palette]
+test_color = "#ff0000"
+background = "#ffffff"
+
+[common]
+border_component_focused = { fg = "test_color", bg = "background", bold = false, underline = false, italic = false }
+```
+
