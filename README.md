@@ -14,9 +14,7 @@
 [creates-io-downloads]: https://crates.io/crates/tgt
 [creates-io-downloads-shield]: https://img.shields.io/crates/d/tgt.svg
 
-
-> [!CAUTION]
-> Note that this is the first release of `tgt`. Please consider to open an issue if you find any bug or if you have any suggestion.
+⚠️  Note that this is the first release of `tgt`. Please consider to open an issue if you find any bug or if you have any suggestion. ⚠️
 
 <p align="center">
     <img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/logo.png" alt="logo" />

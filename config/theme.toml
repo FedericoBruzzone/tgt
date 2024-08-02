@@ -36,8 +36,10 @@ message_myself_content = { fg = "primary_variant", bg = "background", bold = fal
 message_other_name = { fg = "secondary_light", bg = "background", bold = true, underline = false, italic = false }
 message_other_content = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
 message_reply_text = { fg = "ternary", bg = "background", bold = false, underline = false, italic = false }
-message_reply_name = { fg = "secondary_light", bg = "background", bold = true, underline = false, italic = false }
-message_reply_content = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
+message_myself_reply_name = { fg = "secondary_light", bg = "background", bold = true, underline = false, italic = false }
+message_myself_reply_content = { fg = "secondary_variant", bg = "background", bold = false, underline = false, italic = false }
+message_other_reply_name = { fg = "primary_light", bg = "background", bold = true, underline = false, italic = false }
+message_other_reply_content = { fg = "primary_variant", bg = "background", bold = false, underline = false, italic = false }
 
 [prompt]
 self = { fg = "primary", bg = "background", bold = false, underline = false, italic = false }

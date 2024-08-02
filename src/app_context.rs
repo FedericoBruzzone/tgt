@@ -269,13 +269,27 @@ impl AppContext {
         chat,
         message_other_content
     );
-    theme_style_generate!(style_chat_message_reply_name, chat, message_reply_name);
-    theme_style_generate!(
-        style_chat_message_reply_content,
-        chat,
-        message_reply_content
-    );
     theme_style_generate!(style_chat_message_reply_text, chat, message_reply_text);
+    theme_style_generate!(
+        style_chat_message_myself_reply_name,
+        chat,
+        message_myself_reply_name
+    );
+    theme_style_generate!(
+        style_chat_message_myself_reply_content,
+        chat,
+        message_myself_reply_content
+    );
+    theme_style_generate!(
+        style_chat_message_other_reply_name,
+        chat,
+        message_other_reply_name
+    );
+    theme_style_generate!(
+        style_chat_message_other_reply_content,
+        chat,
+        message_other_reply_content
+    );
 
     // ===== PROMPT =====
     theme_style_generate!(style_prompt, prompt, self);

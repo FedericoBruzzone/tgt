@@ -240,9 +240,8 @@ impl Component for ChatWindow {
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;
         let wrap_width = (area.width / 2) as i32;
-        // TODO: refactor
         let items = self.message_list.iter().map(|message_entry| {
-            let (me, name_style, content_style, alignment) = if message_entry.sender_id()
+            let (myself, name_style, content_style, alignment) = if message_entry.sender_id()
                 == self.app_context.tg_context().me()
             {
                 if message_entry.id() == self.app_context.tg_context().last_read_outbox_message_id()
@@ -267,43 +266,18 @@ impl Component for ChatWindow {
                     Alignment::Left,
                 )
             };
-            if me {
-                if is_unread_outbox {
-                    return ListItem::new(
-                        message_entry
-                            .get_text_styled(
-                                &self.app_context,
-                                Some(true),
-                                name_style,
-                                content_style,
-                                wrap_width,
-                            )
-                            .alignment(alignment),
-                    );
-                }
-                return ListItem::new(
-                    message_entry
-                        .get_text_styled(
-                            &self.app_context,
-                            Some(false),
-                            name_style,
-                            content_style,
-                            wrap_width,
-                        )
-                        .alignment(alignment),
-                );
-            }
-            ListItem::new(
+            return ListItem::new(
                 message_entry
                     .get_text_styled(
+                        myself,
                         &self.app_context,
-                        None,
+                        is_unread_outbox,
                         name_style,
                         content_style,
                         wrap_width,
                     )
                     .alignment(alignment),
-            )
+            );
         });
 
         let block = Block::new()

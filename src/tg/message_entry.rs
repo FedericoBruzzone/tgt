@@ -77,14 +77,25 @@ impl MessageEntry {
 
     pub fn get_text_styled(
         &self,
+        myself: bool,
         app_context: &AppContext,
-        is_unread: Option<bool>,
+        is_unread: bool, // When myself is false, is_unread is useless
         name_style: Style,
         content_style: Style,
         wrap_width: i32,
     ) -> Text {
-        tracing::info!("Message content: {:?}", self.message_content_to_string());
-        tracing::info!("Reply to: {:?}", self.reply_to);
+        let (message_reply_name, message_reply_content) = if myself {
+            (
+                app_context.style_chat_message_myself_reply_name(),
+                app_context.style_chat_message_myself_reply_content(),
+            )
+        } else {
+            (
+                app_context.style_chat_message_other_reply_name(),
+                app_context.style_chat_message_other_reply_content(),
+            )
+        };
+
         let reply_text = match &self.reply_to {
             Some(reply_to) => match reply_to {
                 TdMessageReplyTo::Message(message) => {
@@ -110,7 +121,7 @@ impl MessageEntry {
                                         },
                                     )
                                     .unwrap_or_default(),
-                                app_context.style_chat_message_reply_name(),
+                                message_reply_name,
                             ),
                         ])]);
                         entry.extend(
@@ -121,11 +132,8 @@ impl MessageEntry {
                                 .find(|m| m.id() == message.message_id)
                             {
                                 Some(m) => {
-                                    tracing::info!("Reply to: {:?}", m.message_content_to_string());
-                                    m.get_lines_styled_with_style(
-                                    app_context.style_chat_message_reply_content(),
-                                    wrap_width,
-                                )},
+                                    m.get_lines_styled_with_style(message_reply_content, wrap_width)
+                                }
                                 None => vec![Line::from("")],
                             },
                         );
@@ -138,7 +146,7 @@ impl MessageEntry {
                     let mut entry = Text::default();
                     entry.extend(vec![Line::from(vec![
                         Span::styled("↩️ Reply to: ", app_context.style_chat_message_reply_text()),
-                        Span::styled("Story", app_context.style_chat_message_reply_name()),
+                        Span::styled("Story", message_reply_name),
                     ])]);
                     Some(entry)
                 }
@@ -164,15 +172,15 @@ impl MessageEntry {
             Span::raw(" "),
             Span::raw(if self.is_edited { "✏️" } else { "" }),
             Span::raw(" "),
-            Span::raw(match is_unread {
-                Some(is_unread) => {
+            Span::raw(match myself {
+                true => {
                     if is_unread {
                         "📤"
                     } else {
                         "👀"
                     }
                 }
-                None => "",
+                false => "",
             }),
             Span::raw(" "),
             self.timestamp.get_span_styled(app_context),
