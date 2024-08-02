@@ -83,6 +83,8 @@ impl MessageEntry {
         content_style: Style,
         wrap_width: i32,
     ) -> Text {
+        tracing::info!("Message content: {:?}", self.message_content_to_string());
+        tracing::info!("Reply to: {:?}", self.reply_to);
         let reply_text = match &self.reply_to {
             Some(reply_to) => match reply_to {
                 TdMessageReplyTo::Message(message) => {
@@ -118,10 +120,12 @@ impl MessageEntry {
                                 .iter()
                                 .find(|m| m.id() == message.message_id)
                             {
-                                Some(m) => m.get_lines_styled_with_style(
+                                Some(m) => {
+                                    tracing::info!("Reply to: {:?}", m.message_content_to_string());
+                                    m.get_lines_styled_with_style(
                                     app_context.style_chat_message_reply_content(),
                                     wrap_width,
-                                ),
+                                )},
                                 None => vec![Line::from("")],
                             },
                         );

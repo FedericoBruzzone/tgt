@@ -132,6 +132,7 @@ impl TgContext {
         *self.event_tx() = Some(event_tx);
     }
 
+    // This is used to know if a message is being replied to.
     pub fn set_reply_message(&self, message_id: i64, text: String) {
         self.reply_message_id.store(message_id, Ordering::Relaxed);
         *self.reply_message_text.lock().unwrap() = text;

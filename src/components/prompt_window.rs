@@ -477,7 +477,7 @@ impl Input {
                         .send(Event::SendMessage(
                             self.text_to_string(),
                             Some(TdMessageReplyToMessage {
-                                chat_id: app_context.tg_context().open_chat_id(),
+                                chat_id: 0, // This must be  0 and not `app_context.tg_context().open_chat_id()` because the tdlib (maybe from the version 1.8.29 or before)  is able to know the chat id from the message_id; it will infer the chat id from the message_id.
                                 message_id,
                             }),
                         ))
