@@ -2362,7 +2362,7 @@ dependencies = [
  "rand",
  "rand_chacha",
  "simd_helpers",
- "system-deps",
+ "system-deps 6.2.2",
  "thiserror",
  "v_frame",
  "wasm-bindgen",
@@ -2967,6 +2967,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "system-deps"
+version = "7.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c81f13d9a334a6c242465140bd262fae382b752ff2011c4f7419919a9c97922"
+dependencies = [
+ "cfg-expr",
+ "heck",
+ "pkg-config",
+ "toml",
+ "version-compare",
+]
+
+[[package]]
 name = "target-lexicon"
 version = "0.12.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2974,10 +2987,11 @@ checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 
 [[package]]
 name = "tdlib-rs"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53521f4611ffaa8f2504b3c1696af8c45550b4b6bed8c7a2fbc20e9d6113a81c"
+checksum = "65e139e6a3877f1759cef1ded4e3ead57642fb8fe618ac74da41c37830670a46"
 dependencies = [
+ "dirs",
  "futures-channel",
  "log",
  "once_cell",
@@ -2985,7 +2999,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "system-deps",
+ "system-deps 7.0.1",
  "tdlib-rs-gen",
  "tdlib-rs-parser",
  "zip",
@@ -2993,18 +3007,18 @@ dependencies = [
 
 [[package]]
 name = "tdlib-rs-gen"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79a96938c32669ae8dd4be8f59b8b6cfb9b95f5f8e6b11092f1606619bc481a1"
+checksum = "9bb7272e3bc1246b4d97f00640afb64ade25282b3ea38195619f62e1708a2170"
 dependencies = [
  "tdlib-rs-parser",
 ]
 
 [[package]]
 name = "tdlib-rs-parser"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60e302d7d5cc99a8da970037b333814bc40d876f992df58bfbbe732ced312af2"
+checksum = "4ea8e585ae80806b3a6e1a4e9eab8e1857c9ba1ec72463bfa82f33815597833e"
 
 [[package]]
 name = "tempfile"
