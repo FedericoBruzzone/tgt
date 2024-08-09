@@ -1,10 +1,10 @@
 [package]
 name = "tgt"
-version = "0.1.10"
+version = "1.0.0"
 edition = "2021"
 description = "A simple TUI for Telegram"
 license = "MIT OR Apache-2.0"
-documentation = "https://docs.rs/crate/tgt/0.1.10"
+documentation = "https://docs.rs/crate/tgt/1.0.0"
 homepage = "https://github.com/FedericoBruzzone/tgt"
 repository = "https://github.com/FedericoBruzzone/tgt"
 readme = "README.md"
