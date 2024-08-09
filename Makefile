@@ -28,10 +28,10 @@ all:
 	$(MAKE) test ARGS="--features local-tdlib"
 
 run_local:
-	cargo run --no-default-features --features local-tdlib
+	cargo run --no-default-features --features local-tdlib $(ARGS)
 
 build_local:
-	cargo build --no-default-features --features local-tdlib
+	cargo build --no-default-features --features local-tdlib $(ARGS)
 
 # Example 1: make build ARGS="--features download-tdlib"
 # Example 2: make build ARGS="--features download-tdlib --example telegram"
