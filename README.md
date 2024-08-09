@@ -36,6 +36,10 @@
 
 `tgt` is a terminal user interface for Telegram, written in Rust.
 
+<p align="center">
+    <img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/example.png" alt="example"/>
+</p>
+
 ## Contributing
 
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
