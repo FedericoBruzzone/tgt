@@ -710,12 +710,12 @@ impl Component for PromptWindow {
                     }
                 }
 
-                (KeyCode::Left | KeyCode::Char('b'), Modifiers { alt: true, .. }) => {
+                (KeyCode::Left | KeyCode::Char('b'), Modifiers { control: true, .. }) => {
                     self.input.unselect_all();
                     self.input.move_cursor_to_previous_word();
                 }
 
-                (KeyCode::Right | KeyCode::Char('f'), Modifiers { alt: true, .. }) => {
+                (KeyCode::Right | KeyCode::Char('f'), Modifiers { control: true, .. }) => {
                     self.input.unselect_all();
                     self.input.move_cursor_to_next_word();
                 }
@@ -725,7 +725,8 @@ impl Component for PromptWindow {
                     self.input.send_message(Arc::clone(&self.app_context));
                 }
 
-                (KeyCode::Backspace, Modifiers { alt: true, .. })
+                (KeyCode::Backspace, Modifiers { control: true, .. })
+                | (KeyCode::Char('h'), Modifiers { control: true, .. })
                 | (KeyCode::Char('w'), Modifiers { control: true, .. }) => {
                     self.input.unselect_all();
                     self.input.delete_previous_word();

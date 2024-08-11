@@ -40,6 +40,104 @@
     <img src="https://github.com/FedericoBruzzone/tgt/raw/main/imgs/example.png" alt="example"/>
 </p>
 
+## Usage
+
+**From crates.io**
+
+```bash
+cargo install tgt
+```
+
+**From source downloading the tdlib**
+
+```bash
+cargo build --release --features download-tdlib
+```
+
+After the installation, you can run `tgt` with the following command:
+
+```bash
+tgt --help
+```
+
+
+### Configuration
+
+Note that `tgt` is fully customizable. For more information about the **configuration**, please look at [here](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration).
+
+**Default keybindings**:
+
+*None state*:
+
+```bash
+esc:               to the "None" state
+alt+1 | alt+left:  Focus on the chat list
+alt+2 | alt+right: Focus on the chat
+alt+3 | alt+down:  Focus on the prompt
+q | ctrl+c:        Quit
+```
+
+*Chat List*
+
+```bash
+up | down:     Move selection
+enter | right: Open the chat
+left:          Unselect chat
+
+esc:               Return to the "None" state
+alt+1 | alt+left:  Focus on the chat list
+alt+2 | alt+right: Focus on the chat
+alt+3 | alt+down:  Focus on the prompt
+```
+
+*Chat*
+
+```bash
+up | down: Scroll the messages
+left:      Unselect message
+y:         Copy the message
+e:         Edit the message
+r:         Reply to the message
+d:         Delete the message for everyone
+D:         Delete the message for me
+
+esc:               Return to the "None" state
+alt+1 | alt+left:  Focus on the chat list
+alt+2 | alt+right: Focus on the chat
+alt+3 | alt+down:  Focus on the prompt
+```
+
+*Prompt*
+
+Note that when the prompt is focused, you can **NOT** use `q` or `ctrl+c` to quit the application, you need to press `esc` to return to the "None" state.
+
+```bash
+alt+enter:                        Send the message
+
+left | right | up | down:         Move the cursor
+ctrl+left | ctrl+b:               Move the cursor to the previous word
+ctrl+right | ctrl+f:              Move the cursor to the next word
+ctrl+alt+left | ctrl+a | home:    Move the cursor to the beginning of the line (also ctrl+left+b | shift+super+left | shift+super+b)
+ctrl+alt+right | ctrl+e | end:    Move the cursor to the end of the line (also ctrl+right+f | shift+super+right | shift+super+f)
+
+shift+left:                       Move the cursor left and select the text
+shift+right:                      Move the cursor right and select the text
+shift+up:                         Move the cursor up and select the text
+shift+down:                       Move the cursor down and select the text
+shift+ctrl+left:                  Select the text before the cursor
+shift+ctrl+right:                 Select the text after the cursor
+
+ctrl+c:                           Copy the selected text
+ctrl+v:                           Paste the copied text
+
+ctrl+w | ctrl+backspace | ctrl+h: Delete the word before the cursor
+
+esc:               Return to the "None" state
+alt+1 | alt+left:  Focus on the chat list
+alt+2 | alt+right: Focus on the chat
+alt+3 | alt+down:  Focus on the prompt
+```
+
 ## Contributing
 
 Contributions to this project are welcome! If you have any suggestions, improvements, or bug fixes, feel free to submit a pull request.
