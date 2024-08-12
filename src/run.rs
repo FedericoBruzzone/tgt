@@ -253,7 +253,7 @@ pub async fn handle_app_actions(
         match action {
             Action::Render => {
                 tui_backend.terminal.draw(|f| {
-                    tui.draw(f, f.size()).unwrap();
+                    tui.draw(f, f.area()).unwrap();
                 })?;
             }
             Action::Resize(width, height) => {
@@ -261,7 +261,7 @@ pub async fn handle_app_actions(
                     .terminal
                     .resize(Rect::new(0, 0, width, height))?;
                 tui_backend.terminal.draw(|f| {
-                    tui.draw(f, f.size()).unwrap();
+                    tui.draw(f, f.area()).unwrap();
                 })?;
             }
             Action::Quit => {

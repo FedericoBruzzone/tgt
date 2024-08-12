@@ -226,7 +226,7 @@ fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(f.size());
+        .split(f.area());
 
     // Iterate through all elements in the `items` app and append some debug
     // text to it.

@@ -9,7 +9,7 @@ use crate::{
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
 use ratatui::{
-    layout::Rect,
+    layout::{Position, Rect},
     symbols::{
         border::{Set, PLAIN},
         line::NORMAL,
@@ -865,10 +865,10 @@ impl Component for PromptWindow {
         frame.render_widget(input, area);
 
         if self.focused {
-            frame.set_cursor(
-                area.x + self.input.cursor_x() as u16 + 1,
-                area.y + self.input.cursor_y() as u16 + 1,
-            );
+            frame.set_cursor_position(Position {
+                x: area.x + self.input.cursor_x() as u16 + 1,
+                y: area.y + self.input.cursor_y() as u16 + 1,
+            });
         }
         Ok(())
     }
