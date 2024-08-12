@@ -78,6 +78,9 @@ esc:               to the "None" state
 alt+1 | alt+left:  Focus on the chat list
 alt+2 | alt+right: Focus on the chat
 alt+3 | alt+down:  Focus on the prompt
+alt+h | alt+l:     Resize the chat list
+alt+j | alt+k:     Resize the prompt
+alt+n:             Toggle chat list
 q | ctrl+c:        Quit
 ```
 
@@ -196,11 +199,9 @@ Please review the license file provided in the repository for more information r
 
 ## Contact
 
-- Email:
-  - [federico.bruzzone.i@gmail.com]
-  - [federico.bruzzone@studenti.unimi.it]
-  - [andrea.longoni3@studenti.unimi.it]
-- GitHub:
+If you have any questions, suggestions, or feedback, do not hesitate to [contact me](https://federicobruzzone.github.io/).
+
+Maintainers:
   - [FedericoBruzzone](https://github.com/FedericoBruzzone)
   - [Andreal2000](https://github.com/Andreal2000)
 
