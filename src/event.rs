@@ -25,6 +25,11 @@ pub enum Event {
     Init,
     /// Render event.
     Render,
+    /// Focus Lost event.
+    FocusLost,
+    /// Focus Gained event.
+    FocusGained,
+
     /// Update area event with a `Rect` struct.
     UpdateArea(Rect),
     /// EditMessage event with a `String`.
@@ -170,6 +175,8 @@ impl Display for Event {
             Event::Mouse(mouse) => write!(f, "Mouse({:?})", mouse),
             Event::UpdateArea(area) => write!(f, "UpdateArea({:?})", area),
             Event::Paste(s) => write!(f, "Paste({})", s),
+            Event::FocusLost => write!(f, "FocusLost"),
+            Event::FocusGained => write!(f, "FocusGained"),
             Event::GetMe => write!(f, "GetMe"),
             Event::LoadChats(chat_list, limit) => {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)

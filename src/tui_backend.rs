@@ -146,6 +146,7 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn suspend(&mut self) -> Result<(), std::io::Error> {
+        tracing::info!("Suspending TuiBackend");
         self.exit();
         #[cfg(not(windows))]
         signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
@@ -156,6 +157,7 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<(), io::Error>` - An Ok result or an error.
     pub fn resume(&mut self) -> Result<(), std::io::Error> {
+        tracing::info!("Resuming TuiBackend");
         self.enter()?;
         Ok(())
     }
@@ -243,8 +245,12 @@ impl TuiBackend {
                                     CrosstermEvent::Resize(width, height) => {
                                         event_tx.send(Event::Resize(width, height))?;
                                     },
-                                    CrosstermEvent::FocusLost => {} // [TODO] handle focus lost
-                                    CrosstermEvent::FocusGained => {} // [TODO] handle focus gained
+                                    CrosstermEvent::FocusLost => {
+                                        event_tx.send(Event::FocusLost)?;
+                                    }
+                                    CrosstermEvent::FocusGained => {
+                                        event_tx.send(Event::FocusGained)?;
+                                    }
                                     CrosstermEvent::Paste(text) => {
                                         event_tx.send(Event::Paste(text))?;
                                     },

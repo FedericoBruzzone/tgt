@@ -86,6 +86,10 @@ pub enum Action {
     Resize(u16, u16),
     /// Paste action with a `String`.
     Paste(String),
+    /// Focus Lost action.
+    FocusLost,
+    /// Focus Gained action.
+    FocusGained,
 
     /// GetMe action.
     GetMe,

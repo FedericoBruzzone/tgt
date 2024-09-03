@@ -191,6 +191,8 @@ async fn handle_tui_backend_events(
                     }
                 }
             }
+            Event::FocusLost => app_context.action_tx().send(Action::FocusLost)?,
+            Event::FocusGained => app_context.action_tx().send(Action::FocusGained)?,
             Event::Paste(ref text) => app_context.action_tx().send(Action::Paste(text.clone()))?,
             _ => {}
         }
@@ -264,6 +266,8 @@ pub async fn handle_app_actions(
                     tui.draw(f, f.area()).unwrap();
                 })?;
             }
+            Action::FocusLost => tui_backend.suspend()?,
+            Action::FocusGained => tui_backend.resume()?,
             Action::Quit => {
                 app_context.quit_store(true);
             }
