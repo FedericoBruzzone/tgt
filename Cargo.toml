@@ -44,7 +44,7 @@ tdjson = "1.8.29"
 config = "0.14.0"
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 dirs = "5.0.1"
-futures = "0.3.30"
+futures = "0.3.31"
 lazy_static = "1.5.0"
 ratatui = "0.28.1"
 serde = "1.0.210"
