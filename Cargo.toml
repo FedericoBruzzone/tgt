@@ -57,7 +57,7 @@ tracing-appender = "0.2"
 arboard = { version = "3.4.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.38"
 ratatui-image = "2.0.1"
-image = "0.25.2"
+image = "0.25.4"
 signal-hook = "0.3.17"
 clap = { version = "4.5.20", features = ["derive"] }
 
