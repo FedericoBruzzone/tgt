@@ -3,3 +3,10 @@
 /.log
 /.logs
 /.vscode
+result
+outputs/
+result-*
+result
+.direnv
+.envrc
+.DS_Store
