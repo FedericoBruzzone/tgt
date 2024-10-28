@@ -150,9 +150,8 @@ async fn main() {
     functions::close(client_id).await.unwrap();
 
     // Handle the authorization state to wait for the "Closed" state
-    match handle_authorization_state(client_id, auth_rx, run_flag.clone()).await {
-        None => std::process::exit(0),
-        Some(_) => (),
+    if (handle_authorization_state(client_id, auth_rx, run_flag.clone()).await).is_none() {
+        std::process::exit(0)
     }
 
     println!("BEFORE");

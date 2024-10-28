@@ -163,7 +163,7 @@ The [CONTRIBUTING.md](https://github.com/FedericoBruzzone/tgt/blob/main/CONTRIBU
 
 ### Road Map
 
-You can find the road map of the project [here](https://github.com/FedericoBruzzone/tg-tui/issues/1) (in the pinned issues).
+You can find the road map of the project [here](https://github.com/FedericoBruzzone/tgt/issues/37) (in the pinned issues).
 
 ## Commands
 
