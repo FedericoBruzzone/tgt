@@ -1,0 +1,35 @@
+diff --git a/build.rs b/build.rs
+index e211e5b..3da6109 100644
+--- a/build.rs
++++ b/build.rs
+@@ -1,3 +1,7 @@
++fn is_writable<P: AsRef<std::path::Path>>(path: P) -> bool {
++    std::fs::OpenOptions::new().write(true).open(path).is_ok()
++}
++
+ fn empty_tgt_folder() {
+     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
+     let _ = std::fs::remove_dir_all(format!("{}/.tgt/config", home));
+@@ -24,11 +28,18 @@ fn main() -> std::io::Result<()> {
+         return Ok(());
+     }
+
+-    empty_tgt_folder();
+-    move_config_folder_to_home_dottgt();
+     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
+-    let dest = format!("{}/.tgt/tdlib", home);
+-    tdlib_rs::build::build(Some(dest));
++    let tgt_config_path = format!("{}/.tgt/config", home);
++
++    if is_writable(&tgt_config_path) {
++        empty_tgt_folder();
++        move_config_folder_to_home_dottgt();
++        let dest = format!("{}/.tgt/tdlib", home);
++        tdlib_rs::build::build(Some(dest));
++    } else {
++        eprintln!("Filesystem is read-only. Skipping file operations.");
++        tdlib_rs::build::build(None);
++    }
+
+     Ok(())
+ }
