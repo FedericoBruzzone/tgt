@@ -64,6 +64,69 @@ After the installation, you can run `tgt` with the following command:
 tgt --help
 ```
 
+**From `flake.nix`**
+
+First, create the required TOML configuration files in `~/.tgt/config` using these commands:
+
+```bash
+git clone https://github.com/FedericoBruzzone/tgt ~/tgt
+mkdir -p ~/.tgt/config
+cp ~/tgt/config/* ~/.tgt/config
+```
+
+After setting up the configuration files, you have two installation options:
+
+1. Run directly with `nix run`:
+
+```bash
+nix run github:FedericoBruzzone/tgt
+```
+
+2. Add `tgt` to your system packages:
+
+Add the following to your `flake.nix`:
+
+```nix
+{
+  inputs = {
+    tgt.url = "github:FedericoBruzzone/tgt";
+    tgt.inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  outputs = { tgt, ... }
+}
+```
+
+Then add it to your `environment.systemPackages`:
+
+```nix
+{pkgs, tgt, ...}: {
+  environment = {
+    systemPackages = [
+        (tgt.packages.${pkgs.system}.default)
+    ];
+  };
+}
+```
+
+To use a specific version of the program, override the `src` attribute:
+
+```nix
+{pkgs, tgt, ...}: {
+  environment = {
+    systemPackages = [
+      (tgt.packages.${pkgs.system}.default.overrideAttrs (old: {
+        src = pkgs.fetchFromGitHub {
+          owner = old.src.owner;
+          repo = old.src.repo;
+          rev = "00000000000000000000000000000000000000";
+          sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        };
+      }))
+    ];
+  };
+}
+```
 
 ### Configuration
 
