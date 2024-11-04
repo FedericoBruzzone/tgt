@@ -35,24 +35,9 @@ impl TitleBar {
         let name = "".to_string();
         let focused = false;
 
-        let mut picker = Picker::new((8, 12));
-        picker.guess_protocol();
-        // let dyn_img = image::io::Reader::open(
-        //     tgt_dir()
-        //         .unwrap()
-        //         .join("imgs")
-        //         .join("logo.png")
-        //         .to_string_lossy()
-        //         .to_string(),
-        // )
-        // .unwrap()
-        // .decode()
-        // .unwrap();
-        // let image = picker.new_resize_protocol(dyn_img);
-        // let image_state: Box<dyn StatefulProtocol> = image.into();
-        // let image_state = picker
-        //     .new_protocol(dyn_img.clone(), Rect::new(0, 0, 30, 30), Resize::Fit(None))
-        //     .unwrap();
+        let mut _picker = Picker::from_query_stdio();
+        // TODO: Add image to TUI (see https://docs.rs/ratatui-image/latest/ratatui_image/)
+
         TitleBar {
             app_context,
             command_tx,
