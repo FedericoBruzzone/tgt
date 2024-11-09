@@ -89,11 +89,12 @@ Add the following to your `flake.nix`:
 ```nix
 {
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"
     tgt.url = "github:FedericoBruzzone/tgt";
     tgt.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { tgt, ... }
+  outputs = { nixpkgs, tgt, ... }: { /* ... */ }
 }
 ```
 
