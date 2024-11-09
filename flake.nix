@@ -18,7 +18,6 @@
         let
           pkgs = inputs.nixpkgs.legacyPackages.${system};
           inherit (pkgs) lib;
-          inherit (pkgs.darwin.apple_sdk) frameworks;
           inherit (pkgs.stdenvNoCC.hostPlatform) isDarwin;
           tdlib = pkgs.tdlib.overrideAttrs {
             version = "1.8.29";
@@ -48,20 +47,11 @@
               sha256 = "sha256-TDxzQpir9KY6rl34YJ5IHFjfMRYzbGlPI58M9i+G9+Y=";
             };
 
-            nativeBuildInputs = rlinkLibs;
-
-            buildInputs =
+            nativeBuildInputs =
               rlinkLibs
-              ++ lib.optional isDarwin (
-                builtins.attrValues {
-                  inherit (frameworks)
-                    AppKit
-                    CoreGraphics
-                    Security
-                    SystemConfiguration
-                    ;
-                }
-              );
+              ++ lib.optional isDarwin (builtins.attrValues { inherit (pkgs) apple-sdk_12; });
+
+            buildInputs = rlinkLibs;
 
             patches = [ ./patches/0001-check-filesystem-writability-before-operations.patch ];
 
