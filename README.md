@@ -122,6 +122,7 @@ To use a specific version of the program, override the `src` attribute:
           rev = "00000000000000000000000000000000000000";
           sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
         };
+        cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
       }))
     ];
   };
