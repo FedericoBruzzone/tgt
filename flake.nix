@@ -39,12 +39,12 @@
         {
           default = pkgs.rustPlatform.buildRustPackage {
             pname = "tgt";
-            version = "unstable-2024-10-21";
+            version = "unstable-2024-11-04";
             src = pkgs.fetchFromGitHub {
               owner = "FedericoBruzzone";
               repo = "tgt";
-              rev = "470b6052dd66ff55f6039bbf940902f503fb67e2";
-              sha256 = "sha256-TDxzQpir9KY6rl34YJ5IHFjfMRYzbGlPI58M9i+G9+Y=";
+              rev = "39fb4acec241e2db384e268c77e875bd13a48c12";
+              sha256 = "sha256-McZEnRwtGEuhDA1uJ1FgUl6QiPfzCDr/Pl2haF9+MRw=";
             };
 
             nativeBuildInputs =
@@ -58,7 +58,7 @@
             # Tests are broken on nix
             doCheck = false;
 
-            cargoHash = "sha256-QqvP/ULAEn+N8w01kDq4pltP4xHoUhNJPZgP/76hhBo=";
+            cargoHash = "sha256-WIs9rVhTQn217DHIw1SPnQrkDtozEl2jfqVjTwJHF2w=";
             buildNoDefaultFeatures = true;
             buildFeatures = [ "pkg-config" ];
 
