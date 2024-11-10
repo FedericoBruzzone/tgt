@@ -89,11 +89,12 @@ Add the following to your `flake.nix`:
 ```nix
 {
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"
     tgt.url = "github:FedericoBruzzone/tgt";
     tgt.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { tgt, ... }
+  outputs = { nixpkgs, tgt, ... }: { /* ... */ }
 }
 ```
 
@@ -122,6 +123,7 @@ To use a specific version of the program, override the `src` attribute:
           rev = "00000000000000000000000000000000000000";
           sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
         };
+        cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
       }))
     ];
   };
