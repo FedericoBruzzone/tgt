@@ -266,7 +266,7 @@ impl Component for ChatWindow {
                     Alignment::Left,
                 )
             };
-            return ListItem::new(
+            ListItem::new(
                 message_entry
                     .get_text_styled(
                         myself,
@@ -277,7 +277,7 @@ impl Component for ChatWindow {
                         wrap_width,
                     )
                     .alignment(alignment),
-            );
+            )
         });
 
         let block = Block::new()
