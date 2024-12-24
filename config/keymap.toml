@@ -76,4 +76,5 @@ keymap = [
 # The prompt key bindings are only usable in the prompt component.
 # When the prompt is focused, the prompt key bindings will be active.
 [prompt]
+keymap = []
 
