@@ -2,7 +2,7 @@
 /.data
 /.log
 /.logs
-/.vscode
+# /.vscode
 result
 outputs/
 result-*
