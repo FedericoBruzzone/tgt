@@ -41,7 +41,7 @@ pkg-config = ["tdlib-rs/pkg-config"]
 tdjson = "1.8.29"
 
 [dependencies]
-config = "0.15.5"
+config = "0.15.6"
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 dirs = "6.0.0"
 futures = "0.3.31"
