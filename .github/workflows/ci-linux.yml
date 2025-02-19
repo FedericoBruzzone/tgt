@@ -39,7 +39,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install needed packages
-        run: | 
+        run: |
           sudo apt update
           sudo apt install libc++-dev libc++abi-dev
       - name: Restore cache TDLib
@@ -51,17 +51,19 @@ jobs:
           key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        # sudo apt-get -y install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-14 libc++-dev libc++abi-dev
+        # CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
         run: |
           sudo apt-get update
           sudo apt-get -y upgrade
-          sudo apt-get -y install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-14 libc++-dev libc++abi-dev
+          sudo apt-get install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-18 libc++-18-dev libc++abi-18-dev
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
           rm -rf build
           mkdir build
           cd build
-          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-18 CXX=/usr/bin/clang++-18 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
