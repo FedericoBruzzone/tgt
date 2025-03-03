@@ -64,7 +64,7 @@ clap = { version = "4.5.30", features = ["derive"] }
 [build-dependencies]
 dirs = "6.0.0"
 reqwest = { version = "0.12.12", features = ["blocking"] }
-zip = { version = "2.2.2" }
+zip = { version = "2.2.3" }
 tdlib-rs = "1.0.5"
 
 [profile.dev]
