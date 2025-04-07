@@ -255,6 +255,17 @@ impl Component for CoreWindow {
             Action::HideChatWindowReply => {
                 self.show_reply_message = false;
             }
+            Action::ChatListSearch => {
+                self.component_focused = Some(ComponentName::Prompt);
+                self.components
+                    .get_mut(&ComponentName::Prompt)
+                    .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
+                    .focus();
+                self.components
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &ComponentName::Prompt)
+                    .for_each(|(_, component)| component.unfocus());
+            }
             _ => {}
         }
 

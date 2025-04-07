@@ -4,6 +4,7 @@ use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
+use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::layout::Rect;
 use ratatui::symbols::border::PLAIN;
 use ratatui::text::{Line, Span, Text};
@@ -11,6 +12,7 @@ use ratatui::widgets::block::{Block, Title};
 use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
+use std::cmp::Ordering;
 use std::sync::Arc;
 use tdlib_rs::enums::{ChatList, UserStatus};
 use tdlib_rs::types::User;
@@ -140,6 +142,8 @@ pub struct ChatListWindow {
     chat_list_state: ListState,
     /// Indicates whether the `ChatListWindow` is focused or not.
     focused: bool,
+    /// String used to sort chats.
+    sort_string: Option<String>,
 }
 /// Implementation of the `ChatListWindow` struct.
 impl ChatListWindow {
@@ -156,6 +160,7 @@ impl ChatListWindow {
         let chat_list = vec![];
         let chat_list_state = ListState::default();
         let focused = false;
+        let sort_string = None;
 
         ChatListWindow {
             app_context,
@@ -164,6 +169,7 @@ impl ChatListWindow {
             chat_list,
             chat_list_state,
             focused,
+            sort_string,
         }
     }
     /// Set the name of the `ChatListWindow`.
@@ -242,6 +248,11 @@ impl ChatListWindow {
             }
         }
     }
+
+    fn sort(&mut self, s: String) {
+        // TODO Does not panic and
+        self.sort_string = Some(s);
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatListWindow` struct.
@@ -270,6 +281,7 @@ impl Component for ChatListWindow {
             Action::ChatListPrevious => self.previous(),
             Action::ChatListUnselect => self.unselect(),
             Action::ChatListOpen => self.confirm_selection(),
+            Action::ChatListSortWithString(s) => self.sort(s),
             _ => {}
         }
     }
@@ -282,7 +294,44 @@ impl Component for ChatListWindow {
         };
         if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
             self.chat_list = items;
+
+            // Sort before drawing
+            if let Some(s) = self.sort_string.as_ref() {
+                let mut config = nucleo_matcher::Config::DEFAULT;
+                config.prefer_prefix = true;
+                let mut matcher = Matcher::new(config);
+                let s: Vec<char> = s.chars().map(|c| c as char).collect();
+                self.chat_list.sort_by(|a, b| {
+                    let a: Vec<char> = a.chat_name.chars().map(|c| c as char).collect();
+                    let b: Vec<char> = b.chat_name.chars().map(|c| c as char).collect();
+                    let a_score = match matcher.fuzzy_indices(
+                        Utf32Str::Unicode(&a),
+                        Utf32Str::Unicode(&s),
+                        &mut Vec::new(),
+                    ) {
+                        Some(v) => v,
+                        None => 0,
+                    };
+                    let b_score = match matcher.fuzzy_indices(
+                        Utf32Str::Unicode(&b),
+                        Utf32Str::Unicode(&s),
+                        &mut Vec::new(),
+                    ) {
+                        Some(v) => v,
+                        None => 0,
+                    };
+                    if a_score < b_score {
+                        Ordering::Less
+                    } else if a_score > b_score {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Equal
+                    }
+                });
+                self.chat_list.reverse();
+            }
         }
+
         let items = self
             .chat_list
             .iter()
