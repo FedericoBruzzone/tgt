@@ -50,6 +50,9 @@ enum Mode {
     /// Usually, when the prompt is replying to a message.
     /// The parameter is the message id of the message that is being replied.
     Reply(i64),
+    /// The search mode of the prompt.
+    /// Used to sort the chat list window based on the search string.
+    SearchChatList,
 }
 /// `InputCell` is a struct that represents a cell of the input.
 /// It is responsible for managing the input cell of the prompt.
@@ -486,11 +489,32 @@ impl Input {
                     self.set_prompt_size_to_one_focused();
                     self.mode = Mode::Normal;
                 }
+                Mode::SearchChatList => {
+                    // TODO Proper error handling
+                    // Sending a focus first is required for the next action to propagate
+                    // to the chat list window.
+                    // This should probably change in the future, components should change
+                    // state all together when an action is received.
+                    // Refer to the update() method in the CorewWindow struct.
+                    self.action_tx
+                        .as_ref()
+                        .unwrap()
+                        .send(Action::FocusComponent(ComponentName::ChatList))
+                        .unwrap();
+                    self.action_tx
+                        .as_ref()
+                        .unwrap()
+                        .send(Action::ChatListSortWithString(self.text_to_string()))
+                        .unwrap();
+                    self.text = vec![vec![]];
+                    self.mode = Mode::Normal;
+                    self.set_prompt_size_to_one_focused();
+                }
             }
         }
     }
     /// Convert the text of the `Input` struct to a string.
-    fn text_to_string(&mut self) -> String {
+    fn text_to_string(&self) -> String {
         // TODO: Parse into markdown
         let mut message = String::new();
         self.text.iter().for_each(|e| {
@@ -793,6 +817,7 @@ impl Component for PromptWindow {
             Action::ReplyMessage(message_id, _) => {
                 self.input.mode = Mode::Reply(message_id);
             }
+            Action::ChatListSearch => self.input.mode = Mode::SearchChatList,
             _ => {}
         }
     }

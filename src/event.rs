@@ -199,9 +199,7 @@ impl Display for Event {
             Event::ReplyMessage(message_id, text) => {
                 write!(f, "ReplyMessage({}, {})", message_id, text)
             }
-            Event::ViewAllMessages => {
-                write!(f, "ViewAllMessages")
-            }
+            Event::ViewAllMessages => write!(f, "ViewAllMessages"),
         }
     }
 }

@@ -143,6 +143,8 @@ pub enum Action {
     ChatListUnselect,
     /// ChatListOpen action.
     ChatListOpen,
+    /// ChatListSortWithString action.
+    ChatListSortWithString(String),
 
     /// ChatWindowNext action.
     ChatWindowNext,
@@ -169,6 +171,10 @@ pub enum Action {
     /// This event is used to reply to a message.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     ReplyMessage(i64, String),
+    /// ChatListSearch event.
+    /// This event is used to set the prompt to search to set the search string
+    /// for the ChatListWindow.
+    ChatListSearch,
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -207,6 +213,7 @@ impl FromStr for Action {
             "chat_list_previous" => Ok(Action::ChatListPrevious),
             "chat_list_unselect" => Ok(Action::ChatListUnselect),
             "chat_list_open" => Ok(Action::ChatListOpen),
+            "chat_list_search" => Ok(Action::ChatListSearch),
             "chat_window_next" => Ok(Action::ChatWindowNext),
             "chat_window_previous" => Ok(Action::ChatWindowPrevious),
             "chat_window_unselect" => Ok(Action::ChatWindowUnselect),
