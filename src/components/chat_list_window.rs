@@ -12,7 +12,6 @@ use ratatui::widgets::block::{Block, Title};
 use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
-use std::cmp::Ordering;
 use std::sync::Arc;
 use tdlib_rs::enums::{ChatList, UserStatus};
 use tdlib_rs::types::User;
@@ -249,11 +248,12 @@ impl ChatListWindow {
         }
     }
 
+    /// Sets the string used to order the entries of the chat list.
     fn sort(&mut self, s: String) {
-        // TODO Does not panic and
         self.sort_string = Some(s);
     }
 
+    /// Unsets the string used to order the entries of the chat list.
     fn default_sort(&mut self) {
         self.sort_string = None;
     }
@@ -323,11 +323,7 @@ impl Component for ChatListWindow {
                             &mut Vec::new(),
                         )
                         .unwrap_or(0);
-                    match (a_score, b_score) {
-                        (a, b) if a < b => Ordering::Less,
-                        (a, b) if a > b => Ordering::Greater,
-                        _ => Ordering::Equal,
-                    }
+                    a_score.cmp(&b_score)
                 });
                 self.chat_list.reverse();
             }
