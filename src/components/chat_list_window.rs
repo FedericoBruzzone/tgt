@@ -305,32 +305,28 @@ impl Component for ChatListWindow {
                 let mut config = nucleo_matcher::Config::DEFAULT;
                 config.prefer_prefix = true;
                 let mut matcher = Matcher::new(config);
-                let s: Vec<char> = s.chars().map(|c| c as char).collect();
+                let s: Vec<char> = s.chars().collect();
                 self.chat_list.sort_by(|a, b| {
-                    let a: Vec<char> = a.chat_name.chars().map(|c| c as char).collect();
-                    let b: Vec<char> = b.chat_name.chars().map(|c| c as char).collect();
-                    let a_score = match matcher.fuzzy_indices(
-                        Utf32Str::Unicode(&a),
-                        Utf32Str::Unicode(&s),
-                        &mut Vec::new(),
-                    ) {
-                        Some(v) => v,
-                        None => 0,
-                    };
-                    let b_score = match matcher.fuzzy_indices(
-                        Utf32Str::Unicode(&b),
-                        Utf32Str::Unicode(&s),
-                        &mut Vec::new(),
-                    ) {
-                        Some(v) => v,
-                        None => 0,
-                    };
-                    if a_score < b_score {
-                        Ordering::Less
-                    } else if a_score > b_score {
-                        Ordering::Greater
-                    } else {
-                        Ordering::Equal
+                    let a: Vec<char> = a.chat_name.chars().collect();
+                    let b: Vec<char> = b.chat_name.chars().collect();
+                    let a_score = matcher
+                        .fuzzy_indices(
+                            Utf32Str::Unicode(&a),
+                            Utf32Str::Unicode(&s),
+                            &mut Vec::new(),
+                        )
+                        .unwrap_or(0);
+                    let b_score = matcher
+                        .fuzzy_indices(
+                            Utf32Str::Unicode(&b),
+                            Utf32Str::Unicode(&s),
+                            &mut Vec::new(),
+                        )
+                        .unwrap_or(0);
+                    match (a_score, b_score) {
+                        (a, b) if a < b => Ordering::Less,
+                        (a, b) if a > b => Ordering::Greater,
+                        _ => Ordering::Equal,
                     }
                 });
                 self.chat_list.reverse();
