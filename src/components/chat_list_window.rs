@@ -253,6 +253,10 @@ impl ChatListWindow {
         // TODO Does not panic and
         self.sort_string = Some(s);
     }
+
+    fn default_sort(&mut self) {
+        self.sort_string = None;
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatListWindow` struct.
@@ -282,6 +286,7 @@ impl Component for ChatListWindow {
             Action::ChatListUnselect => self.unselect(),
             Action::ChatListOpen => self.confirm_selection(),
             Action::ChatListSortWithString(s) => self.sort(s),
+            Action::ChatListRestoreSort => self.default_sort(),
             _ => {}
         }
     }
