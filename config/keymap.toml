@@ -48,6 +48,7 @@ keymap = [
   # Open the selected chat
   { keys = ["enter"], command = "chat_list_open", description = "Open the selected chat"},
   { keys = ["alt+r"], command = "chat_list_search", description = "Focus on prompt to start searching"},
+  { keys = ["alt+c"], command = "chat_list_restore_sort", description = "Restore the default ordering of the chat list"},
 ]
 
 # The chat key bindings are only usable in the chat component.
