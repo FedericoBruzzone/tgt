@@ -490,11 +490,12 @@ impl Input {
                     self.mode = Mode::Normal;
                 }
                 Mode::SearchChatList => {
-                    // Sending a focus first is required for the next action to propagate
-                    // to the chat list window.
-                    // This should probably change in the future, components should change
-                    // state all together when an action is received.
-                    // Refer to the update() method in the CorewWindow struct.
+                    // NOTE: This should probably change in the future. Currently CoreWindow
+                    // only propagates updates to the other components if they are in focus.
+                    // FocusComponent is sent first to work around this problem.
+                    //
+                    // Ideally CoreWindow should propagate updates regardless of focus, that
+                    // way components can handle their own state by themselves.
                     self.action_tx
                         .as_ref()
                         .unwrap()
