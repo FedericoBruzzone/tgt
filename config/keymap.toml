@@ -47,7 +47,9 @@ keymap = [
   { keys = ["right"], command = "chat_list_open", description = "Open the selected chat"},
   # Open the selected chat
   { keys = ["enter"], command = "chat_list_open", description = "Open the selected chat"},
+  # Move focus to the prompt and set its state to receive a string used to order the entries in the chat list window.
   { keys = ["alt+r"], command = "chat_list_search", description = "Focus on prompt to start searching"},
+  # Restore the default sorting in the chat list window.
   { keys = ["alt+c"], command = "chat_list_restore_sort", description = "Restore the default ordering of the chat list"},
 ]
 
