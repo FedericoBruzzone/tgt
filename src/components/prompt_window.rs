@@ -490,7 +490,6 @@ impl Input {
                     self.mode = Mode::Normal;
                 }
                 Mode::SearchChatList => {
-                    // TODO Proper error handling
                     // Sending a focus first is required for the next action to propagate
                     // to the chat list window.
                     // This should probably change in the future, components should change
