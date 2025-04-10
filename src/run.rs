@@ -59,7 +59,6 @@ pub async fn run_app(
     // Main loop
     while tg_backend.have_authorization {
         handle_tui_backend_events(app_context.clone(), tui, tui_backend).await?;
-        handle_tg_backend_events(app_context.clone(), tg_backend).await?;
         handle_app_actions(app_context.clone(), tui, tui_backend, tg_backend).await?;
 
         if app_context.quit_acquire() {
@@ -69,26 +68,6 @@ pub async fn run_app(
         }
     }
 
-    Ok(())
-}
-/// Handle incoming events from the Telegram backend and produce actions if
-/// necessary.
-///
-/// # Arguments
-/// * `app_context` - An Arc wrapped AppContext struct.
-/// * `tg_backend` - A mutable reference to the TgBackend struct.
-///
-/// # Returns
-/// * `Result<(), AppError>` - An Ok result or an error.
-async fn handle_tg_backend_events(
-    app_context: Rc<AppContext>,
-    tg_backend: &mut TgBackend,
-) -> Result<(), AppError<Action>> {
-    if let Some(event) = tg_backend.next().await {
-        match event {
-            _ => {}
-        }
-    }
     Ok(())
 }
 
