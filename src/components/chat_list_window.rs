@@ -12,7 +12,7 @@ use ratatui::widgets::block::{Block, Title};
 use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
-use std::sync::Arc;
+use std::rc::Rc;
 use tdlib_rs::enums::{ChatList, UserStatus};
 use tdlib_rs::types::User;
 use tokio::sync::mpsc::UnboundedSender;
@@ -130,7 +130,7 @@ impl ChatListEntry {
 /// the chat list.
 pub struct ChatListWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `ChatListWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -153,7 +153,7 @@ impl ChatListWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `ChatListWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let name = "".to_string();
         let command_tx = None;
         let chat_list = vec![];

@@ -15,14 +15,14 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, List, ListDirection, ListItem, ListState, Paragraph},
 };
-use std::sync::Arc;
+use std::rc::Rc;
 use tokio::sync::mpsc::UnboundedSender;
 
 /// `ChatWindow` is a struct that represents a window for displaying a chat.
 /// It is responsible for managing the layout and rendering of the chat window.
 pub struct ChatWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `ChatWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -43,7 +43,7 @@ impl ChatWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `ChatWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let name = "".to_string();
         let action_tx = None;
         let message_list = vec![];

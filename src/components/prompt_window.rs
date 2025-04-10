@@ -18,7 +18,7 @@ use ratatui::{
     widgets::{block::Block, Borders, Paragraph},
     Frame,
 };
-use std::{io, sync::Arc};
+use std::{io, rc::Rc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// `DirSelection` is an enum that represents the direction of the selection.
@@ -553,7 +553,7 @@ impl Default for Input {
 /// window.
 pub struct PromptWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `PromptWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -574,7 +574,7 @@ impl PromptWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `PromptWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let name = "".to_string();
         let action_tx = None;
         let focused = false;

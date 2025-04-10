@@ -10,7 +10,7 @@ use crate::{
     event::Event,
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, rc::Rc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// `Tui` is a struct that represents the main user interface for the
@@ -19,7 +19,7 @@ use tokio::sync::mpsc::UnboundedSender;
 /// the appropriate components.
 pub struct Tui {
     /// The application configuration.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// An optional unbounded sender that can send actions to be processed.
     action_tx: Option<UnboundedSender<Action>>,
     /// A hashmap of components that make up the user interface.
@@ -34,23 +34,23 @@ impl Tui {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `Tui` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::TitleBar,
-                TitleBar::new(Arc::clone(&app_context))
+                TitleBar::new(app_context.clone())
                     .with_name("Tgt")
                     .new_boxed(),
             ),
             (
                 ComponentName::CoreWindow,
-                CoreWindow::new(Arc::clone(&app_context))
+                CoreWindow::new(app_context.clone())
                     .with_name("Core Window")
                     .new_boxed(),
             ),
             (
                 ComponentName::StatusBar,
-                StatusBar::new(Arc::clone(&app_context))
+                StatusBar::new(app_context.clone())
                     .with_name("Status Bar")
                     .new_boxed(),
             ),
