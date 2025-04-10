@@ -91,16 +91,6 @@ async fn handle_tg_backend_events(
                     .action_tx()
                     .send(Action::LoadChats(chat_list, limit))?;
             }
-            Event::SendMessage(message, reply_to) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessage(message, reply_to))?;
-            }
-            Event::SendMessageEdited(message_id, message) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessageEdited(message_id, message))?;
-            }
             Event::GetChatHistory => {
                 app_context.action_tx().send(Action::GetChatHistory)?;
             }

@@ -1,5 +1,5 @@
 use crate::app_error::AppError;
-use crate::tg::td_enums::{TdChatList, TdMessageReplyToMessage};
+use crate::tg::td_enums::TdChatList;
 use crossterm::event::{KeyCode, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
 use std::fmt::{self, Display, Formatter};
@@ -45,14 +45,6 @@ pub enum Event {
     GetMe,
     /// Load chats event with a `ChatList` and a limit.
     LoadChats(TdChatList, i32),
-    /// Send message event with a `String`.
-    /// This event is used to send a message.
-    /// The first parameter is the `text`.
-    /// The second parameter is the `reply_to` field.
-    SendMessage(String, Option<TdMessageReplyToMessage>),
-    /// Send message edited event with a `i64` and a `String`.
-    /// The first parameter is the `message_id` and the second parameter is the `text`.
-    SendMessageEdited(i64, String),
     /// Get chat history event.
     GetChatHistory,
     /// Delete messages event with a `Vec<i64>` and a `bool`.
@@ -180,12 +172,6 @@ impl Display for Event {
             Event::GetMe => write!(f, "GetMe"),
             Event::LoadChats(chat_list, limit) => {
                 write!(f, "LoadChats({:?}, {})", chat_list, limit)
-            }
-            Event::SendMessage(s, reply_to) => {
-                write!(f, "SendMessage({}, {:?})", s, reply_to)
-            }
-            Event::SendMessageEdited(message_id, s) => {
-                write!(f, "SendMessageEdited({}, {})", message_id, s)
             }
             Event::GetChatHistory => {
                 write!(f, "GetChatHistory")
