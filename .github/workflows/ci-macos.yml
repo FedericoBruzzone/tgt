@@ -2,7 +2,7 @@ name: CI macOS
 
 on:
   push:
-    branches: [ main ]
+    # branches: [ main ]
     paths:
       - 'src/**'
       - 'Cargo.lock'
@@ -11,7 +11,7 @@ on:
       - 'config/**'
       - '.github/workflows/**'
   pull_request:
-    branches: [ main ]
+    # branches: [ main ]
     paths:
       - 'src/**'
       - 'Cargo.lock'

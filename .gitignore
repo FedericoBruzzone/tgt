@@ -3,6 +3,7 @@
 /.log
 /.logs
 # /.vscode
+/.vscode/settings.json
 result
 outputs/
 result-*
