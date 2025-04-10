@@ -30,6 +30,13 @@ pub struct TgBackend {
     full_chats_list: bool,
 }
 
+// NOTE: To improve performance, requests to update the telegram state should
+// only be received through a channel so that they may be handled in their
+// own thread. Instead the only functions that should be exposed are getters,
+// that way the UI can draw the data that it currently has while the rest of
+// the data is pulled in the background. Upon receiving new data the backend
+// should send a signal to the frontend that new data is available so that it
+// may redraw with the new data.
 impl TgBackend {
     pub fn new(app_context: Rc<AppContext>) -> Result<Self, std::io::Error> {
         tracing::info!("Creating TgBackend");
