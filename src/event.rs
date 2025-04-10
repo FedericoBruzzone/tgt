@@ -1,5 +1,4 @@
 use crate::app_error::AppError;
-use crate::tg::td_enums::TdChatList;
 use crossterm::event::{KeyCode, KeyModifiers, MouseEvent};
 use ratatui::layout::Rect;
 use std::fmt::{self, Display, Formatter};
@@ -29,31 +28,8 @@ pub enum Event {
     FocusLost,
     /// Focus Gained event.
     FocusGained,
-
     /// Update area event with a `Rect` struct.
     UpdateArea(Rect),
-    /// EditMessage event with a `String`.
-    /// This event is used to edit a message.
-    /// The first parameter is the `message_id` and the second parameter is the `text`.
-    EditMessage(i64, String),
-    /// ReplyMessage event with a `String`.
-    /// This event is used to reply to a message.
-    /// The first parameter is the `message_id` and the second parameter is the `text`.
-    ReplyMessage(i64, String),
-
-    /// GetMe event.
-    GetMe,
-    /// Load chats event with a `ChatList` and a limit.
-    LoadChats(TdChatList, i32),
-    /// Get chat history event.
-    GetChatHistory,
-    /// Delete messages event with a `Vec<i64>` and a `bool`.
-    /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
-    /// If `revoke` is true, the message will be deleted for everyone.
-    /// If `revoke` is false, the message will be deleted only for the current user.
-    DeleteMessages(Vec<i64>, bool),
-    /// View all messages event.
-    ViewAllMessages,
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -169,23 +145,6 @@ impl Display for Event {
             Event::Paste(s) => write!(f, "Paste({})", s),
             Event::FocusLost => write!(f, "FocusLost"),
             Event::FocusGained => write!(f, "FocusGained"),
-            Event::GetMe => write!(f, "GetMe"),
-            Event::LoadChats(chat_list, limit) => {
-                write!(f, "LoadChats({:?}, {})", chat_list, limit)
-            }
-            Event::GetChatHistory => {
-                write!(f, "GetChatHistory")
-            }
-            Event::DeleteMessages(message_ids, revoke) => {
-                write!(f, "DeleteMessages({:?}, {})", message_ids, revoke)
-            }
-            Event::EditMessage(message_id, text) => {
-                write!(f, "EditMessage({}, {})", message_id, text)
-            }
-            Event::ReplyMessage(message_id, text) => {
-                write!(f, "ReplyMessage({}, {})", message_id, text)
-            }
-            Event::ViewAllMessages => write!(f, "ViewAllMessages"),
         }
     }
 }

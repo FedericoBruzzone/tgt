@@ -1,4 +1,3 @@
-use crate::component_name::ComponentName::Prompt;
 use crate::{
     action::Action, app_context::AppContext, app_error::AppError,
     configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
@@ -87,42 +86,6 @@ async fn handle_tg_backend_events(
 ) -> Result<(), AppError<Action>> {
     if let Some(event) = tg_backend.next().await {
         match event {
-            Event::LoadChats(chat_list, limit) => {
-                app_context
-                    .action_tx()
-                    .send(Action::LoadChats(chat_list, limit))?;
-            }
-            Event::GetChatHistory => {
-                app_context.action_tx().send(Action::GetChatHistory)?;
-            }
-            Event::DeleteMessages(message_ids, revoke) => {
-                app_context
-                    .action_tx()
-                    .send(Action::DeleteMessages(message_ids, revoke))?;
-            }
-            Event::EditMessage(message_id, message) => {
-                // It is important to focus the prompt before editing the message.
-                // Because the actions are sent to the focused component.
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-
-                app_context
-                    .action_tx()
-                    .send(Action::EditMessage(message_id, message))?;
-            }
-            Event::ReplyMessage(message_id, message) => {
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-
-                app_context
-                    .action_tx()
-                    .send(Action::ReplyMessage(message_id, message))?;
-            }
-            Event::ViewAllMessages => {
-                app_context.action_tx().send(Action::ViewAllMessages)?;
-            }
             _ => {}
         }
     }

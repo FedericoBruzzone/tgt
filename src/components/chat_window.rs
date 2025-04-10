@@ -1,8 +1,8 @@
 use crate::{
     action::Action,
     app_context::AppContext,
+    component_name::ComponentName,
     components::component_traits::{Component, HandleFocus},
-    event::Event,
     tg::message_entry::MessageEntry,
 };
 use arboard::Clipboard;
@@ -75,9 +75,10 @@ impl ChatWindow {
         let i = match self.message_list_state.selected() {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx.send(Event::GetChatHistory).unwrap();
-                    }
+                    self.app_context
+                        .action_tx()
+                        .send(Action::GetChatHistory)
+                        .unwrap();
                 }
 
                 if i == 0 {
@@ -96,9 +97,10 @@ impl ChatWindow {
         let i = match self.message_list_state.selected() {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx.send(Event::GetChatHistory).unwrap();
-                    }
+                    self.app_context
+                        .action_tx()
+                        .send(Action::GetChatHistory)
+                        .unwrap();
                 }
 
                 if i >= self.message_list.len() - 1 {
@@ -123,17 +125,16 @@ impl ChatWindow {
     /// * `revoke` - A boolean flag indicating whether the message should be revoked or not.
     fn delete_selected(&mut self, revoke: bool) {
         if let Some(selected) = self.message_list_state.selected() {
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                let sender_id = self.message_list[selected].sender_id();
-                if sender_id != self.app_context.tg_context().me() {
-                    return;
-                }
-                let message_id = self.message_list[selected].id();
-                event_tx
-                    .send(Event::DeleteMessages(vec![message_id], revoke))
-                    .unwrap();
-                self.app_context.tg_context().delete_message(message_id);
+            let sender_id = self.message_list[selected].sender_id();
+            if sender_id != self.app_context.tg_context().me() {
+                return;
             }
+            let message_id = self.message_list[selected].id();
+            self.app_context
+                .action_tx()
+                .send(Action::DeleteMessages(vec![message_id], revoke))
+                .unwrap();
+            self.app_context.tg_context().delete_message(message_id);
         }
     }
 
@@ -156,11 +157,15 @@ impl ChatWindow {
             }
             let message = self.message_list[selected].message_content_to_string();
             let message_id = self.message_list[selected].id();
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                event_tx
-                    .send(Event::EditMessage(message_id, message))
-                    .unwrap();
-            }
+
+            self.app_context
+                .action_tx()
+                .send(Action::FocusComponent(ComponentName::Prompt))
+                .unwrap();
+            self.app_context
+                .action_tx()
+                .send(Action::EditMessage(message_id, message))
+                .unwrap();
         }
     }
 
@@ -169,11 +174,15 @@ impl ChatWindow {
         if let Some(selected) = self.message_list_state.selected() {
             let message_id = self.message_list[selected].id();
             let text = self.message_list[selected].message_content_to_string();
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                event_tx
-                    .send(Event::ReplyMessage(message_id, text))
-                    .unwrap();
-            }
+
+            self.app_context
+                .action_tx()
+                .send(Action::FocusComponent(ComponentName::Prompt))
+                .unwrap();
+            self.app_context
+                .action_tx()
+                .send(Action::ReplyMessage(message_id, text))
+                .unwrap();
         }
     }
 }

@@ -2,7 +2,6 @@ use crate::action::Action;
 use crate::app_context::AppContext;
 use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
-use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::layout::Rect;
@@ -187,11 +186,10 @@ impl ChatListWindow {
         let i = match self.chat_list_state.selected() {
             Some(i) => {
                 if i == self.chat_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx
-                            .send(Event::LoadChats(ChatList::Main.into(), 20))
-                            .unwrap();
-                    }
+                    self.app_context
+                        .action_tx()
+                        .send(Action::LoadChats(ChatList::Main.into(), 20))
+                        .unwrap();
                 }
 
                 if i >= self.chat_list.len() - 1 {
@@ -236,14 +234,18 @@ impl ChatListWindow {
                     .send(Action::FocusComponent(Prompt))
                     .unwrap();
 
-                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                    self.app_context.tg_context().set_from_message_id(0);
-                    // Load chat history
-                    event_tx.send(Event::GetChatHistory).unwrap();
+                self.app_context.tg_context().set_from_message_id(0);
+                // Load chat history
+                self.app_context
+                    .action_tx()
+                    .send(Action::GetChatHistory)
+                    .unwrap();
 
-                    // Mark all unread messages as read
-                    event_tx.send(Event::ViewAllMessages).unwrap();
-                }
+                // Mark all unread messages as read
+                self.app_context
+                    .action_tx()
+                    .send(Action::ViewAllMessages)
+                    .unwrap();
             }
         }
     }
