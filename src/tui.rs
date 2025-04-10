@@ -13,6 +13,10 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, rc::Rc};
 use tokio::sync::mpsc::UnboundedSender;
 
+// NOTE: Tui and AppContext should be merged in a single struct, or at the
+// very least, AppContext should be a field of Tui that is not shared with
+// any other struct. Instead the various structs should only pass the relevant
+// data through channels.
 /// `Tui` is a struct that represents the main user interface for the
 /// application. It is responsible for managing the layout and rendering of all
 /// the components. It also handles the distribution of events and actions to

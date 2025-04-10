@@ -303,6 +303,7 @@ async fn handle_cli(app_context: Rc<AppContext>, tg_backend: &mut TgBackend) -> 
                 match msg {
                     Ok(msg) => {
                         let message_id = msg.id;
+                        // TODO: Spin lock increases CPU usage by a lot. Need to replace why a notify.
                         while app_context.tg_context().last_acknowledged_message_id() != message_id
                         {
                         }

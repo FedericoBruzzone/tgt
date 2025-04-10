@@ -18,8 +18,16 @@ use tdlib_rs::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
+// NOTE: TgContext should be part of TgBackend an not shared around.
+// Some of the fields like `reply_message_id` should not be a thing,
+// the message_id and the message_text should come as parameters to
+// TgBackend (ideally with the actor model, firstly to avoid locks,
+// secondly to have a clear distiction in responsability). This struct
+// should only expose a channel sender instead of multiple setters and
+// getters.
 #[derive(Debug, Default)]
 pub struct TgContext {
+    // Here it uses std Mutex instead of tokio Mutex
     users: Mutex<HashMap<i64, User>>,
     basic_groups: Mutex<HashMap<i64, BasicGroup>>,
     supergroups: Mutex<HashMap<i64, Supergroup>>,
