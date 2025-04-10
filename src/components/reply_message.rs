@@ -13,7 +13,7 @@ use {
         text::{Line, Span, Text},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
-    std::{io, sync::Arc},
+    std::{io, rc::Rc},
     tokio::sync::mpsc,
 };
 
@@ -21,7 +21,7 @@ use {
 /// It is responsible for managing the layout and rendering of the reply message window.
 pub struct ReplyMessage {
     /// The application configuration.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `ReplyMessage`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -31,7 +31,7 @@ pub struct ReplyMessage {
 }
 /// Implementation of `ReplyMessage` struct.
 impl ReplyMessage {
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
         let focused = false;

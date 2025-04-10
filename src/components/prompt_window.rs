@@ -18,7 +18,7 @@ use ratatui::{
     widgets::{block::Block, Borders, Paragraph},
     Frame,
 };
-use std::{io, sync::Arc};
+use std::{io, rc::Rc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// `DirSelection` is an enum that represents the direction of the selection.
@@ -457,59 +457,65 @@ impl Input {
     ///
     /// # Arguments
     /// * `app_context` - An Arc wrapped AppContext struct.
-    fn send_message(&mut self, app_context: Arc<AppContext>) {
-        if let Some(event_tx) = app_context.tg_context().event_tx().as_ref() {
-            match self.mode {
-                Mode::Normal => {
-                    event_tx
-                        .send(Event::SendMessage(self.text_to_string(), None))
-                        .unwrap();
-                    self.text = vec![vec![]];
-                    self.set_prompt_size_to_one_focused();
-                }
-                Mode::Edit(message_id) => {
-                    event_tx
-                        .send(Event::SendMessageEdited(message_id, self.text_to_string()))
-                        .unwrap();
-                    self.text = vec![vec![]];
-                    self.set_prompt_size_to_one_focused();
-                    self.mode = Mode::Normal;
-                }
-                Mode::Reply(message_id) => {
-                    event_tx
-                        .send(Event::SendMessage(
-                            self.text_to_string(),
-                            Some(TdMessageReplyToMessage {
-                                chat_id: 0, // This must be  0 and not `app_context.tg_context().open_chat_id()` because the tdlib (maybe from the version 1.8.29 or before)  is able to know the chat id from the message_id; it will infer the chat id from the message_id.
-                                message_id,
-                            }),
-                        ))
-                        .unwrap();
-                    self.text = vec![vec![]];
-                    self.set_prompt_size_to_one_focused();
-                    self.mode = Mode::Normal;
-                }
-                Mode::SearchChatList => {
-                    // NOTE: This should probably change in the future. Currently CoreWindow
-                    // only propagates updates to the other components if they are in focus.
-                    // FocusComponent is sent first to work around this problem.
-                    //
-                    // Ideally CoreWindow should propagate updates regardless of focus, that
-                    // way components can handle their own state by themselves.
-                    self.action_tx
-                        .as_ref()
-                        .unwrap()
-                        .send(Action::FocusComponent(ComponentName::ChatList))
-                        .unwrap();
-                    self.action_tx
-                        .as_ref()
-                        .unwrap()
-                        .send(Action::ChatListSortWithString(self.text_to_string()))
-                        .unwrap();
-                    self.text = vec![vec![]];
-                    self.mode = Mode::Normal;
-                    self.set_prompt_size_to_one_focused();
-                }
+    fn send_message(&mut self) {
+        match self.mode {
+            Mode::Normal => {
+                self.action_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SendMessage(self.text_to_string(), None))
+                    .unwrap();
+                self.text = vec![vec![]];
+                self.set_prompt_size_to_one_focused();
+            }
+            Mode::Edit(message_id) => {
+                // NOTE: This seems to be bugged. It doesn't actually edit the message.
+                // This was true even before the refactor.
+                self.action_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SendMessageEdited(message_id, self.text_to_string()))
+                    .unwrap();
+                self.text = vec![vec![]];
+                self.set_prompt_size_to_one_focused();
+                self.mode = Mode::Normal;
+            }
+            Mode::Reply(message_id) => {
+                self.action_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SendMessage(
+                        self.text_to_string(),
+                        Some(TdMessageReplyToMessage {
+                            chat_id: 0,
+                            message_id,
+                        }),
+                    ))
+                    .unwrap();
+                self.text = vec![vec![]];
+                self.set_prompt_size_to_one_focused();
+                self.mode = Mode::Normal;
+            }
+            Mode::SearchChatList => {
+                // NOTE: This should probably change in the future. Currently CoreWindow
+                // only propagates updates to the other components if they are in focus.
+                // FocusComponent is sent first to work around this problem.
+                //
+                // Ideally CoreWindow should propagate updates regardless of focus, that
+                // way components can handle their own state by themselves.
+                self.action_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::FocusComponent(ComponentName::ChatList))
+                    .unwrap();
+                self.action_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::ChatListSortWithString(self.text_to_string()))
+                    .unwrap();
+                self.text = vec![vec![]];
+                self.mode = Mode::Normal;
+                self.set_prompt_size_to_one_focused();
             }
         }
     }
@@ -547,7 +553,7 @@ impl Default for Input {
 /// window.
 pub struct PromptWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `PromptWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -568,7 +574,7 @@ impl PromptWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `PromptWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let name = "".to_string();
         let action_tx = None;
         let focused = false;
@@ -746,7 +752,7 @@ impl Component for PromptWindow {
 
                 (KeyCode::Enter, Modifiers { alt: true, .. }) => {
                     self.input.unselect_all();
-                    self.input.send_message(Arc::clone(&self.app_context));
+                    self.input.send_message();
                 }
 
                 (KeyCode::Backspace, Modifiers { control: true, .. })
