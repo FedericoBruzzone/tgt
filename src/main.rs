@@ -32,7 +32,7 @@ use clap::Parser;
 use configs::custom::telegram_custom::TelegramConfig;
 use lazy_static::lazy_static;
 use std::panic::{set_hook, take_hook};
-use std::sync::Arc;
+use std::rc::Rc;
 
 lazy_static! {
     pub static ref LOGGER_CONFIG: LoggerConfig = LoggerConfig::get_config();
@@ -89,7 +89,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
 
     let tg_context = TgContext::default();
     tracing::info!("Telegram context: {:?}", tg_context);
-    let app_context = Arc::new(AppContext::new(
+    let app_context = Rc::new(AppContext::new(
         app_config,
         keymap_config,
         theme_config,
@@ -100,16 +100,16 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     )?);
     tracing::info!("App context: {:?}", app_context);
 
-    let mut tui_backend = TuiBackend::new(Arc::clone(&app_context))?;
+    let mut tui_backend = TuiBackend::new(app_context.clone())?;
     tracing::info!("Tui backend initialized");
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
-    let mut tui = Tui::new(Arc::clone(&app_context));
+    let mut tui = Tui::new(app_context.clone());
     tracing::info!("Tui initialized");
-    let mut tg_backend = TgBackend::new(Arc::clone(&app_context)).unwrap();
+    let mut tg_backend = TgBackend::new(app_context.clone()).unwrap();
     tracing::info!("Telegram backend initialized");
 
     match run::run_app(
-        Arc::clone(&app_context),
+        app_context.clone(),
         &mut tui,
         &mut tui_backend,
         &mut tg_backend,

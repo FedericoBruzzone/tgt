@@ -2,6 +2,7 @@ use crate::action::Action;
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, VecDeque};
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib_rs::enums::{
@@ -25,12 +26,12 @@ pub struct TgBackend {
     pub client_id: i32,
     pub have_authorization: bool,
     pub can_quit: Arc<AtomicBool>,
-    pub app_context: Arc<AppContext>,
+    pub app_context: Rc<AppContext>,
     full_chats_list: bool,
 }
 
 impl TgBackend {
-    pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
+    pub fn new(app_context: Rc<AppContext>) -> Result<Self, std::io::Error> {
         tracing::info!("Creating TgBackend");
         let handle_updates = tokio::spawn(async {});
         let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();

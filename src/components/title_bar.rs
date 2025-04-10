@@ -10,7 +10,7 @@ use {
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
     ratatui_image::picker::Picker,
-    std::{io, sync::Arc},
+    std::{io, rc::Rc},
     tokio::sync::mpsc,
 };
 
@@ -18,7 +18,7 @@ use {
 /// It is responsible for managing the layout and rendering of the title bar.
 pub struct TitleBar {
     /// The application configuration.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `TitleBar`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -30,7 +30,7 @@ pub struct TitleBar {
 }
 /// Implementation of `TitleBar` struct.
 impl TitleBar {
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
         let focused = false;

@@ -14,7 +14,7 @@ use crate::{
     event::Event,
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use std::{collections::HashMap, io, sync::Arc};
+use std::{collections::HashMap, io, rc::Rc};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::reply_message::ReplyMessage;
@@ -23,7 +23,7 @@ use super::reply_message::ReplyMessage;
 /// It is responsible for managing the layout and rendering of the core window.
 pub struct CoreWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `CoreWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -57,29 +57,29 @@ impl CoreWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `CoreWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::ChatList,
-                ChatListWindow::new(Arc::clone(&app_context))
+                ChatListWindow::new(app_context.clone())
                     .with_name(ComponentName::ChatList.to_string())
                     .new_boxed(),
             ),
             (
                 ComponentName::Chat,
-                ChatWindow::new(Arc::clone(&app_context))
+                ChatWindow::new(app_context.clone())
                     .with_name(ComponentName::Chat.to_string())
                     .new_boxed(),
             ),
             (
                 ComponentName::Prompt,
-                PromptWindow::new(Arc::clone(&app_context))
+                PromptWindow::new(app_context.clone())
                     .with_name(ComponentName::Prompt.to_string())
                     .new_boxed(),
             ),
             (
                 ComponentName::ReplyMessage,
-                ReplyMessage::new(Arc::clone(&app_context))
+                ReplyMessage::new(app_context.clone())
                     .with_name(ComponentName::ReplyMessage.to_string())
                     .new_boxed(),
             ),

@@ -5,7 +5,8 @@ use crate::{
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
-use std::{collections::HashMap, io, sync::Arc, time::Instant};
+use std::rc::Rc;
+use std::{collections::HashMap, io, time::Instant};
 use tdlib_rs::enums::ChatList;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -21,7 +22,7 @@ use tokio::sync::mpsc::UnboundedSender;
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 pub async fn run_app(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
     tg_backend: &mut TgBackend,
@@ -38,7 +39,7 @@ pub async fn run_app(
     tg_backend.get_me().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
 
-    match handle_cli(Arc::clone(&app_context), tg_backend).await {
+    match handle_cli(app_context.clone(), tg_backend).await {
         HandleCliOutcome::Quit => {
             futures::join!(quit_cli(tg_backend));
             return Ok(());
@@ -58,9 +59,9 @@ pub async fn run_app(
 
     // Main loop
     while tg_backend.have_authorization {
-        handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
-        handle_tg_backend_events(Arc::clone(&app_context), tg_backend).await?;
-        handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
+        handle_tui_backend_events(app_context.clone(), tui, tui_backend).await?;
+        handle_tg_backend_events(app_context.clone(), tg_backend).await?;
+        handle_app_actions(app_context.clone(), tui, tui_backend, tg_backend).await?;
 
         if app_context.quit_acquire() {
             quit_tui(tg_backend, tui_backend).await;
@@ -81,7 +82,7 @@ pub async fn run_app(
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn handle_tg_backend_events(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
     if let Some(event) = tg_backend.next().await {
@@ -140,7 +141,7 @@ async fn handle_tg_backend_events(
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn handle_tui_backend_events(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
 ) -> Result<(), AppError<Action>> {
@@ -236,7 +237,7 @@ async fn consume_until_single_action(
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 pub async fn handle_app_actions(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
     tg_backend: &mut TgBackend,
@@ -326,7 +327,7 @@ enum HandleCliOutcome {
 /// * `app_context` - An Arc wrapped AppContext struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) -> HandleCliOutcome {
+async fn handle_cli(app_context: Rc<AppContext>, tg_backend: &mut TgBackend) -> HandleCliOutcome {
     if app_context.cli_args().telegram_cli().logout() {
         return HandleCliOutcome::Logout;
     }
