@@ -1,6 +1,6 @@
 use crate::{
     action::Action, app_context::AppContext, app_error::AppError,
-    configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
+    configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackendOld,
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
@@ -24,7 +24,7 @@ pub async fn run_app(
     app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
-    tg_backend: &mut TgBackend,
+    tg_backend: &mut TgBackendOld,
 ) -> Result<(), AppError<Action>> {
     tracing::info!("Starting run_app");
 
@@ -182,7 +182,7 @@ pub async fn handle_app_actions(
     app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
-    tg_backend: &mut TgBackend,
+    tg_backend: &mut TgBackendOld,
 ) -> Result<(), AppError<Action>> {
     while let Ok(action) = app_context.action_rx().try_recv() {
         match action {
@@ -269,7 +269,10 @@ enum HandleCliOutcome {
 /// * `app_context` - An Arc wrapped AppContext struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn handle_cli(app_context: Rc<AppContext>, tg_backend: &mut TgBackend) -> HandleCliOutcome {
+async fn handle_cli(
+    app_context: Rc<AppContext>,
+    tg_backend: &mut TgBackendOld,
+) -> HandleCliOutcome {
     if app_context.cli_args().telegram_cli().logout() {
         return HandleCliOutcome::Logout;
     }
@@ -338,7 +341,7 @@ async fn handle_cli(app_context: Rc<AppContext>, tg_backend: &mut TgBackend) -> 
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
-async fn quit_tui(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
+async fn quit_tui(tg_backend: &mut TgBackendOld, tui_backend: &mut TuiBackend) {
     futures::join!(tg_backend.offline());
     tg_backend.have_authorization = false;
     tg_backend.close().await;
@@ -353,7 +356,7 @@ async fn quit_tui(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
 ///
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn quit_cli(tg_backend: &mut TgBackend) {
+async fn quit_cli(tg_backend: &mut TgBackendOld) {
     tg_backend.have_authorization = false;
     tg_backend.close().await;
     tg_backend.handle_authorization_state().await;
@@ -366,7 +369,7 @@ async fn quit_cli(tg_backend: &mut TgBackend) {
 ///
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn log_out(tg_backend: &mut TgBackend) {
+async fn log_out(tg_backend: &mut TgBackendOld) {
     tg_backend.log_out().await;
     tg_backend.handle_authorization_state().await;
 
