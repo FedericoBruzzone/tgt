@@ -989,6 +989,7 @@ impl TgBackend {
                     Action::LoadChats(chat_list, limit) => {
                         self.load_chats(chat_list.into(), limit).await
                     }
+                    Action::ViewAllMessages(chat_id) => self.view_all_messages(chat_id).await,
                     _ => (),
                 }
             } else {
@@ -1013,6 +1014,22 @@ impl TgBackend {
             tracing::error!("Failed to load chats: {e:?}");
             let mut full_cl = self.full_chats_list.write().await;
             *full_cl = true;
+        }
+    }
+
+    async fn view_all_messages(&mut self, chat_id: i64) {
+        let to_read = match self.chats.read().await.get(&chat_id) {
+            Some(c) => match c.last_message.as_ref() {
+                Some(m) => m.id,
+                None => -1,
+            },
+            None => -1,
+        };
+
+        if let Err(e) =
+            functions::view_messages(chat_id, vec![to_read], None, true, self.client_id).await
+        {
+            tracing::error!("Failed to view all messages: {e:?}");
         }
     }
 }
