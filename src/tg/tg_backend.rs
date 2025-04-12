@@ -89,12 +89,14 @@ impl TgBackendOld {
         }
     }
 
+    // Used only in CLI
     pub async fn load_all_chats(&mut self) {
         while !self.full_chats_list {
             self.load_chats(ChatList::Main, 50).await;
         }
     }
 
+    // Used only in CLI
     pub async fn search_chats(
         &self,
         username: String,
@@ -934,6 +936,7 @@ pub struct TgBackend {
     last_acknowledged_message_id: RwLock<i64>,
 }
 
+// TODO: Implement functions called only through the CLI interface
 impl TgBackend {
     async fn new() -> Self {
         tracing::info!("Creating TgBackend");
@@ -991,6 +994,11 @@ impl TgBackend {
             } else {
                 break;
             }
+        }
+
+        match functions::close(self.client_id).await {
+            Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
+            Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
         }
     }
 
