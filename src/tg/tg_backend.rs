@@ -1,7 +1,7 @@
 use crate::action::Action;
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
@@ -10,14 +10,19 @@ use tdlib_rs::enums::{
     Messages, OptionValue, Update, User,
 };
 use tdlib_rs::functions;
-use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tdlib_rs::types::{
+    BasicGroup, BasicGroupFullInfo, Chat, ChatPosition, InputMessageText, LogStreamFile,
+    OptionValueBoolean, SecretChat, Supergroup, SupergroupFullInfo, UserFullInfo,
+};
+use tokio::spawn;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
 use super::message_entry::MessageEntry;
 use super::td_enums::TdMessageReplyToMessage;
 
-pub struct TgBackend {
+pub struct TgBackendOld {
     pub handle_updates: JoinHandle<()>,
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
     pub auth_tx: UnboundedSender<AuthorizationState>,
@@ -37,12 +42,12 @@ pub struct TgBackend {
 // the data is pulled in the background. Upon receiving new data the backend
 // should send a signal to the frontend that new data is available so that it
 // may redraw with the new data.
-impl TgBackend {
+impl TgBackendOld {
     pub fn new(app_context: Rc<AppContext>) -> Result<Self, std::io::Error> {
         tracing::info!("Creating TgBackend");
-        let handle_updates = tokio::spawn(async {});
-        let (auth_tx, auth_rx) = tokio::sync::mpsc::unbounded_channel::<AuthorizationState>();
-        let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let handle_updates = spawn(async {});
+        let (auth_tx, auth_rx) = unbounded_channel::<AuthorizationState>();
+        let (event_tx, event_rx) = unbounded_channel::<Event>();
         let client_id = tdlib_rs::create_client();
         let have_authorization = false;
         let can_quit = Arc::new(AtomicBool::new(false));
@@ -533,7 +538,7 @@ impl TgBackend {
         let can_quit = self.can_quit.clone();
         let tg_context = self.app_context.tg_context();
 
-        self.handle_updates = tokio::spawn(async move {
+        self.handle_updates = spawn(async move {
             tracing::info!("Starting handling updates from TDLib");
             while !can_quit.load(Ordering::Acquire) {
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
@@ -905,4 +910,84 @@ fn ask_user(string: &str) -> String {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     input.trim().to_string()
+}
+
+pub struct TgBackend {
+    pub auth_rx: UnboundedReceiver<AuthorizationState>,
+    pub auth_tx: UnboundedSender<AuthorizationState>,
+    pub event_rx: UnboundedReceiver<Event>,
+    pub event_tx: UnboundedSender<Event>,
+    pub client_id: i32,
+    pub have_authorization: bool,
+    full_chats_list: bool,
+
+    users: RwLock<HashMap<i64, User>>,
+    basic_groups: RwLock<HashMap<i64, BasicGroup>>,
+    supergroups: RwLock<HashMap<i64, Supergroup>>,
+    secret_chats: RwLock<HashMap<i32, SecretChat>>,
+    chats: RwLock<HashMap<i64, Chat>>,
+    chats_index: RwLock<BTreeSet<OrderedChat>>,
+    users_full_info: RwLock<HashMap<i64, UserFullInfo>>,
+    basic_groups_full_info: RwLock<HashMap<i64, BasicGroupFullInfo>>,
+    supergroups_full_info: RwLock<HashMap<i64, SupergroupFullInfo>>,
+    me: RwLock<i64>,
+    last_acknowledged_message_id: RwLock<i64>,
+}
+
+impl TgBackend {
+    async fn new() -> Self {
+        tracing::info!("Creating TgBackend");
+        let (auth_tx, auth_rx) = unbounded_channel::<AuthorizationState>();
+        let (event_tx, event_rx) = unbounded_channel::<Event>();
+        let client_id = tdlib_rs::create_client();
+        let have_authorization = false;
+        let full_chats_list = false;
+        tracing::info!("Created TDLib client with client_id: {}", client_id);
+
+        Self {
+            auth_tx,
+            auth_rx,
+            event_tx,
+            event_rx,
+            client_id,
+            have_authorization,
+            full_chats_list,
+            users: Default::default(),
+            basic_groups: Default::default(),
+            supergroups: Default::default(),
+            secret_chats: Default::default(),
+            chats: Default::default(),
+            chats_index: Default::default(),
+            users_full_info: Default::default(),
+            basic_groups_full_info: Default::default(),
+            supergroups_full_info: Default::default(),
+            me: Default::default(),
+            last_acknowledged_message_id: Default::default(),
+        }
+    }
+
+    /// Need to be called in a spawned thread
+    async fn start(&mut self) {
+        match functions::get_me(self.client_id).await {
+            Ok(User::User(me)) => {
+                let mut m = self.me.write().await;
+                *m = me.id;
+            }
+            Err(error) => tracing::error!("Failed to get me: {error:?}"),
+        }
+
+        self.process().await;
+    }
+
+    async fn process(&mut self) {
+        loop {
+            if let Some(ev) = self.event_rx.recv().await {
+                match ev {
+                    _ => (),
+                }
+            } else {
+                break;
+            }
+        }
+    }
 }
