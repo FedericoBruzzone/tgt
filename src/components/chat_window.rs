@@ -77,7 +77,7 @@ impl ChatWindow {
                 if i == self.message_list.len() / 2 {
                     self.app_context
                         .action_tx()
-                        .send(Action::GetChatHistory)
+                        .send(Action::GetChatHistoryOld)
                         .unwrap();
                 }
 
@@ -99,7 +99,7 @@ impl ChatWindow {
                 if i == self.message_list.len() / 2 {
                     self.app_context
                         .action_tx()
-                        .send(Action::GetChatHistory)
+                        .send(Action::GetChatHistoryOld)
                         .unwrap();
                 }
 
