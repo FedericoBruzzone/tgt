@@ -240,7 +240,7 @@ pub async fn handle_app_actions(
                     .tg_context()
                     .set_reply_message(message_id, message.to_string());
             }
-            Action::ViewAllMessages => {
+            Action::ViewAllMessagesOld => {
                 tg_backend.view_all_messages().await;
             }
             _ => {}

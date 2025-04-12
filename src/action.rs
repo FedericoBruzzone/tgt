@@ -2,7 +2,10 @@ use {
     super::component_name::ComponentName,
     crate::{
         app_error::AppError,
-        tg::td_enums::{TdChatList, TdMessageReplyToMessage},
+        tg::{
+            message_entry::MessageEntry,
+            td_enums::{TdChatList, TdMessageReplyToMessage},
+        },
     },
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::layout::Rect,
@@ -110,7 +113,9 @@ pub enum Action {
     /// If `revoke` is false, the message will be deleted only for the current user.
     DeleteMessages(Vec<i64>, bool),
     /// ViewAllMessages action.
-    ViewAllMessages,
+    ViewAllMessagesOld,
+    /// Set all messages of the chat as read
+    ViewAllMessages(i64),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
