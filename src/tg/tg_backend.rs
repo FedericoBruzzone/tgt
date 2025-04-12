@@ -915,11 +915,11 @@ fn ask_user(string: &str) -> String {
 pub struct TgBackend {
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
     pub auth_tx: UnboundedSender<AuthorizationState>,
-    pub event_rx: UnboundedReceiver<Event>,
-    pub event_tx: UnboundedSender<Event>,
+    pub action_rx: UnboundedReceiver<Action>,
+    pub action_tx: UnboundedSender<Action>,
     pub client_id: i32,
     pub have_authorization: bool,
-    full_chats_list: bool,
+    full_chats_list: RwLock<bool>,
 
     users: RwLock<HashMap<i64, User>>,
     basic_groups: RwLock<HashMap<i64, BasicGroup>>,
@@ -938,17 +938,17 @@ impl TgBackend {
     async fn new() -> Self {
         tracing::info!("Creating TgBackend");
         let (auth_tx, auth_rx) = unbounded_channel::<AuthorizationState>();
-        let (event_tx, event_rx) = unbounded_channel::<Event>();
+        let (event_tx, event_rx) = unbounded_channel::<Action>();
         let client_id = tdlib_rs::create_client();
         let have_authorization = false;
-        let full_chats_list = false;
+        let full_chats_list = RwLock::new(false);
         tracing::info!("Created TDLib client with client_id: {}", client_id);
 
         Self {
             auth_tx,
             auth_rx,
-            event_tx,
-            event_rx,
+            action_tx: event_tx,
+            action_rx: event_rx,
             client_id,
             have_authorization,
             full_chats_list,
@@ -967,7 +967,7 @@ impl TgBackend {
     }
 
     /// Need to be called in a spawned thread
-    async fn start(&mut self) {
+    pub async fn start(&mut self) {
         match functions::get_me(self.client_id).await {
             Ok(User::User(me)) => {
                 let mut m = self.me.write().await;
@@ -981,13 +981,30 @@ impl TgBackend {
 
     async fn process(&mut self) {
         loop {
-            if let Some(ev) = self.event_rx.recv().await {
+            if let Some(ev) = self.action_rx.recv().await {
                 match ev {
+                    Action::LoadChats(chat_list, limit) => {
+                        self.load_chats(chat_list.into(), limit).await
+                    }
                     _ => (),
                 }
             } else {
                 break;
             }
+        }
+    }
+
+    async fn load_chats(&mut self, chat_list: ChatList, limit: i32) {
+        let full_cl = self.full_chats_list.read().await;
+        if *full_cl {
+            return;
+        }
+        drop(full_cl);
+
+        if let Err(e) = functions::load_chats(Some(chat_list), limit, self.client_id).await {
+            tracing::error!("Failed to load chats: {e:?}");
+            let mut full_cl = self.full_chats_list.write().await;
+            *full_cl = true;
         }
     }
 }
