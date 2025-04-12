@@ -22,6 +22,8 @@ use tokio::task::JoinHandle;
 use super::message_entry::MessageEntry;
 use super::td_enums::TdMessageReplyToMessage;
 
+const QUERY_MESSAGE_WIN_SIZE: i32 = 100;
+
 pub struct TgBackendOld {
     pub handle_updates: JoinHandle<()>,
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
@@ -133,6 +135,7 @@ impl TgBackendOld {
 
     #[allow(clippy::await_holding_lock)]
     // By default telegram send us only one message the first time
+    // NOTE: Never used
     pub async fn prepare_to_get_chat_history(&mut self, chat_id: i64) {
         match functions::get_chat_history(chat_id, 0, 0, 100, false, self.client_id).await {
             Ok(_m) => {}
@@ -990,6 +993,9 @@ impl TgBackend {
                         self.load_chats(chat_list.into(), limit).await
                     }
                     Action::ViewAllMessages(chat_id) => self.view_all_messages(chat_id).await,
+                    Action::GetChatHistory(chat_id, from_id, resp_c) => {
+                        self.get_chat_history(chat_id, from_id, resp_c.inner).await
+                    }
                     _ => (),
                 }
             } else {
@@ -1030,6 +1036,51 @@ impl TgBackend {
             functions::view_messages(chat_id, vec![to_read], None, true, self.client_id).await
         {
             tracing::error!("Failed to view all messages: {e:?}");
+        }
+    }
+
+    /// Sends back, through the relevant channel, multiple responses to the relevant
+    /// component until all of the requested history is returned.
+    async fn get_chat_history(
+        &mut self,
+        chat_id: i64,
+        from_message_id: i64,
+        response_c: UnboundedSender<Action>,
+    ) {
+        let mut counter = 0;
+
+        while (counter as usize) < QUERY_MESSAGE_WIN_SIZE as usize {
+            match functions::get_chat_history(
+                chat_id,
+                from_message_id,
+                counter,
+                QUERY_MESSAGE_WIN_SIZE,
+                false,
+                self.client_id,
+            )
+            .await
+            {
+                Ok(Messages::Messages(messages)) => {
+                    if messages.messages.is_empty() {
+                        tracing::info!("No more messages to get");
+                        break;
+                    }
+
+                    let resp: Vec<MessageEntry> = messages
+                        .messages
+                        .into_iter()
+                        .flatten()
+                        .map(|m| MessageEntry::from(&m))
+                        .collect();
+                    let many = resp.len();
+                    let _ = response_c.send(Action::GetChatHistoryResponse(chat_id, resp));
+                    counter += many as i32;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to get chat history: {e:?}");
+                    break;
+                }
+            }
         }
     }
 }

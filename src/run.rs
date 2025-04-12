@@ -221,7 +221,7 @@ pub async fn handle_app_actions(
                     .send_message_edited(message_id, message.to_string())
                     .await;
             }
-            Action::GetChatHistory => {
+            Action::GetChatHistoryOld => {
                 tg_backend
                     .get_chat_history(app_context.tg_context().open_chat_id())
                     .await;
