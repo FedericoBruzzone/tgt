@@ -2,7 +2,8 @@ name: CI Windows
 
 on:
   push:
-    # branches: [ main ]
+    branches: [ '**' ]
+    tags-ignore: [ '**' ]
     paths:
       - 'src/**'
       - 'Cargo.lock'
@@ -11,7 +12,7 @@ on:
       - 'config/**'
       - '.github/workflows/**'
   pull_request:
-    # branches: [ main ]
+    branches: [ '**' ]
     paths:
       - 'src/**'
       - 'Cargo.lock'
