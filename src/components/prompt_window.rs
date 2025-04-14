@@ -474,7 +474,10 @@ impl Input {
                 self.action_tx
                     .as_ref()
                     .unwrap()
-                    .send(Action::SendMessageEdited(message_id, self.text_to_string()))
+                    .send(Action::SendMessageEditedOld(
+                        message_id,
+                        self.text_to_string(),
+                    ))
                     .unwrap();
                 self.text = vec![vec![]];
                 self.set_prompt_size_to_one_focused();
