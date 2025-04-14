@@ -986,23 +986,19 @@ impl TgBackend {
     }
 
     async fn process(&mut self) {
-        loop {
-            if let Some(ev) = self.action_rx.recv().await {
-                match ev {
-                    Action::LoadChats(chat_list, limit) => {
-                        self.load_chats(chat_list.into(), limit).await
-                    }
-                    Action::ViewAllMessages(chat_id) => self.view_all_messages(chat_id).await,
-                    Action::GetChatHistory(chat_id, from_id, resp_c) => {
-                        self.get_chat_history(chat_id, from_id, resp_c.inner).await
-                    }
-                    Action::SendMessage(chat_id, m, r_id, resp_c) => {
-                        self.send_message(chat_id, m, r_id, resp_c.inner).await
-                    }
-                    _ => (),
+        while let Some(ev) = self.action_rx.recv().await {
+            match ev {
+                Action::LoadChats(chat_list, limit) => {
+                    self.load_chats(chat_list.into(), limit).await
                 }
-            } else {
-                break;
+                Action::ViewAllMessages(chat_id) => self.view_all_messages(chat_id).await,
+                Action::GetChatHistory(chat_id, from_id, resp_c) => {
+                    self.get_chat_history(chat_id, from_id, resp_c.inner).await
+                }
+                Action::SendMessage(chat_id, m, r_id, resp_c) => {
+                    self.send_message(chat_id, m, r_id, resp_c.inner).await
+                }
+                _ => (),
             }
         }
 
@@ -1108,7 +1104,9 @@ impl TgBackend {
             reply_to.map(|reply_to| InputMessageReplyTo::Message((&reply_to).into()));
         let r =
             match functions::send_message(chat_id, 0, reply_to, None, text, self.client_id).await {
-                Ok(tdlib_rs::enums::Message::Message(message)) => SendMessageResult::Ok(message),
+                Ok(tdlib_rs::enums::Message::Message(message)) => {
+                    SendMessageResult::Ok(Box::new(message))
+                }
                 Err(e) => {
                     tracing::error!("Failed to send message: {e:?}");
                     SendMessageResult::Err(e)

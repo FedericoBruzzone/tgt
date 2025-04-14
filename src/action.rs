@@ -78,7 +78,7 @@ pub struct WrapperSender {
 
 impl PartialEq for WrapperSender {
     fn eq(&self, _: &Self) -> bool {
-        return true;
+        true
     }
 }
 
@@ -86,7 +86,7 @@ impl Eq for WrapperSender {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SendMessageResult {
-    Ok(Message),
+    Ok(Box<Message>),
     Err(tdlib_rs::types::Error),
 }
 
