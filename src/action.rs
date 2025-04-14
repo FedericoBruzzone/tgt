@@ -150,7 +150,9 @@ pub enum Action {
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
-    DeleteMessages(Vec<i64>, bool),
+    DeleteMessagesOld(Vec<i64>, bool),
+    DeleteMessages(i64, Vec<i64>, bool, WrapperSender),
+    DeleteMessagesResponse(i64, Vec<i64>, bool),
     /// ViewAllMessages action.
     ViewAllMessagesOld,
     /// Set all messages of the chat as read
