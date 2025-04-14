@@ -1026,6 +1026,7 @@ impl TgBackend {
                 chat_window_component,
             },
         ));
+        self.set_logging(telegram_config).await;
         self.handle_authorization_state(app_config, telegram_config)
             .await;
         self.online().await;
@@ -1900,6 +1901,33 @@ impl TgBackend {
                     _ => (),
                 }
             }
+        }
+    }
+
+    pub async fn set_logging(&self, telegram_config: &TelegramConfig) {
+        let verbosity_level = telegram_config.verbosity_level;
+        let log_path = telegram_config.log_path.clone();
+        let redirect_stderr = telegram_config.redirect_stderr;
+
+        // Set a fairly low verbosity level. We mainly do this because tdlib_rs
+        // requires to perform a random request with the client to start
+        // receiving updates for it.
+        functions::set_log_verbosity_level(verbosity_level, self.client_id)
+            .await
+            .unwrap();
+
+        // Create log file
+        let log_stream_file = LogStreamFile {
+            path: log_path,
+            max_file_size: 1 << 27,
+            redirect_stderr,
+        };
+
+        // Set log stream to file
+        if let Err(error) =
+            functions::set_log_stream(LogStream::File(log_stream_file), self.client_id).await
+        {
+            tracing::error!("Failed to set log stream to file: {error:?}");
         }
     }
 }
