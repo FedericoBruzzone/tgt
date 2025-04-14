@@ -207,7 +207,7 @@ pub async fn handle_app_actions(
             Action::LoadChats(chat_list, limit) => {
                 tg_backend.load_chats(chat_list.into(), limit).await;
             }
-            Action::SendMessage(ref message, ref reply_to) => {
+            Action::SendMessageOld(ref message, ref reply_to) => {
                 let _ = tg_backend
                     .send_message(
                         message.to_string(),
