@@ -2,7 +2,7 @@ name: CI Linux
 
 on:
   push:
-    branches: [ '**' ]
+    branches-ignore: [ 'dependabot/**' ]
     tags-ignore: [ '**' ]
     paths:
       - 'src/**'
