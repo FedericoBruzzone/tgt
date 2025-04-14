@@ -82,8 +82,6 @@ impl PartialEq for WrapperSender {
     }
 }
 
-impl Eq for WrapperSender {}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum SendMessageResult {
     Ok(Box<Message>),
@@ -99,20 +97,6 @@ pub enum MessageEdited {
 }
 
 impl Eq for MessageEdited {}
-
-//#[derive(Debug, Clone, PartialEq)]
-//pub struct WrapperMessage {
-//    pub inner: Message,
-//}
-//
-//impl Eq for WrapperMessage {}
-//
-//#[derive(Debug, Clone, PartialEq)]
-//pub struct WrapperMessageContent {
-//    pub inner: MessageContent,
-//}
-//
-//impl Eq for WrapperMessageContent {}
 
 #[derive(Debug, Clone, PartialEq)]
 // TODO: Separate actions related to TgBackend from the UI actions
