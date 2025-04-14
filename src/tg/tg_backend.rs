@@ -910,6 +910,7 @@ impl TgBackendOld {
     }
 }
 
+// TODO: Should not show input if password
 fn ask_user(string: &str) -> String {
     println!("{}", string);
     let mut input = String::new();
@@ -1000,6 +1001,10 @@ impl TgBackend {
                 }
                 Action::SendMessageEdited(chat_id, m_id, m, resp_c) => {
                     self.send_message_edited(chat_id, m_id, m, resp_c.inner)
+                        .await
+                }
+                Action::DeleteMessages(chat_id, message_ids, revoke, resp_c) => {
+                    self.delete_messages(chat_id, message_ids, revoke, resp_c.inner)
                         .await
                 }
                 _ => (),
@@ -1146,5 +1151,28 @@ impl TgBackend {
             }
         };
         let _ = response_c.send(Action::SendMessageEditedResponse(r));
+    }
+
+    async fn delete_messages(
+        &self,
+        chat_id: i64,
+        message_ids: Vec<i64>,
+        revoke: bool,
+        response_c: UnboundedSender<Action>,
+    ) {
+        let r =
+            match functions::delete_messages(chat_id, message_ids.clone(), revoke, self.client_id)
+                .await
+            {
+                Ok(_) => {
+                    tracing::info!("Messages deleted");
+                    true
+                }
+                Err(e) => {
+                    tracing::error!("Failed to delete messages: {e:?}");
+                    false
+                }
+            };
+        let _ = response_c.send(Action::DeleteMessagesResponse(chat_id, message_ids, r));
     }
 }

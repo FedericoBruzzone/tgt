@@ -226,7 +226,7 @@ pub async fn handle_app_actions(
                     .get_chat_history(app_context.tg_context().open_chat_id())
                     .await;
             }
-            Action::DeleteMessages(ref message_ids, revoke) => {
+            Action::DeleteMessagesOld(ref message_ids, revoke) => {
                 tg_backend
                     .delete_messages(
                         app_context.tg_context().open_chat_id(),
