@@ -10,6 +10,7 @@ use {
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::layout::Rect,
     std::str::FromStr,
+    tdlib_rs::types::Message,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -83,6 +84,14 @@ impl PartialEq for WrapperSender {
 
 impl Eq for WrapperSender {}
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum SendMessageResult {
+    Ok(Message),
+    Err(tdlib_rs::types::Error),
+}
+
+impl Eq for SendMessageResult {}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 // TODO: Separate actions related to TgBackend from the UI actions
 /// Action` is an enum that represents an action that can be handled by the
@@ -116,7 +125,9 @@ pub enum Action {
     /// SendMessage action with a `String`.
     /// The first parameter is the `text`.
     /// The second parameter is the `reply_to` field.
-    SendMessage(String, Option<TdMessageReplyToMessage>),
+    SendMessageOld(String, Option<TdMessageReplyToMessage>),
+    SendMessage(i64, String, Option<TdMessageReplyToMessage>, WrapperSender),
+    SendMessageResponse(SendMessageResult),
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),

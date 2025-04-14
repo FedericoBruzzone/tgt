@@ -463,7 +463,7 @@ impl Input {
                 self.action_tx
                     .as_ref()
                     .unwrap()
-                    .send(Action::SendMessage(self.text_to_string(), None))
+                    .send(Action::SendMessageOld(self.text_to_string(), None))
                     .unwrap();
                 self.text = vec![vec![]];
                 self.set_prompt_size_to_one_focused();
@@ -484,7 +484,7 @@ impl Input {
                 self.action_tx
                     .as_ref()
                     .unwrap()
-                    .send(Action::SendMessage(
+                    .send(Action::SendMessageOld(
                         self.text_to_string(),
                         Some(TdMessageReplyToMessage {
                             chat_id: 0,

@@ -1,4 +1,4 @@
-use crate::action::Action;
+use crate::action::{Action, SendMessageResult};
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -996,6 +996,9 @@ impl TgBackend {
                     Action::GetChatHistory(chat_id, from_id, resp_c) => {
                         self.get_chat_history(chat_id, from_id, resp_c.inner).await
                     }
+                    Action::SendMessage(chat_id, m, r_id, resp_c) => {
+                        self.send_message(chat_id, m, r_id, resp_c.inner).await
+                    }
                     _ => (),
                 }
             } else {
@@ -1082,5 +1085,35 @@ impl TgBackend {
                 }
             }
         }
+    }
+
+    // The relevant component should hide the reply window on its own.
+    // In the previous version this function sent back a Action::HideChatWindowReply
+    async fn send_message(
+        &mut self,
+        chat_id: i64,
+        message: String,
+        reply_to: Option<TdMessageReplyToMessage>,
+        response_c: UnboundedSender<Action>,
+    ) {
+        let text = InputMessageContent::InputMessageText(InputMessageText {
+            text: tdlib_rs::types::FormattedText {
+                text: message,
+                entities: vec![], // TODO: Add entities
+            },
+            link_preview_options: None,
+            clear_draft: true,
+        });
+        let reply_to: Option<InputMessageReplyTo> =
+            reply_to.map(|reply_to| InputMessageReplyTo::Message((&reply_to).into()));
+        let r =
+            match functions::send_message(chat_id, 0, reply_to, None, text, self.client_id).await {
+                Ok(tdlib_rs::enums::Message::Message(message)) => SendMessageResult::Ok(message),
+                Err(e) => {
+                    tracing::error!("Failed to send message: {e:?}");
+                    SendMessageResult::Err(e)
+                }
+            };
+        let _ = response_c.send(Action::SendMessageResponse(r));
     }
 }
