@@ -983,7 +983,16 @@ impl TgBackend {
             Err(error) => tracing::error!("Failed to get me: {error:?}"),
         }
 
+        // Prep before processing actions
+        self.online().await;
+
         self.process().await;
+
+        self.offline().await;
+        match functions::close(self.client_id).await {
+            Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
+            Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
+        }
     }
 
     async fn process(&mut self) {
@@ -1009,11 +1018,6 @@ impl TgBackend {
                 }
                 _ => (),
             }
-        }
-
-        match functions::close(self.client_id).await {
-            Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
-            Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
         }
     }
 
@@ -1174,5 +1178,62 @@ impl TgBackend {
                 }
             };
         let _ = response_c.send(Action::DeleteMessagesResponse(chat_id, message_ids, r));
+    }
+
+    pub async fn use_quick_ack(&self) {
+        match functions::set_option(
+            String::from("use_quick_ack"),
+            Some(OptionValue::Boolean(OptionValueBoolean { value: true })),
+            self.client_id,
+        )
+        .await
+        {
+            Ok(_) => {
+                tracing::info!("Quick ack enabled");
+            }
+            Err(e) => {
+                tracing::error!("Failed to enable quick ack: {e:?}");
+            }
+        }
+    }
+
+    async fn set_online(&self, online: bool) -> Result<(), tdlib_rs::types::Error> {
+        functions::set_option(
+            String::from("online"),
+            Some(OptionValue::Boolean(OptionValueBoolean { value: online })),
+            self.client_id,
+        )
+        .await
+    }
+
+    async fn online(&mut self) {
+        match self.set_online(true).await {
+            Ok(_) => tracing::info!("Went online"),
+            Err(error) => tracing::error!("Error going online: {error:?}"),
+        }
+    }
+
+    async fn offline(&mut self) {
+        match self.set_online(false).await {
+            Ok(_) => tracing::info!("Went offline"),
+            Err(error) => tracing::error!("Error going offline: {error:?}"),
+        }
+    }
+
+    pub async fn disable_animated_emoji(&mut self, disable: bool) {
+        match functions::set_option(
+            String::from("disable_animated_emoji"),
+            Some(OptionValue::Boolean(OptionValueBoolean { value: disable })),
+            self.client_id,
+        )
+        .await
+        {
+            Ok(_) => {
+                tracing::info!("Animated emoji set to: {}", disable);
+            }
+            Err(error) => {
+                tracing::error!("Error setting animated emoji: {error:?}");
+            }
+        }
     }
 }
