@@ -1,6 +1,4 @@
-use crate::action::{
-    Action, MessageEdited, SendMessageResult, WrapperMessage, WrapperMessageContent,
-};
+use crate::action::{Action, MessageEdited, SendMessageResult};
 use crate::configs::custom::app_custom::AppConfig;
 use crate::configs::custom::telegram_custom::TelegramConfig;
 use crate::event::Event;
@@ -1876,9 +1874,7 @@ impl TgBackend {
                         // in real time the message displayed
                         let _ = context.chat_window_component.send(Action::NewMessageUpdate(
                             update_new_message.message.chat_id,
-                            Box::new(WrapperMessage {
-                                inner: update_new_message.message,
-                            }),
+                            Box::new(update_new_message.message),
                         ));
                     }
                     Update::MessageEdited(_) => {}
@@ -1886,9 +1882,7 @@ impl TgBackend {
                         let _ = context.chat_window_component.send(Action::NewContentUpdate(
                             message.chat_id,
                             message.message_id,
-                            Box::new(WrapperMessageContent {
-                                inner: message.new_content,
-                            }),
+                            Box::new(message.new_content),
                         ));
                     }
                     Update::DeleteMessages(update_delete_messages) => {

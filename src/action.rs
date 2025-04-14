@@ -100,21 +100,21 @@ pub enum MessageEdited {
 
 impl Eq for MessageEdited {}
 
+//#[derive(Debug, Clone, PartialEq)]
+//pub struct WrapperMessage {
+//    pub inner: Message,
+//}
+//
+//impl Eq for WrapperMessage {}
+//
+//#[derive(Debug, Clone, PartialEq)]
+//pub struct WrapperMessageContent {
+//    pub inner: MessageContent,
+//}
+//
+//impl Eq for WrapperMessageContent {}
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct WrapperMessage {
-    pub inner: Message,
-}
-
-impl Eq for WrapperMessage {}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct WrapperMessageContent {
-    pub inner: MessageContent,
-}
-
-impl Eq for WrapperMessageContent {}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
 // TODO: Separate actions related to TgBackend from the UI actions
 /// Action` is an enum that represents an action that can be handled by the
 /// main application loop and the components of the user interface.
@@ -160,8 +160,8 @@ pub enum Action {
     GetChatHistory(i64, i64, WrapperSender),
     /// Response to the GetChatHistory action
     GetChatHistoryResponse(i64, Vec<MessageEntry>),
-    NewMessageUpdate(i64, Box<WrapperMessage>),
-    NewContentUpdate(i64, i64, Box<WrapperMessageContent>),
+    NewMessageUpdate(i64, Box<Message>),
+    NewContentUpdate(i64, i64, Box<MessageContent>),
     DeleteMessagesUpdate(i64, Vec<i64>),
     /// DeleteMessages action.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
@@ -257,6 +257,10 @@ impl Action {
         Action::Key(key, Modifiers::from(modifiers))
     }
 }
+
+// It's ok to do this hack. The only actions used in a HashMap are the ones
+// that are associated to keybindings which are enums without fields.
+impl Eq for Action {}
 
 /// Implement the `FromStr` trait for `Action`.
 impl FromStr for Action {
