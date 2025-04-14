@@ -10,7 +10,7 @@ use {
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::layout::Rect,
     std::str::FromStr,
-    tdlib_rs::types::Message,
+    tdlib_rs::{enums::MessageContent, types::Message},
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -100,6 +100,20 @@ pub enum MessageEdited {
 
 impl Eq for MessageEdited {}
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct WrapperMessage {
+    pub inner: Message,
+}
+
+impl Eq for WrapperMessage {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WrapperMessageContent {
+    pub inner: MessageContent,
+}
+
+impl Eq for WrapperMessageContent {}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 // TODO: Separate actions related to TgBackend from the UI actions
 /// Action` is an enum that represents an action that can be handled by the
@@ -146,6 +160,9 @@ pub enum Action {
     GetChatHistory(i64, i64, WrapperSender),
     /// Response to the GetChatHistory action
     GetChatHistoryResponse(i64, Vec<MessageEntry>),
+    NewMessageUpdate(i64, Box<WrapperMessage>),
+    NewContentUpdate(i64, i64, Box<WrapperMessageContent>),
+    DeleteMessagesUpdate(i64, Vec<i64>),
     /// DeleteMessages action.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.

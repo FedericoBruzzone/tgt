@@ -1,4 +1,6 @@
-use crate::action::{Action, MessageEdited, SendMessageResult};
+use crate::action::{
+    Action, MessageEdited, SendMessageResult, WrapperMessage, WrapperMessageContent,
+};
 use crate::configs::custom::app_custom::AppConfig;
 use crate::configs::custom::telegram_custom::TelegramConfig;
 use crate::event::Event;
@@ -6,19 +8,19 @@ use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, MutexGuard, RwLockWriteGuard};
+use std::sync::{Arc, MutexGuard};
 use tdlib_rs::enums::{
     self, AuthorizationState, ChatList, InputMessageContent, InputMessageReplyTo, LogStream,
-    Messages, OptionValue, Update, User,
+    Messages, OptionValue, Update,
 };
 use tdlib_rs::functions;
 use tdlib_rs::types::{
     BasicGroup, BasicGroupFullInfo, Chat, ChatPosition, InputMessageText, LogStreamFile,
-    OptionValueBoolean, SecretChat, Supergroup, SupergroupFullInfo, UserFullInfo,
+    OptionValueBoolean, SecretChat, Supergroup, SupergroupFullInfo, User, UserFullInfo,
 };
 use tokio::spawn;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio::task::JoinHandle;
 
 use super::message_entry::MessageEntry;
@@ -75,7 +77,7 @@ impl TgBackendOld {
 
     pub async fn get_me(&mut self) {
         match functions::get_me(self.client_id).await {
-            Ok(User::User(me)) => {
+            Ok(tdlib_rs::enums::User::User(me)) => {
                 self.app_context.tg_context().set_me(me.id);
             }
             Err(error) => tracing::error!("Failed to get me: {error:?}"),
@@ -481,10 +483,6 @@ impl TgBackendOld {
         }
     }
 
-    // NOTE: Since there are a lot of insertions (imagine 2 chats with
-    // a lot of traffic) there are no benefits in using a BTree. Not even
-    // on read since the UI has to read all of it to draw the chat list
-    // anyway. Instead just use a Vec and sort each time.
     fn set_chat_positions(
         mut chats_index: MutexGuard<'_, BTreeSet<OrderedChat>>,
         chat: &mut Chat,
@@ -540,6 +538,7 @@ impl TgBackendOld {
         }
     }
 
+    // Unused
     pub async fn next(&mut self) -> Option<Event> {
         self.event_rx.try_recv().ok()
     }
@@ -555,6 +554,9 @@ impl TgBackendOld {
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
                 if let Some((update, _client_id)) = tdlib_rs::receive() {
                     update_dequeue.push_back(update);
+                    // This might be a bug. Updates that are pushed back for processing
+                    // later on are lost due to `update_dequeue` being deallocated on the
+                    // cycle.
                     let update = update_dequeue.pop_front().unwrap();
                     match update.clone() {
                         Update::MessageSendSucceeded(update_message) => {
@@ -924,6 +926,20 @@ fn ask_user(string: &str) -> String {
     input.trim().to_string()
 }
 
+struct Context {
+    users: Arc<RwLock<HashMap<i64, User>>>,
+    basic_groups: Arc<RwLock<HashMap<i64, BasicGroup>>>,
+    supergroups: Arc<RwLock<HashMap<i64, Supergroup>>>,
+    secret_chats: Arc<RwLock<HashMap<i32, SecretChat>>>,
+    chats: Arc<RwLock<HashMap<i64, Chat>>>,
+    chats_index: Arc<RwLock<BTreeSet<OrderedChat>>>,
+    users_full_info: Arc<RwLock<HashMap<i64, UserFullInfo>>>,
+    basic_groups_full_info: Arc<RwLock<HashMap<i64, BasicGroupFullInfo>>>,
+    supergroups_full_info: Arc<RwLock<HashMap<i64, SupergroupFullInfo>>>,
+    last_acknowledged_message_id: Arc<RwLock<i64>>,
+    chat_window_component: UnboundedSender<Action>,
+}
+
 pub struct TgBackend {
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
     pub auth_tx: UnboundedSender<AuthorizationState>,
@@ -933,17 +949,17 @@ pub struct TgBackend {
     pub have_authorization: bool,
     full_chats_list: RwLock<bool>,
 
-    users: RwLock<HashMap<i64, User>>,
-    basic_groups: RwLock<HashMap<i64, BasicGroup>>,
-    supergroups: RwLock<HashMap<i64, Supergroup>>,
-    secret_chats: RwLock<HashMap<i32, SecretChat>>,
-    chats: RwLock<HashMap<i64, Chat>>,
-    chats_index: RwLock<Vec<OrderedChat>>,
-    users_full_info: RwLock<HashMap<i64, UserFullInfo>>,
-    basic_groups_full_info: RwLock<HashMap<i64, BasicGroupFullInfo>>,
-    supergroups_full_info: RwLock<HashMap<i64, SupergroupFullInfo>>,
-    me: RwLock<i64>,
-    last_acknowledged_message_id: RwLock<i64>,
+    users: Arc<RwLock<HashMap<i64, User>>>,
+    basic_groups: Arc<RwLock<HashMap<i64, BasicGroup>>>,
+    supergroups: Arc<RwLock<HashMap<i64, Supergroup>>>,
+    secret_chats: Arc<RwLock<HashMap<i32, SecretChat>>>,
+    chats: Arc<RwLock<HashMap<i64, Chat>>>,
+    chats_index: Arc<RwLock<BTreeSet<OrderedChat>>>,
+    users_full_info: Arc<RwLock<HashMap<i64, UserFullInfo>>>,
+    basic_groups_full_info: Arc<RwLock<HashMap<i64, BasicGroupFullInfo>>>,
+    supergroups_full_info: Arc<RwLock<HashMap<i64, SupergroupFullInfo>>>,
+    me: Arc<RwLock<i64>>,
+    last_acknowledged_message_id: Arc<RwLock<i64>>,
 }
 
 // TODO: Implement functions called only through the CLI interface
@@ -980,9 +996,14 @@ impl TgBackend {
     }
 
     /// Need to be called in a spawned thread
-    pub async fn start(&mut self, app_config: &AppConfig, telegram_config: &TelegramConfig) {
+    pub async fn start(
+        &mut self,
+        app_config: &AppConfig,
+        telegram_config: &TelegramConfig,
+        chat_window_component: UnboundedSender<Action>,
+    ) {
         match functions::get_me(self.client_id).await {
-            Ok(User::User(me)) => {
+            Ok(tdlib_rs::enums::User::User(me)) => {
                 let mut m = self.me.write().await;
                 *m = me.id;
             }
@@ -990,11 +1011,28 @@ impl TgBackend {
         }
 
         // Prep before processing actions
+        spawn(Self::process_telegram_updates(
+            self.action_tx.clone(),
+            self.auth_tx.clone(),
+            Context {
+                users: self.users.clone(),
+                basic_groups: self.basic_groups.clone(),
+                supergroups: self.supergroups.clone(),
+                secret_chats: self.secret_chats.clone(),
+                chats: self.chats.clone(),
+                chats_index: self.chats_index.clone(),
+                users_full_info: self.users_full_info.clone(),
+                basic_groups_full_info: self.basic_groups_full_info.clone(),
+                supergroups_full_info: self.supergroups_full_info.clone(),
+                last_acknowledged_message_id: self.last_acknowledged_message_id.clone(),
+                chat_window_component,
+            },
+        ));
         self.handle_authorization_state(app_config, telegram_config)
             .await;
         self.online().await;
 
-        self.process().await;
+        self.process_app_interactions().await;
 
         self.offline().await;
         match functions::close(self.client_id).await {
@@ -1005,7 +1043,7 @@ impl TgBackend {
             .await;
     }
 
-    async fn process(&mut self) {
+    async fn process_app_interactions(&mut self) {
         while let Some(ev) = self.action_rx.recv().await {
             match ev {
                 Action::LoadChats(chat_list, limit) => {
@@ -1400,24 +1438,474 @@ impl TgBackend {
     }
 
     async fn set_chat_positions(
-        mut chats_index: RwLockWriteGuard<'_, Vec<OrderedChat>>,
+        mut chats_index: RwLockWriteGuard<'_, BTreeSet<OrderedChat>>,
         chat: &mut Chat,
         positions: Vec<ChatPosition>,
     ) {
-        let p = if let Some(p) = positions.iter().find(|p| p.list == enums::ChatList::Main) {
-            p
-        } else {
-            chats_index.retain(|c| c.chat_id != chat.id);
-            return;
-        };
-        if let Some(c) = chats_index.iter_mut().find(|o_c| o_c.chat_id == chat.id) {
-            c.position = p.clone();
-        } else {
-            chats_index.push(OrderedChat {
+        if let Some(pos) = chat.positions.iter().find(|p| p.list == ChatList::Main) {
+            let is_removed = chats_index.remove(&OrderedChat {
+                position: pos.clone(),
                 chat_id: chat.id,
-                position: p.clone(),
             });
+            assert!(is_removed);
         }
-        chats_index.sort();
+
+        chat.positions = positions;
+
+        if let Some(pos) = chat.positions.iter().find(|p| p.list == ChatList::Main) {
+            let is_inserted = chats_index.insert(OrderedChat {
+                position: pos.clone(),
+                chat_id: chat.id,
+            });
+            assert!(is_inserted);
+        }
+    }
+
+    // Process quits when `action_tx` is closed. No need to check for shared state.
+    async fn process_telegram_updates(
+        action_tx: UnboundedSender<Action>,
+        auth_tx: UnboundedSender<AuthorizationState>,
+        context: Context,
+    ) {
+        tracing::info!("Starting handling updates from TDLib");
+        let mut update_dequeue: VecDeque<Update> = VecDeque::new();
+        while !action_tx.is_closed() {
+            if let Some((update, _client_id)) = tdlib_rs::receive() {
+                update_dequeue.push_back(update);
+            }
+
+            let mut counter = 0;
+            while !update_dequeue.is_empty() && counter < update_dequeue.len() {
+                let update = update_dequeue.pop_front().unwrap();
+                match update.clone() {
+                    Update::MessageSendSucceeded(update_message) => {
+                        tracing::info!("Message sent: {:?}", update_message);
+                    }
+                    Update::MessageSendAcknowledged(update_message) => {
+                        let mut last = context.last_acknowledged_message_id.write().await;
+                        *last = update_message.message_id;
+                    }
+                    Update::AuthorizationState(update) => {
+                        auth_tx.send(update.authorization_state).unwrap();
+                    }
+                    Update::User(update_user) => {
+                        let mut users = context.users.write().await;
+                        users.insert(update_user.user.id, update_user.user);
+                    }
+                    Update::UserStatus(update_user) => {
+                        let mut users = context.users.write().await;
+                        match users.get_mut(&update_user.user_id) {
+                            Some(user) => user.status = update_user.status,
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::BasicGroup(update_basic_group) => {
+                        let mut basic_groups = context.basic_groups.write().await;
+                        basic_groups.insert(
+                            update_basic_group.basic_group.id,
+                            update_basic_group.basic_group,
+                        );
+                    }
+                    Update::Supergroup(update_supergroup) => {
+                        let mut supergroups = context.supergroups.write().await;
+                        supergroups.insert(
+                            update_supergroup.supergroup.id,
+                            update_supergroup.supergroup,
+                        );
+                    }
+                    Update::SecretChat(update_secret_chat) => {
+                        let mut secret_chats = context.secret_chats.write().await;
+                        secret_chats.insert(
+                            update_secret_chat.secret_chat.id,
+                            update_secret_chat.secret_chat,
+                        );
+                    }
+                    Update::NewChat(update_new_chat) => {
+                        let mut chat = update_new_chat.chat.clone();
+                        context
+                            .chats
+                            .write()
+                            .await
+                            .insert(update_new_chat.chat.id, update_new_chat.chat);
+                        let positions = chat.positions;
+                        chat.positions = Vec::new();
+                        Self::set_chat_positions(
+                            context.chats_index.write().await,
+                            &mut chat,
+                            positions,
+                        )
+                        .await;
+                    }
+                    Update::ChatTitle(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => chat.title = update_chat.title,
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatPhoto(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => chat.photo = update_chat.photo,
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatPermissions(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => chat.permissions = update_chat.permissions,
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatLastMessage(update_chat) => {
+                        // This update is received also when a message is edited
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.last_message = update_chat.last_message;
+                                Self::set_chat_positions(
+                                    context.chats_index.write().await,
+                                    chat,
+                                    update_chat.positions,
+                                )
+                                .await;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatPosition(update_chat) => {
+                        if let enums::ChatList::Main = update_chat.position.list {
+                            match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                                Some(chat) => {
+                                    let mut i = 0;
+
+                                    for p in &chat.positions {
+                                        if let enums::ChatList::Main = p.list {
+                                            break;
+                                        }
+                                        i += 1;
+                                    }
+                                    let mut new_position: Vec<ChatPosition> = Vec::new();
+                                    let mut pos = 0;
+                                    if update_chat.position.order != 0 {
+                                        new_position.insert(pos, update_chat.position);
+                                        pos += 1;
+                                    }
+                                    for j in 0..chat.positions.len() {
+                                        if j != i {
+                                            new_position.insert(pos, chat.positions[j].clone());
+                                            pos += 1;
+                                        }
+                                    }
+                                    assert!(pos == new_position.len());
+
+                                    Self::set_chat_positions(
+                                        context.chats_index.write().await,
+                                        chat,
+                                        new_position,
+                                    )
+                                    .await;
+                                }
+                                None => {
+                                    update_dequeue.push_back(update);
+                                    counter += 1;
+                                }
+                            }
+                        }
+                    }
+                    Update::ChatReadInbox(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.last_read_inbox_message_id =
+                                    update_chat.last_read_inbox_message_id;
+                                chat.unread_count = update_chat.unread_count;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatReadOutbox(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.last_read_outbox_message_id =
+                                    update_chat.last_read_outbox_message_id;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatActionBar(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.action_bar = update_chat.action_bar.clone();
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatAvailableReactions(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.available_reactions = update_chat.available_reactions.clone();
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatUnreadMentionCount(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.unread_mention_count = update_chat.unread_mention_count;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::MessageMentionRead(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.unread_mention_count = update_chat.unread_mention_count;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatReplyMarkup(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.reply_markup_message_id = update_chat.reply_markup_message_id;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatDraftMessage(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.draft_message = update_chat.draft_message;
+                                Self::set_chat_positions(
+                                    context.chats_index.write().await,
+                                    chat,
+                                    update_chat.positions,
+                                )
+                                .await;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatMessageSender(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.message_sender_id = update_chat.message_sender_id;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatMessageAutoDeleteTime(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.message_auto_delete_time =
+                                    update_chat.message_auto_delete_time;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatNotificationSettings(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.notification_settings = update_chat.notification_settings;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatPendingJoinRequests(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.pending_join_requests = update_chat.pending_join_requests;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatBackground(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.background = update_chat.background;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatTheme(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.theme_name = update_chat.theme_name;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatUnreadReactionCount(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.unread_reaction_count = update_chat.unread_reaction_count;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatDefaultDisableNotification(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.default_disable_notification =
+                                    update_chat.default_disable_notification;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatIsMarkedAsUnread(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.is_marked_as_unread = update_chat.is_marked_as_unread;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatBlockList(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => chat.block_list = update_chat.block_list,
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::ChatHasScheduledMessages(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.has_scheduled_messages = update_chat.has_scheduled_messages;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::MessageUnreadReactions(update_chat) => {
+                        match context.chats.write().await.get_mut(&update_chat.chat_id) {
+                            Some(chat) => {
+                                chat.unread_mention_count = update_chat.unread_reaction_count;
+                            }
+                            None => {
+                                update_dequeue.push_back(update);
+                                counter += 1;
+                            }
+                        }
+                    }
+                    Update::UserFullInfo(update_user_full_info) => {
+                        context.users_full_info.write().await.insert(
+                            update_user_full_info.user_id,
+                            update_user_full_info.user_full_info,
+                        );
+                    }
+                    Update::BasicGroupFullInfo(update_basic_group_full_info) => {
+                        context.basic_groups_full_info.write().await.insert(
+                            update_basic_group_full_info.basic_group_id,
+                            update_basic_group_full_info.basic_group_full_info,
+                        );
+                    }
+                    Update::SupergroupFullInfo(update_supergroup_full_info) => {
+                        context.supergroups_full_info.write().await.insert(
+                            update_supergroup_full_info.supergroup_id,
+                            update_supergroup_full_info.supergroup_full_info,
+                        );
+                    }
+                    Update::NewMessage(update_new_message) => {
+                        // New message update only the opened chat in order to have
+                        // in real time the message displayed
+                        let _ = context.chat_window_component.send(Action::NewMessageUpdate(
+                            update_new_message.message.chat_id,
+                            Box::new(WrapperMessage {
+                                inner: update_new_message.message,
+                            }),
+                        ));
+                    }
+                    Update::MessageEdited(_) => {}
+                    Update::MessageContent(message) => {
+                        let _ = context.chat_window_component.send(Action::NewContentUpdate(
+                            message.chat_id,
+                            message.message_id,
+                            Box::new(WrapperMessageContent {
+                                inner: message.new_content,
+                            }),
+                        ));
+                    }
+                    Update::DeleteMessages(update_delete_messages) => {
+                        let _ = context
+                            .chat_window_component
+                            .send(Action::DeleteMessagesUpdate(
+                                update_delete_messages.chat_id,
+                                update_delete_messages.message_ids,
+                            ));
+                    }
+                    // Update::Option(option) => {
+                    //     tracing::info!("{:?}", option);
+                    // }
+                    // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
+                    _ => (),
+                }
+            }
+        }
     }
 }
