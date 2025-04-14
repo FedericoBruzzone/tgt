@@ -216,7 +216,7 @@ pub async fn handle_app_actions(
                     )
                     .await;
             }
-            Action::SendMessageEdited(message_id, ref message) => {
+            Action::SendMessageEditedOld(message_id, ref message) => {
                 tg_backend
                     .send_message_edited(message_id, message.to_string())
                     .await;

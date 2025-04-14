@@ -92,6 +92,14 @@ pub enum SendMessageResult {
 
 impl Eq for SendMessageResult {}
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum MessageEdited {
+    Ok(i64, i64, String),
+    Err(tdlib_rs::types::Error),
+}
+
+impl Eq for MessageEdited {}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 // TODO: Separate actions related to TgBackend from the UI actions
 /// Action` is an enum that represents an action that can be handled by the
@@ -130,7 +138,9 @@ pub enum Action {
     SendMessageResponse(SendMessageResult),
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
-    SendMessageEdited(i64, String),
+    SendMessageEditedOld(i64, String),
+    SendMessageEdited(i64, i64, String, WrapperSender),
+    SendMessageEditedResponse(MessageEdited),
     /// GetChatHistory action.
     GetChatHistoryOld,
     GetChatHistory(i64, i64, WrapperSender),

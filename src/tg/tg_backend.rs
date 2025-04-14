@@ -1,4 +1,4 @@
-use crate::action::{Action, SendMessageResult};
+use crate::action::{Action, MessageEdited, SendMessageResult};
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -998,6 +998,10 @@ impl TgBackend {
                 Action::SendMessage(chat_id, m, r_id, resp_c) => {
                     self.send_message(chat_id, m, r_id, resp_c.inner).await
                 }
+                Action::SendMessageEdited(chat_id, m_id, m, resp_c) => {
+                    self.send_message_edited(chat_id, m_id, m, resp_c.inner)
+                        .await
+                }
                 _ => (),
             }
         }
@@ -1113,5 +1117,34 @@ impl TgBackend {
                 }
             };
         let _ = response_c.send(Action::SendMessageResponse(r));
+    }
+
+    async fn send_message_edited(
+        &self,
+        chat_id: i64,
+        message_id: i64,
+        message: String,
+        response_c: UnboundedSender<Action>,
+    ) {
+        let text = InputMessageContent::InputMessageText(InputMessageText {
+            text: tdlib_rs::types::FormattedText {
+                text: message.clone(),
+                entities: vec![],
+            },
+            link_preview_options: None,
+            clear_draft: true,
+        });
+        let r = match functions::edit_message_text(chat_id, message_id, text, self.client_id).await
+        {
+            Ok(_) => {
+                tracing::info!("Message edited");
+                MessageEdited::Ok(chat_id, message_id, message)
+            }
+            Err(e) => {
+                tracing::error!("Failed to edit message: {e:?}");
+                MessageEdited::Err(e)
+            }
+        };
+        let _ = response_c.send(Action::SendMessageEditedResponse(r));
     }
 }
