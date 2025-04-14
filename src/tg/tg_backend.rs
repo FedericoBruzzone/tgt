@@ -6,7 +6,7 @@ use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, MutexGuard};
+use std::sync::{Arc, MutexGuard, RwLockWriteGuard};
 use tdlib_rs::enums::{
     self, AuthorizationState, ChatList, InputMessageContent, InputMessageReplyTo, LogStream,
     Messages, OptionValue, Update, User,
@@ -481,6 +481,10 @@ impl TgBackendOld {
         }
     }
 
+    // NOTE: Since there are a lot of insertions (imagine 2 chats with
+    // a lot of traffic) there are no benefits in using a BTree. Not even
+    // on read since the UI has to read all of it to draw the chat list
+    // anyway. Instead just use a Vec and sort each time.
     fn set_chat_positions(
         mut chats_index: MutexGuard<'_, BTreeSet<OrderedChat>>,
         chat: &mut Chat,
@@ -934,7 +938,7 @@ pub struct TgBackend {
     supergroups: RwLock<HashMap<i64, Supergroup>>,
     secret_chats: RwLock<HashMap<i32, SecretChat>>,
     chats: RwLock<HashMap<i64, Chat>>,
-    chats_index: RwLock<BTreeSet<OrderedChat>>,
+    chats_index: RwLock<Vec<OrderedChat>>,
     users_full_info: RwLock<HashMap<i64, UserFullInfo>>,
     basic_groups_full_info: RwLock<HashMap<i64, BasicGroupFullInfo>>,
     supergroups_full_info: RwLock<HashMap<i64, SupergroupFullInfo>>,
@@ -986,7 +990,8 @@ impl TgBackend {
         }
 
         // Prep before processing actions
-        self.handle_authorization_state(app_config, telegram_config).await;
+        self.handle_authorization_state(app_config, telegram_config)
+            .await;
         self.online().await;
 
         self.process().await;
@@ -996,7 +1001,8 @@ impl TgBackend {
             Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
             Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
         }
-        self.handle_authorization_state(app_config, telegram_config).await;
+        self.handle_authorization_state(app_config, telegram_config)
+            .await;
     }
 
     async fn process(&mut self) {
@@ -1391,5 +1397,27 @@ impl TgBackend {
                 }
             }
         }
+    }
+
+    async fn set_chat_positions(
+        mut chats_index: RwLockWriteGuard<'_, Vec<OrderedChat>>,
+        chat: &mut Chat,
+        positions: Vec<ChatPosition>,
+    ) {
+        let p = if let Some(p) = positions.iter().find(|p| p.list == enums::ChatList::Main) {
+            p
+        } else {
+            chats_index.retain(|c| c.chat_id != chat.id);
+            return;
+        };
+        if let Some(c) = chats_index.iter_mut().find(|o_c| o_c.chat_id == chat.id) {
+            c.position = p.clone();
+        } else {
+            chats_index.push(OrderedChat {
+                chat_id: chat.id,
+                position: p.clone(),
+            });
+        }
+        chats_index.sort();
     }
 }
