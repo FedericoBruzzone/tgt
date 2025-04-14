@@ -1,4 +1,6 @@
 use crate::action::{Action, MessageEdited, SendMessageResult};
+use crate::configs::custom::app_custom::AppConfig;
+use crate::configs::custom::telegram_custom::TelegramConfig;
 use crate::event::Event;
 use crate::{app_context::AppContext, tg::ordered_chat::OrderedChat};
 use std::collections::{BTreeSet, HashMap, VecDeque};
@@ -974,7 +976,7 @@ impl TgBackend {
     }
 
     /// Need to be called in a spawned thread
-    pub async fn start(&mut self) {
+    pub async fn start(&mut self, app_config: &AppConfig, telegram_config: &TelegramConfig) {
         match functions::get_me(self.client_id).await {
             Ok(User::User(me)) => {
                 let mut m = self.me.write().await;
@@ -984,6 +986,7 @@ impl TgBackend {
         }
 
         // Prep before processing actions
+        self.handle_authorization_state(app_config, telegram_config).await;
         self.online().await;
 
         self.process().await;
@@ -993,6 +996,7 @@ impl TgBackend {
             Ok(me) => tracing::info!("TDLib client closed: {:?}", me),
             Err(error) => tracing::error!("Error closing TDLib client: {:?}", error),
         }
+        self.handle_authorization_state(app_config, telegram_config).await;
     }
 
     async fn process(&mut self) {
@@ -1233,6 +1237,158 @@ impl TgBackend {
             }
             Err(error) => {
                 tracing::error!("Error setting animated emoji: {error:?}");
+            }
+        }
+    }
+
+    async fn handle_authorization_state(
+        &mut self,
+        app_config: &AppConfig,
+        telegram_config: &TelegramConfig,
+    ) {
+        tracing::info!("Handling authorization state");
+        let api_id: i32 = {
+            if app_config.take_api_id_from_telegram_config {
+                if let Ok(api_id) = std::env::var("API_ID") {
+                    api_id.parse().unwrap()
+                } else {
+                    tracing::error!("API_ID not found in environment");
+                    "-1".parse().unwrap() // This will throw the tdlib-rs error message
+                }
+            } else {
+                telegram_config.api_id.parse().unwrap()
+            }
+        };
+        let api_hash: String = {
+            if app_config.take_api_hash_from_telegram_config {
+                if let Ok(api_hash) = std::env::var("API_HASH") {
+                    api_hash
+                } else {
+                    tracing::error!("API_HASH not found in environment");
+                    "".into() // This will throw the tdlib-rs error message
+                }
+            } else {
+                telegram_config.api_hash.clone()
+            }
+        };
+        let database_dir = telegram_config.database_dir.clone();
+        let use_file_database = telegram_config.use_file_database;
+        let use_chat_info_database = telegram_config.use_chat_info_database;
+        let use_message_database = telegram_config.use_message_database;
+        let system_language_code = telegram_config.system_language_code.clone();
+        let device_model = telegram_config.device_model.clone();
+
+        while let Some(state) = self.auth_rx.recv().await {
+            match state {
+                AuthorizationState::WaitTdlibParameters => {
+                    let response = functions::set_tdlib_parameters(
+                        false,
+                        database_dir.clone(),
+                        String::new(),
+                        String::new(),
+                        use_file_database,
+                        use_chat_info_database,
+                        use_message_database,
+                        false,
+                        api_id,
+                        api_hash.clone(),
+                        system_language_code.clone(),
+                        device_model.clone(),
+                        String::new(),
+                        env!("CARGO_PKG_VERSION").into(),
+                        self.client_id,
+                    )
+                    .await;
+
+                    if let Err(error) = response {
+                        println!("{}", error.message);
+                    }
+                }
+                AuthorizationState::WaitPhoneNumber => loop {
+                    let phone_number =
+                        ask_user("Enter your phone number (include the country calling code):");
+                    let response = functions::set_authentication_phone_number(
+                        phone_number,
+                        None,
+                        self.client_id,
+                    )
+                    .await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                },
+                AuthorizationState::WaitOtherDeviceConfirmation(x) => {
+                    println!(
+                        "Please confirm this login link on another device: {}",
+                        x.link
+                    );
+                }
+                AuthorizationState::WaitEmailAddress(_x) => {
+                    let email_address = ask_user("Please enter email address: ");
+                    let response =
+                        functions::set_authentication_email_address(email_address, self.client_id)
+                            .await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                }
+                AuthorizationState::WaitEmailCode(_x) => {
+                    let code = ask_user("Please enter email authentication code: ");
+                    let response = functions::check_authentication_email_code(
+                        enums::EmailAddressAuthentication::Code(
+                            tdlib_rs::types::EmailAddressAuthenticationCode { code },
+                        ),
+                        self.client_id,
+                    )
+                    .await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                }
+                AuthorizationState::WaitCode(_x) => loop {
+                    // x contains info about verification code
+                    let code = ask_user("Enter the verification code:");
+                    let response = functions::check_authentication_code(code, self.client_id).await;
+                    match response {
+                        Ok(_) => break,
+                        Err(e) => println!("{}", e.message),
+                    }
+                },
+                AuthorizationState::WaitRegistration(_x) => {
+                    // x useless but contains the TOS if we want to show it
+                    let first_name = ask_user("Please enter your first name: ");
+                    let last_name = ask_user("Please enter your last name: ");
+                    functions::register_user(first_name, last_name, false, self.client_id)
+                        .await
+                        .unwrap();
+                }
+                AuthorizationState::WaitPassword(_x) => {
+                    let password = ask_user("Please enter password: ");
+                    functions::check_authentication_password(password, self.client_id)
+                        .await
+                        .unwrap();
+                }
+                AuthorizationState::Ready => {
+                    // Maybe block all until this state is reached
+                    self.have_authorization = true;
+                    break;
+                }
+                AuthorizationState::LoggingOut => {
+                    self.have_authorization = false;
+                    tracing::info!("Logging out");
+                }
+                AuthorizationState::Closing => {
+                    self.have_authorization = false;
+                    tracing::info!("Closing");
+                }
+                AuthorizationState::Closed => {
+                    tracing::info!("Closed");
+                    //self.can_quit.store(true, Ordering::Release);
+                    break;
+                }
             }
         }
     }
