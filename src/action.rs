@@ -11,7 +11,6 @@ use {
     ratatui::layout::Rect,
     std::str::FromStr,
     tdlib_rs::{enums::MessageContent, types::Message},
-    tokio::sync::mpsc::UnboundedSender,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -71,17 +70,6 @@ impl From<Modifiers> for KeyModifiers {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct WrapperSender {
-    pub inner: UnboundedSender<Action>,
-}
-
-impl PartialEq for WrapperSender {
-    fn eq(&self, _: &Self) -> bool {
-        true
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum SendMessageResult {
     Ok(Box<Message>),
@@ -132,16 +120,16 @@ pub enum Action {
     /// The first parameter is the `text`.
     /// The second parameter is the `reply_to` field.
     SendMessageOld(String, Option<TdMessageReplyToMessage>),
-    SendMessage(i64, String, Option<TdMessageReplyToMessage>, WrapperSender),
+    SendMessage(i64, String, Option<TdMessageReplyToMessage>),
     SendMessageResponse(SendMessageResult),
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEditedOld(i64, String),
-    SendMessageEdited(i64, i64, String, WrapperSender),
+    SendMessageEdited(i64, i64, String),
     SendMessageEditedResponse(MessageEdited),
     /// GetChatHistory action.
     GetChatHistoryOld,
-    GetChatHistory(i64, i64, WrapperSender),
+    GetChatHistory(i64, i64),
     /// Response to the GetChatHistory action
     GetChatHistoryResponse(i64, Vec<MessageEntry>),
     NewMessageUpdate(i64, Box<Message>),
@@ -152,7 +140,7 @@ pub enum Action {
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
     DeleteMessagesOld(Vec<i64>, bool),
-    DeleteMessages(i64, Vec<i64>, bool, WrapperSender),
+    DeleteMessages(i64, Vec<i64>, bool),
     DeleteMessagesResponse(i64, Vec<i64>, bool),
     /// ViewAllMessages action.
     ViewAllMessagesOld,
