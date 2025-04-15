@@ -946,6 +946,7 @@ pub struct TgBackend {
     pub client_id: i32,
     pub have_authorization: bool,
     full_chats_list: RwLock<bool>,
+    app_tx: Option<UnboundedSender<Action>>,
 
     users: Arc<RwLock<HashMap<i64, User>>>,
     basic_groups: Arc<RwLock<HashMap<i64, BasicGroup>>>,
@@ -962,7 +963,7 @@ pub struct TgBackend {
 
 // TODO: Implement functions called only through the CLI interface
 impl TgBackend {
-    async fn new() -> Self {
+    pub async fn new() -> Self {
         tracing::info!("Creating TgBackend");
         let (auth_tx, auth_rx) = unbounded_channel::<AuthorizationState>();
         let (event_tx, event_rx) = unbounded_channel::<Action>();
@@ -990,7 +991,12 @@ impl TgBackend {
             supergroups_full_info: Default::default(),
             me: Default::default(),
             last_acknowledged_message_id: Default::default(),
+            app_tx: None,
         }
+    }
+
+    pub async fn register_app_tx(&mut self, app_tx: UnboundedSender<Action>) {
+        self.app_tx = Some(app_tx);
     }
 
     /// Need to be called in a spawned thread
@@ -1043,25 +1049,25 @@ impl TgBackend {
     }
 
     async fn process_app_interactions(&mut self) {
+        if self.app_tx.is_none() {
+            panic!("This shouldn't have happened. Do not start the TgBackend without registering an app channel.");
+        }
+
         while let Some(ev) = self.action_rx.recv().await {
             match ev {
                 Action::LoadChats(chat_list, limit) => {
                     self.load_chats(chat_list.into(), limit).await
                 }
                 Action::ViewAllMessages(chat_id) => self.view_all_messages(chat_id).await,
-                Action::GetChatHistory(chat_id, from_id, resp_c) => {
-                    self.get_chat_history(chat_id, from_id, resp_c.inner).await
+                Action::GetChatHistory(chat_id, from_id) => {
+                    self.get_chat_history(chat_id, from_id).await
                 }
-                Action::SendMessage(chat_id, m, r_id, resp_c) => {
-                    self.send_message(chat_id, m, r_id, resp_c.inner).await
+                Action::SendMessage(chat_id, m, r_id) => self.send_message(chat_id, m, r_id).await,
+                Action::SendMessageEdited(chat_id, m_id, m) => {
+                    self.send_message_edited(chat_id, m_id, m).await
                 }
-                Action::SendMessageEdited(chat_id, m_id, m, resp_c) => {
-                    self.send_message_edited(chat_id, m_id, m, resp_c.inner)
-                        .await
-                }
-                Action::DeleteMessages(chat_id, message_ids, revoke, resp_c) => {
-                    self.delete_messages(chat_id, message_ids, revoke, resp_c.inner)
-                        .await
+                Action::DeleteMessages(chat_id, message_ids, revoke) => {
+                    self.delete_messages(chat_id, message_ids, revoke).await
                 }
                 _ => (),
             }
@@ -1100,12 +1106,7 @@ impl TgBackend {
 
     /// Sends back, through the relevant channel, multiple responses to the relevant
     /// component until all of the requested history is returned.
-    async fn get_chat_history(
-        &mut self,
-        chat_id: i64,
-        from_message_id: i64,
-        response_c: UnboundedSender<Action>,
-    ) {
+    async fn get_chat_history(&mut self, chat_id: i64, from_message_id: i64) {
         let mut counter = 0;
 
         while (counter as usize) < QUERY_MESSAGE_WIN_SIZE as usize {
@@ -1132,7 +1133,11 @@ impl TgBackend {
                         .map(|m| MessageEntry::from(&m))
                         .collect();
                     let many = resp.len();
-                    let _ = response_c.send(Action::GetChatHistoryResponse(chat_id, resp));
+                    let _ = self
+                        .app_tx
+                        .as_ref()
+                        .unwrap()
+                        .send(Action::GetChatHistoryResponse(chat_id, resp));
                     counter += many as i32;
                 }
                 Err(e) => {
@@ -1150,7 +1155,6 @@ impl TgBackend {
         chat_id: i64,
         message: String,
         reply_to: Option<TdMessageReplyToMessage>,
-        response_c: UnboundedSender<Action>,
     ) {
         let text = InputMessageContent::InputMessageText(InputMessageText {
             text: tdlib_rs::types::FormattedText {
@@ -1172,16 +1176,14 @@ impl TgBackend {
                     SendMessageResult::Err(e)
                 }
             };
-        let _ = response_c.send(Action::SendMessageResponse(r));
+        let _ = self
+            .app_tx
+            .as_ref()
+            .unwrap()
+            .send(Action::SendMessageResponse(r));
     }
 
-    async fn send_message_edited(
-        &self,
-        chat_id: i64,
-        message_id: i64,
-        message: String,
-        response_c: UnboundedSender<Action>,
-    ) {
+    async fn send_message_edited(&self, chat_id: i64, message_id: i64, message: String) {
         let text = InputMessageContent::InputMessageText(InputMessageText {
             text: tdlib_rs::types::FormattedText {
                 text: message.clone(),
@@ -1201,16 +1203,14 @@ impl TgBackend {
                 MessageEdited::Err(e)
             }
         };
-        let _ = response_c.send(Action::SendMessageEditedResponse(r));
+        let _ = self
+            .app_tx
+            .as_ref()
+            .unwrap()
+            .send(Action::SendMessageEditedResponse(r));
     }
 
-    async fn delete_messages(
-        &self,
-        chat_id: i64,
-        message_ids: Vec<i64>,
-        revoke: bool,
-        response_c: UnboundedSender<Action>,
-    ) {
+    async fn delete_messages(&self, chat_id: i64, message_ids: Vec<i64>, revoke: bool) {
         let r =
             match functions::delete_messages(chat_id, message_ids.clone(), revoke, self.client_id)
                 .await
@@ -1224,7 +1224,11 @@ impl TgBackend {
                     false
                 }
             };
-        let _ = response_c.send(Action::DeleteMessagesResponse(chat_id, message_ids, r));
+        let _ = self
+            .app_tx
+            .as_ref()
+            .unwrap()
+            .send(Action::DeleteMessagesResponse(chat_id, message_ids, r));
     }
 
     pub async fn use_quick_ack(&self) {
