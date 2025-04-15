@@ -46,6 +46,7 @@ pub struct TgContext {
     open_chat_id: AtomicI64,
     // This is the chat messages that are currently being displayed
     // in the chat window.
+    // NOTE: This should be part of ChatWindow
     open_chat_messages: Mutex<Vec<MessageEntry>>,
     open_chat_user: Mutex<Option<User>>,
 

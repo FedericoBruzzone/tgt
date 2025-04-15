@@ -238,13 +238,13 @@ impl ChatListWindow {
                 // Load chat history
                 self.app_context
                     .action_tx()
-                    .send(Action::GetChatHistory)
+                    .send(Action::GetChatHistoryOld)
                     .unwrap();
 
                 // Mark all unread messages as read
                 self.app_context
                     .action_tx()
-                    .send(Action::ViewAllMessages)
+                    .send(Action::ViewAllMessagesOld)
                     .unwrap();
             }
         }

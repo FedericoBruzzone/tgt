@@ -25,7 +25,7 @@ use crate::configs::{
     },
 };
 use crate::logger::Logger;
-use crate::tg::{tg_backend::TgBackend, tg_context::TgContext};
+use crate::tg::{tg_backend::TgBackendOld, tg_context::TgContext};
 use crate::tui::Tui;
 use crate::tui_backend::TuiBackend;
 use clap::Parser;
@@ -105,7 +105,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
     let mut tui = Tui::new(app_context.clone());
     tracing::info!("Tui initialized");
-    let mut tg_backend = TgBackend::new(app_context.clone()).unwrap();
+    let mut tg_backend = TgBackendOld::new(app_context.clone()).unwrap();
     tracing::info!("Telegram backend initialized");
 
     match run::run_app(
