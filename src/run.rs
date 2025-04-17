@@ -58,6 +58,8 @@ pub async fn run_app(
 
     // Main loop
     while tg_backend.have_authorization {
+        // TODO: Input handling and app handling (which is different still from
+        // the telegram stuff handled tdlib) should be in different threads.
         handle_tui_backend_events(app_context.clone(), tui, tui_backend).await?;
         handle_app_actions(app_context.clone(), tui, tui_backend, tg_backend).await?;
 
