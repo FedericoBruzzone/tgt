@@ -798,32 +798,11 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
-dependencies = [
- "dirs-sys 0.4.1",
-]
-
-[[package]]
-name = "dirs"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
 dependencies = [
- "dirs-sys 0.5.0",
-]
-
-[[package]]
-name = "dirs-sys"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
-dependencies = [
- "libc",
- "option-ext",
- "redox_users 0.4.5",
- "windows-sys 0.48.0",
+ "dirs-sys",
 ]
 
 [[package]]
@@ -834,7 +813,7 @@ checksum = "e01a3366d27ee9890022452ee61b2b63a67e6f13f58900b651ff5665f0bb1fab"
 dependencies = [
  "libc",
  "option-ext",
- "redox_users 0.5.0",
+ "redox_users",
  "windows-sys 0.59.0",
 ]
 
@@ -2390,17 +2369,6 @@ dependencies = [
 
 [[package]]
 name = "redox_users"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd283d9651eeda4b2a83a43c1c91b266c40fd76ecd39a50a8c630ae69dc72891"
-dependencies = [
- "getrandom 0.2.15",
- "libredox",
- "thiserror 1.0.63",
-]
-
-[[package]]
-name = "redox_users"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd6f9d3d47bdd2ad6945c5015a226ec6155d0bcdfd8f7cd29f86b71f8de99d2b"
@@ -2977,11 +2945,11 @@ checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 
 [[package]]
 name = "tdlib-rs"
-version = "1.0.5"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65e139e6a3877f1759cef1ded4e3ead57642fb8fe618ac74da41c37830670a46"
+checksum = "f98c960258301bee0758a669fbe12ad8a97c6e764d2f30c5426eea008eebf2d2"
 dependencies = [
- "dirs 5.0.1",
+ "dirs",
  "futures-channel",
  "log",
  "once_cell",
@@ -2997,18 +2965,18 @@ dependencies = [
 
 [[package]]
 name = "tdlib-rs-gen"
-version = "1.0.5"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bb7272e3bc1246b4d97f00640afb64ade25282b3ea38195619f62e1708a2170"
+checksum = "be6a2373951794ddcf612db2cd26fc67d9fb2721a1497e873c06bd87823fae80"
 dependencies = [
  "tdlib-rs-parser",
 ]
 
 [[package]]
 name = "tdlib-rs-parser"
-version = "1.0.5"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ea8e585ae80806b3a6e1a4e9eab8e1857c9ba1ec72463bfa82f33815597833e"
+checksum = "87cbdfae498e57fb48d380fff8eb5c9c98d4497c998f6de0d30d5d6b12f5358b"
 
 [[package]]
 name = "tempfile"
@@ -3032,7 +3000,7 @@ dependencies = [
  "clap",
  "config",
  "crossterm 0.29.0",
- "dirs 6.0.0",
+ "dirs",
  "futures",
  "image",
  "lazy_static",
@@ -3827,15 +3795,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87fa48cc5d406560701792be122a10132491cff9d0aeb23583cc2dcafc847319"
 dependencies = [
  "windows-link",
-]
-
-[[package]]
-name = "windows-sys"
-version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9"
-dependencies = [
- "windows-targets 0.48.5",
 ]
 
 [[package]]
