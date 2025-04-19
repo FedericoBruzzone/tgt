@@ -2,11 +2,15 @@ use {
     super::component_name::ComponentName,
     crate::{
         app_error::AppError,
-        tg::td_enums::{TdChatList, TdMessageReplyToMessage},
+        tg::{
+            message_entry::MessageEntry,
+            td_enums::{TdChatList, TdMessageReplyToMessage},
+        },
     },
     crossterm::event::{KeyCode, KeyModifiers},
     ratatui::layout::Rect,
     std::str::FromStr,
+    tdlib_rs::{enums::MessageContent, types::Message},
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -66,8 +70,25 @@ impl From<Modifiers> for KeyModifiers {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-// Action` is an enum that represents an action that can be handled by the
+#[derive(Debug, Clone, PartialEq)]
+pub enum SendMessageResult {
+    Ok(Box<Message>),
+    Err(tdlib_rs::types::Error),
+}
+
+impl Eq for SendMessageResult {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MessageEdited {
+    Ok(i64, i64, String),
+    Err(tdlib_rs::types::Error),
+}
+
+impl Eq for MessageEdited {}
+
+#[derive(Debug, Clone, PartialEq)]
+// TODO: Separate actions related to TgBackend from the UI actions
+/// Action` is an enum that represents an action that can be handled by the
 /// main application loop and the components of the user interface.
 pub enum Action {
     /// Unknown action.
@@ -98,19 +119,33 @@ pub enum Action {
     /// SendMessage action with a `String`.
     /// The first parameter is the `text`.
     /// The second parameter is the `reply_to` field.
-    SendMessage(String, Option<TdMessageReplyToMessage>),
+    SendMessageOld(String, Option<TdMessageReplyToMessage>),
+    SendMessage(i64, String, Option<TdMessageReplyToMessage>),
+    SendMessageResponse(SendMessageResult),
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
-    SendMessageEdited(i64, String),
+    SendMessageEditedOld(i64, String),
+    SendMessageEdited(i64, i64, String),
+    SendMessageEditedResponse(MessageEdited),
     /// GetChatHistory action.
-    GetChatHistory,
+    GetChatHistoryOld,
+    GetChatHistory(i64, i64),
+    /// Response to the GetChatHistory action
+    GetChatHistoryResponse(i64, Vec<MessageEntry>),
+    NewMessageUpdate(i64, Box<Message>),
+    NewContentUpdate(i64, i64, Box<MessageContent>),
+    DeleteMessagesUpdate(i64, Vec<i64>),
     /// DeleteMessages action.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
     /// If `revoke` is false, the message will be deleted only for the current user.
-    DeleteMessages(Vec<i64>, bool),
+    DeleteMessagesOld(Vec<i64>, bool),
+    DeleteMessages(i64, Vec<i64>, bool),
+    DeleteMessagesResponse(i64, Vec<i64>, bool),
     /// ViewAllMessages action.
-    ViewAllMessages,
+    ViewAllMessagesOld,
+    /// Set all messages of the chat as read
+    ViewAllMessages(i64),
 
     /// Focus action with a `ComponentName`.
     FocusComponent(ComponentName),
@@ -194,6 +229,10 @@ impl Action {
         Action::Key(key, Modifiers::from(modifiers))
     }
 }
+
+// It's ok to do this hack. The only actions used in a HashMap are the ones
+// that are associated to keybindings which are enums without fields.
+impl Eq for Action {}
 
 /// Implement the `FromStr` trait for `Action`.
 impl FromStr for Action {

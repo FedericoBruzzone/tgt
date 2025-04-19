@@ -2,7 +2,6 @@ use crate::action::Action;
 use crate::app_context::AppContext;
 use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
-use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::layout::Rect;
@@ -12,7 +11,7 @@ use ratatui::widgets::block::{Block, Title};
 use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
-use std::sync::Arc;
+use std::rc::Rc;
 use tdlib_rs::enums::{ChatList, UserStatus};
 use tdlib_rs::types::User;
 use tokio::sync::mpsc::UnboundedSender;
@@ -130,7 +129,7 @@ impl ChatListEntry {
 /// the chat list.
 pub struct ChatListWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `ChatListWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -153,7 +152,7 @@ impl ChatListWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `ChatListWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let name = "".to_string();
         let command_tx = None;
         let chat_list = vec![];
@@ -187,11 +186,10 @@ impl ChatListWindow {
         let i = match self.chat_list_state.selected() {
             Some(i) => {
                 if i == self.chat_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx
-                            .send(Event::LoadChats(ChatList::Main.into(), 20))
-                            .unwrap();
-                    }
+                    self.app_context
+                        .action_tx()
+                        .send(Action::LoadChats(ChatList::Main.into(), 20))
+                        .unwrap();
                 }
 
                 if i >= self.chat_list.len() - 1 {
@@ -236,14 +234,18 @@ impl ChatListWindow {
                     .send(Action::FocusComponent(Prompt))
                     .unwrap();
 
-                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                    self.app_context.tg_context().set_from_message_id(0);
-                    // Load chat history
-                    event_tx.send(Event::GetChatHistory).unwrap();
+                self.app_context.tg_context().set_from_message_id(0);
+                // Load chat history
+                self.app_context
+                    .action_tx()
+                    .send(Action::GetChatHistoryOld)
+                    .unwrap();
 
-                    // Mark all unread messages as read
-                    event_tx.send(Event::ViewAllMessages).unwrap();
-                }
+                // Mark all unread messages as read
+                self.app_context
+                    .action_tx()
+                    .send(Action::ViewAllMessagesOld)
+                    .unwrap();
             }
         }
     }

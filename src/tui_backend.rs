@@ -12,7 +12,7 @@ use {
     ratatui::{backend::CrosstermBackend, Terminal},
     std::{
         io::{self, Stderr},
-        sync::Arc,
+        rc::Rc,
         time::Duration,
     },
     tokio::{
@@ -53,7 +53,7 @@ impl TuiBackend {
     /// # Returns
     /// * `Result<Self, io::Error>` - An Ok result containing the new instance
     ///   of the `TuiBackend` struct or an error.
-    pub fn new(app_context: Arc<AppContext>) -> Result<Self, std::io::Error> {
+    pub fn new(app_context: Rc<AppContext>) -> Result<Self, std::io::Error> {
         tracing::info!("Creating TuiBackend");
         let frame_rate = app_context.app_config().frame_rate;
         let mouse = app_context.app_config().mouse_support;
