@@ -38,7 +38,7 @@ impl Tui {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `Tui` struct.
-    pub fn new(app_context: Rc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>, tg_backend: UnboundedSender<Action>) -> Self {
         let components_iter: Vec<(ComponentName, Box<dyn Component>)> = vec![
             (
                 ComponentName::TitleBar,
@@ -48,7 +48,7 @@ impl Tui {
             ),
             (
                 ComponentName::CoreWindow,
-                CoreWindow::new(app_context.clone())
+                CoreWindow::new(app_context.clone(), tg_backend)
                     .with_name("Core Window")
                     .new_boxed(),
             ),

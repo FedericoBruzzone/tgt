@@ -10,6 +10,7 @@ use arboard::Clipboard;
 use crossterm::event::KeyCode;
 use ratatui::{
     layout::{Position, Rect},
+    style::Style,
     symbols::{
         border::{Set, PLAIN},
         line::NORMAL,
@@ -76,7 +77,9 @@ struct Input {
     /// It is used to send actions to the main event loop for processing.
     /// Basically, it is used to send `IncreasePromptSize` and `DecreasePromptSize`
     /// actions.
-    action_tx: Option<UnboundedSender<Action>>,
+    app_tx: Option<UnboundedSender<Action>>,
+    tg_backend: Option<UnboundedSender<Action>>,
+    chat_id: i64,
     /// An enum that represents the direction of the selection.
     /// Implicitly, it is used to keep track whether the user is selecting text
     /// or not.
@@ -99,8 +102,11 @@ impl Input {
     ///
     /// # Arguments
     /// * `command_tx` - An unbounded sender that send action for processing.
-    fn set_command_tx(&mut self, command_tx: UnboundedSender<Action>) {
-        self.action_tx = Some(command_tx);
+    fn set_app_tx(&mut self, command_tx: UnboundedSender<Action>) {
+        self.app_tx = Some(command_tx);
+    }
+    fn set_tg_backend_tx(&mut self, command_tx: UnboundedSender<Action>) {
+        self.tg_backend = Some(command_tx);
     }
     /// Get the cursor x position of the `Input` struct.
     fn cursor_x(&self) -> usize {
@@ -139,7 +145,7 @@ impl Input {
         self.text.insert(self.cursor.1 + 1, right);
         self.cursor.0 = 0;
         self.cursor.1 += 1;
-        if let Some(tx) = self.action_tx.as_ref() {
+        if let Some(tx) = self.app_tx.as_ref() {
             self.correct_prompt_size += 1;
             tx.send(Action::IncreasePromptSize).unwrap()
         }
@@ -147,7 +153,7 @@ impl Input {
     /// Delete the character before the cursor position.
     fn backspace(&mut self) {
         if self.text[self.cursor.1].is_empty() && self.cursor.1 > 0 {
-            if let Some(tx) = self.action_tx.as_ref() {
+            if let Some(tx) = self.app_tx.as_ref() {
                 self.correct_prompt_size -= 1;
                 tx.send(Action::DecreasePromptSize).unwrap();
             }
@@ -261,7 +267,7 @@ impl Input {
     /// the prompt size.
     fn restore_prompt_size(&mut self) {
         if !self.is_restored {
-            if let Some(tx) = self.action_tx.as_ref() {
+            if let Some(tx) = self.app_tx.as_ref() {
                 for _ in 0..self.correct_prompt_size {
                     tx.send(Action::IncreasePromptSize).unwrap();
                 }
@@ -272,7 +278,7 @@ impl Input {
     /// Set the prompt size to one.
     /// It is used to set the prompt size to one.
     fn set_prompt_size_to_one(&mut self) {
-        if let Some(tx) = self.action_tx.as_ref() {
+        if let Some(tx) = self.app_tx.as_ref() {
             for _ in 0..self.correct_prompt_size {
                 tx.send(Action::DecreasePromptSize).unwrap();
             }
@@ -445,7 +451,7 @@ impl Input {
             })
             .collect();
         for _ in 0..self.text.len() - 1 {
-            if let Some(tx) = self.action_tx.as_ref() {
+            if let Some(tx) = self.app_tx.as_ref() {
                 tx.send(Action::IncreasePromptSize).unwrap();
             }
         }
@@ -460,10 +466,14 @@ impl Input {
     fn send_message(&mut self) {
         match self.mode {
             Mode::Normal => {
-                self.action_tx
+                self.tg_backend
                     .as_ref()
                     .unwrap()
-                    .send(Action::SendMessageOld(self.text_to_string(), None))
+                    .send(Action::SendMessage(
+                        self.chat_id,
+                        self.text_to_string(),
+                        None,
+                    ))
                     .unwrap();
                 self.text = vec![vec![]];
                 self.set_prompt_size_to_one_focused();
@@ -471,10 +481,11 @@ impl Input {
             Mode::Edit(message_id) => {
                 // NOTE: This seems to be bugged. It doesn't actually edit the message.
                 // This was true even before the refactor.
-                self.action_tx
+                self.tg_backend
                     .as_ref()
                     .unwrap()
-                    .send(Action::SendMessageEditedOld(
+                    .send(Action::SendMessageEdited(
+                        self.chat_id,
                         message_id,
                         self.text_to_string(),
                     ))
@@ -484,10 +495,11 @@ impl Input {
                 self.mode = Mode::Normal;
             }
             Mode::Reply(message_id) => {
-                self.action_tx
+                self.tg_backend
                     .as_ref()
                     .unwrap()
-                    .send(Action::SendMessageOld(
+                    .send(Action::SendMessage(
+                        self.chat_id,
                         self.text_to_string(),
                         Some(TdMessageReplyToMessage {
                             chat_id: 0,
@@ -506,12 +518,12 @@ impl Input {
                 //
                 // Ideally CoreWindow should propagate updates regardless of focus, that
                 // way components can handle their own state by themselves.
-                self.action_tx
+                self.app_tx
                     .as_ref()
                     .unwrap()
                     .send(Action::FocusComponent(ComponentName::ChatList))
                     .unwrap();
-                self.action_tx
+                self.app_tx
                     .as_ref()
                     .unwrap()
                     .send(Action::ChatListSortWithString(self.text_to_string()))
@@ -543,20 +555,29 @@ impl Default for Input {
             text: vec![vec![]],
             cursor: (0, 0),
             area_input: Rect::default(),
-            action_tx: None,
+            app_tx: None,
             dir_selection: DirSelection::Empty,
             correct_prompt_size: 0,
             is_restored: true,
             mode: Mode::Normal,
+            chat_id: 0,
+            tg_backend: None,
         }
     }
 }
+
+struct PromptStyles {
+    prompt: Style,
+    text: Style,
+    preview: Style,
+    selected: Style,
+    border_component_focused: Style,
+}
+
 /// `PromptWindow` is a struct that represents a window for displaying a prompt.
 /// It is responsible for managing the layout and rendering of the prompt
 /// window.
 pub struct PromptWindow {
-    /// The application context.
-    app_context: Rc<AppContext>,
     /// The name of the `PromptWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -567,6 +588,7 @@ pub struct PromptWindow {
     focused_keys: Vec<Event>,
     /// The current input of the `PromptWindow`.
     input: Input,
+    style: PromptStyles,
 }
 /// Implement the `PromptWindow` struct.
 impl PromptWindow {
@@ -577,7 +599,7 @@ impl PromptWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `PromptWindow` struct.
-    pub fn new(app_context: Rc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>, tg_backend: UnboundedSender<Action>) -> Self {
         let name = "".to_string();
         let action_tx = None;
         let focused = false;
@@ -586,15 +608,22 @@ impl PromptWindow {
             Action::FocusComponent(ComponentName::Prompt),
         );
 
-        let input = Input::default();
+        let mut input = Input::default();
+        input.tg_backend = Some(tg_backend);
 
         PromptWindow {
-            app_context,
             name,
             action_tx,
             focused,
             focused_keys,
             input,
+            style: PromptStyles {
+                prompt: app_context.style_prompt(),
+                text: app_context.style_prompt_message_text(),
+                preview: app_context.style_prompt_message_preview_text(),
+                selected: app_context.style_prompt_message_text_selected(),
+                border_component_focused: app_context.style_border_component_focused(),
+            },
         }
     }
     /// Set the name of the `PromptWindow`.
@@ -640,7 +669,7 @@ impl HandleFocus for PromptWindow {
 impl Component for PromptWindow {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.action_tx = Some(tx.clone());
-        self.input.set_command_tx(tx);
+        self.input.set_app_tx(tx);
         Ok(())
     }
 
@@ -827,6 +856,7 @@ impl Component for PromptWindow {
                 self.input.mode = Mode::Reply(message_id);
             }
             Action::ChatListSearch => self.input.mode = Mode::SearchChatList,
+            Action::ChatListOpen(chat_id) => self.input.chat_id = chat_id,
             _ => {}
         }
     }
@@ -849,15 +879,9 @@ impl Component for PromptWindow {
                     line.iter()
                         .map(|cell| {
                             if cell.selected {
-                                Span::styled(
-                                    cell.c.to_string(),
-                                    self.app_context.style_prompt_message_text_selected(),
-                                )
+                                Span::styled(cell.c.to_string(), self.style.selected)
                             } else {
-                                Span::styled(
-                                    cell.c.to_string(),
-                                    self.app_context.style_prompt_message_text(),
-                                )
+                                Span::styled(cell.c.to_string(), self.style.text)
                             }
                         })
                         .collect::<Vec<Span>>(),
@@ -867,11 +891,7 @@ impl Component for PromptWindow {
 
         let (text, style_text, style_border_focused) = if self.focused {
             self.input.restore_prompt_size();
-            (
-                text,
-                self.app_context.style_prompt(),
-                self.app_context.style_border_component_focused(),
-            )
+            (text, self.style.prompt, self.style.border_component_focused)
         } else {
             self.input.set_prompt_size_to_one_unfocused();
             (
@@ -883,8 +903,8 @@ impl Component for PromptWindow {
                         .collect::<Vec<String>>()
                         .join(" or ")
                 ))],
-                self.app_context.style_prompt_message_preview_text(),
-                self.app_context.style_prompt(),
+                self.style.preview,
+                self.style.prompt,
             )
         };
 

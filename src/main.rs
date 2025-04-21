@@ -103,7 +103,7 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     let mut tui_backend = TuiBackend::new(app_context.clone())?;
     tracing::info!("Tui backend initialized");
     init_panic_hook(tui_backend.mouse, tui_backend.paste);
-    let mut tui = Tui::new(app_context.clone());
+    let mut tui = Tui::new(app_context.clone(), todo!());
     tracing::info!("Tui initialized");
     let mut tg_backend = TgBackendOld::new(app_context.clone()).unwrap();
     tracing::info!("Telegram backend initialized");

@@ -177,7 +177,8 @@ pub enum Action {
     /// ChatListSelect action.
     ChatListUnselect,
     /// ChatListOpen action.
-    ChatListOpen,
+    ChatListOpenOld,
+    ChatListOpen(i64),
     /// ChatListSortWithString action.
     ChatListSortWithString(String),
 
@@ -255,7 +256,9 @@ impl FromStr for Action {
             "chat_list_next" => Ok(Action::ChatListNext),
             "chat_list_previous" => Ok(Action::ChatListPrevious),
             "chat_list_unselect" => Ok(Action::ChatListUnselect),
-            "chat_list_open" => Ok(Action::ChatListOpen),
+            // TODO: Rework action to get id from ChatList, maybe use
+            // ChatListOpenCommand => gets chat_id => generate ChatListOpen(chat_id)
+            "chat_list_open" => Ok(Action::ChatListOpenOld),
             "chat_list_search" => Ok(Action::ChatListSearch),
             "chat_list_restore_sort" => Ok(Action::ChatListRestoreSort),
             "chat_window_next" => Ok(Action::ChatWindowNext),

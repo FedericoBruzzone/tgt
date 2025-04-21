@@ -286,7 +286,7 @@ impl Component for ChatListWindow {
             Action::ChatListNext => self.next(),
             Action::ChatListPrevious => self.previous(),
             Action::ChatListUnselect => self.unselect(),
-            Action::ChatListOpen => self.confirm_selection(),
+            Action::ChatListOpenOld => self.confirm_selection(),
             Action::ChatListSortWithString(s) => self.sort(s),
             Action::ChatListRestoreSort => self.default_sort(),
             _ => {}
