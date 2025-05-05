@@ -52,7 +52,7 @@ jobs:
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          brew install gperf cmake openssl
+          brew install gperf openssl
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
