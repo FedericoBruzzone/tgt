@@ -1,11 +1,11 @@
-use crate::component_name::ComponentName::Prompt;
 use crate::{
     action::Action, app_context::AppContext, app_error::AppError,
-    configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
+    configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackendOld,
     tui::Tui, tui_backend::TuiBackend,
 };
 use ratatui::layout::Rect;
-use std::{collections::HashMap, io, sync::Arc, time::Instant};
+use std::rc::Rc;
+use std::{collections::HashMap, io, time::Instant};
 use tdlib_rs::enums::ChatList;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -21,10 +21,10 @@ use tokio::sync::mpsc::UnboundedSender;
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 pub async fn run_app(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
-    tg_backend: &mut TgBackend,
+    tg_backend: &mut TgBackendOld,
 ) -> Result<(), AppError<Action>> {
     tracing::info!("Starting run_app");
 
@@ -38,7 +38,7 @@ pub async fn run_app(
     tg_backend.get_me().await;
     tg_backend.load_chats(ChatList::Main, 30).await;
 
-    match handle_cli(Arc::clone(&app_context), tg_backend).await {
+    match handle_cli(app_context.clone(), tg_backend).await {
         HandleCliOutcome::Quit => {
             futures::join!(quit_cli(tg_backend));
             return Ok(());
@@ -58,9 +58,10 @@ pub async fn run_app(
 
     // Main loop
     while tg_backend.have_authorization {
-        handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
-        handle_tg_backend_events(Arc::clone(&app_context), tg_backend).await?;
-        handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
+        // TODO: Input handling and app handling (which is different still from
+        // the telegram stuff handled tdlib) should be in different threads.
+        handle_tui_backend_events(app_context.clone(), tui, tui_backend).await?;
+        handle_app_actions(app_context.clone(), tui, tui_backend, tg_backend).await?;
 
         if app_context.quit_acquire() {
             quit_tui(tg_backend, tui_backend).await;
@@ -69,72 +70,6 @@ pub async fn run_app(
         }
     }
 
-    Ok(())
-}
-/// Handle incoming events from the Telegram backend and produce actions if
-/// necessary.
-///
-/// # Arguments
-/// * `app_context` - An Arc wrapped AppContext struct.
-/// * `tg_backend` - A mutable reference to the TgBackend struct.
-///
-/// # Returns
-/// * `Result<(), AppError>` - An Ok result or an error.
-async fn handle_tg_backend_events(
-    app_context: Arc<AppContext>,
-    tg_backend: &mut TgBackend,
-) -> Result<(), AppError<Action>> {
-    if let Some(event) = tg_backend.next().await {
-        match event {
-            Event::LoadChats(chat_list, limit) => {
-                app_context
-                    .action_tx()
-                    .send(Action::LoadChats(chat_list, limit))?;
-            }
-            Event::SendMessage(message, reply_to) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessage(message, reply_to))?;
-            }
-            Event::SendMessageEdited(message_id, message) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessageEdited(message_id, message))?;
-            }
-            Event::GetChatHistory => {
-                app_context.action_tx().send(Action::GetChatHistory)?;
-            }
-            Event::DeleteMessages(message_ids, revoke) => {
-                app_context
-                    .action_tx()
-                    .send(Action::DeleteMessages(message_ids, revoke))?;
-            }
-            Event::EditMessage(message_id, message) => {
-                // It is important to focus the prompt before editing the message.
-                // Because the actions are sent to the focused component.
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-
-                app_context
-                    .action_tx()
-                    .send(Action::EditMessage(message_id, message))?;
-            }
-            Event::ReplyMessage(message_id, message) => {
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-
-                app_context
-                    .action_tx()
-                    .send(Action::ReplyMessage(message_id, message))?;
-            }
-            Event::ViewAllMessages => {
-                app_context.action_tx().send(Action::ViewAllMessages)?;
-            }
-            _ => {}
-        }
-    }
     Ok(())
 }
 
@@ -150,7 +85,7 @@ async fn handle_tg_backend_events(
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn handle_tui_backend_events(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
 ) -> Result<(), AppError<Action>> {
@@ -246,10 +181,10 @@ async fn consume_until_single_action(
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
 pub async fn handle_app_actions(
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
-    tg_backend: &mut TgBackend,
+    tg_backend: &mut TgBackendOld,
 ) -> Result<(), AppError<Action>> {
     while let Ok(action) = app_context.action_rx().try_recv() {
         match action {
@@ -274,7 +209,7 @@ pub async fn handle_app_actions(
             Action::LoadChats(chat_list, limit) => {
                 tg_backend.load_chats(chat_list.into(), limit).await;
             }
-            Action::SendMessage(ref message, ref reply_to) => {
+            Action::SendMessageOld(ref message, ref reply_to) => {
                 let _ = tg_backend
                     .send_message(
                         message.to_string(),
@@ -283,17 +218,17 @@ pub async fn handle_app_actions(
                     )
                     .await;
             }
-            Action::SendMessageEdited(message_id, ref message) => {
+            Action::SendMessageEditedOld(message_id, ref message) => {
                 tg_backend
                     .send_message_edited(message_id, message.to_string())
                     .await;
             }
-            Action::GetChatHistory => {
+            Action::GetChatHistoryOld => {
                 tg_backend
                     .get_chat_history(app_context.tg_context().open_chat_id())
                     .await;
             }
-            Action::DeleteMessages(ref message_ids, revoke) => {
+            Action::DeleteMessagesOld(ref message_ids, revoke) => {
                 tg_backend
                     .delete_messages(
                         app_context.tg_context().open_chat_id(),
@@ -307,7 +242,7 @@ pub async fn handle_app_actions(
                     .tg_context()
                     .set_reply_message(message_id, message.to_string());
             }
-            Action::ViewAllMessages => {
+            Action::ViewAllMessagesOld => {
                 tg_backend.view_all_messages().await;
             }
             _ => {}
@@ -336,7 +271,10 @@ enum HandleCliOutcome {
 /// * `app_context` - An Arc wrapped AppContext struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) -> HandleCliOutcome {
+async fn handle_cli(
+    app_context: Rc<AppContext>,
+    tg_backend: &mut TgBackendOld,
+) -> HandleCliOutcome {
     if app_context.cli_args().telegram_cli().logout() {
         return HandleCliOutcome::Logout;
     }
@@ -370,6 +308,7 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                 match msg {
                     Ok(msg) => {
                         let message_id = msg.id;
+                        // TODO: Spin lock increases CPU usage by a lot. Need to replace why a notify.
                         while app_context.tg_context().last_acknowledged_message_id() != message_id
                         {
                         }
@@ -404,7 +343,7 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
 /// * `tui_backend` - A mutable reference to the TuiBackend struct.
-async fn quit_tui(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
+async fn quit_tui(tg_backend: &mut TgBackendOld, tui_backend: &mut TuiBackend) {
     futures::join!(tg_backend.offline());
     tg_backend.have_authorization = false;
     tg_backend.close().await;
@@ -419,7 +358,7 @@ async fn quit_tui(tg_backend: &mut TgBackend, tui_backend: &mut TuiBackend) {
 ///
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn quit_cli(tg_backend: &mut TgBackend) {
+async fn quit_cli(tg_backend: &mut TgBackendOld) {
     tg_backend.have_authorization = false;
     tg_backend.close().await;
     tg_backend.handle_authorization_state().await;
@@ -432,7 +371,7 @@ async fn quit_cli(tg_backend: &mut TgBackend) {
 ///
 /// # Arguments
 /// * `tg_backend` - A mutable reference to the TgBackend struct.
-async fn log_out(tg_backend: &mut TgBackend) {
+async fn log_out(tg_backend: &mut TgBackendOld) {
     tg_backend.log_out().await;
     tg_backend.handle_authorization_state().await;
 
