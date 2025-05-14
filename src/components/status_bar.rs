@@ -10,7 +10,7 @@ use {
         text::{Line, Span},
         widgets::{block::Block, Borders, Paragraph, Wrap},
     },
-    std::sync::Arc,
+    std::rc::Rc,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -18,7 +18,7 @@ use {
 /// It is responsible for managing the layout and rendering of the status bar.
 pub struct StatusBar {
     /// The application configuration.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `StatusBar`.
     name: String,
     /// An unbounded sender that send action for processing.
@@ -39,7 +39,7 @@ impl StatusBar {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `StatusBar` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let command_tx = None;
         let name = "".to_string();
         let terminal_area = Rect::default();
