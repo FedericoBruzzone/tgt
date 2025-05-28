@@ -1,8 +1,8 @@
 use crate::{
     action::Action,
     app_context::AppContext,
+    component_name::ComponentName,
     components::component_traits::{Component, HandleFocus},
-    event::Event,
     tg::message_entry::MessageEntry,
 };
 use arboard::Clipboard;
@@ -15,24 +15,27 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, List, ListDirection, ListItem, ListState, Paragraph},
 };
-use std::sync::Arc;
+use std::rc::Rc;
 use tokio::sync::mpsc::UnboundedSender;
 
+// TODO: Rework UI configs in order to remove app_context
 /// `ChatWindow` is a struct that represents a window for displaying a chat.
 /// It is responsible for managing the layout and rendering of the chat window.
 pub struct ChatWindow {
     /// The application context.
-    app_context: Arc<AppContext>,
+    app_context: Rc<AppContext>,
     /// The name of the `ChatWindow`.
     name: String,
     /// An unbounded sender that send action for processing.
-    action_tx: Option<UnboundedSender<Action>>,
+    app_tx: Option<UnboundedSender<Action>>,
+    tgbackend_tx: Option<UnboundedSender<Action>>,
     /// A list of message items to be displayed in the `ChatWindow`.
     message_list: Vec<MessageEntry>,
     /// The state of the list.
     message_list_state: ListState,
     /// Indicates whether the `ChatWindow` is focused or not.
     focused: bool,
+    chat_id: i64,
 }
 /// Implementation of the `ChatWindow` struct.
 impl ChatWindow {
@@ -43,19 +46,23 @@ impl ChatWindow {
     ///
     /// # Returns
     /// * `Self` - The new instance of the `ChatWindow` struct.
-    pub fn new(app_context: Arc<AppContext>) -> Self {
+    pub fn new(app_context: Rc<AppContext>) -> Self {
         let name = "".to_string();
-        let action_tx = None;
+        let app_tx = None;
+        let tgbackend_tx = None;
         let message_list = vec![];
         let message_list_state = ListState::default();
         let focused = false;
+        let chat_id = 0;
         ChatWindow {
             app_context,
             name,
-            action_tx,
+            app_tx,
+            tgbackend_tx,
             message_list,
             message_list_state,
             focused,
+            chat_id,
         }
     }
     /// Set the name of the `ChatWindow`.
@@ -70,14 +77,19 @@ impl ChatWindow {
         self
     }
 
+    pub fn register_tgbackend_tx(&mut self, tgbackend_tx: UnboundedSender<Action>) {
+        self.tgbackend_tx = Some(tgbackend_tx);
+    }
+
     /// Select the next message item in the list.
     fn next(&mut self) {
         let i = match self.message_list_state.selected() {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx.send(Event::GetChatHistory).unwrap();
-                    }
+                    self.app_context
+                        .action_tx()
+                        .send(Action::GetChatHistoryOld)
+                        .unwrap();
                 }
 
                 if i == 0 {
@@ -96,9 +108,10 @@ impl ChatWindow {
         let i = match self.message_list_state.selected() {
             Some(i) => {
                 if i == self.message_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx.send(Event::GetChatHistory).unwrap();
-                    }
+                    self.app_context
+                        .action_tx()
+                        .send(Action::GetChatHistoryOld)
+                        .unwrap();
                 }
 
                 if i >= self.message_list.len() - 1 {
@@ -123,17 +136,23 @@ impl ChatWindow {
     /// * `revoke` - A boolean flag indicating whether the message should be revoked or not.
     fn delete_selected(&mut self, revoke: bool) {
         if let Some(selected) = self.message_list_state.selected() {
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                let sender_id = self.message_list[selected].sender_id();
-                if sender_id != self.app_context.tg_context().me() {
-                    return;
-                }
-                let message_id = self.message_list[selected].id();
-                event_tx
-                    .send(Event::DeleteMessages(vec![message_id], revoke))
-                    .unwrap();
-                self.app_context.tg_context().delete_message(message_id);
+            let sender_id = self.message_list[selected].sender_id();
+            if sender_id != self.app_context.tg_context().me() {
+                return;
             }
+            let message_id = self.message_list[selected].id();
+            self.tgbackend_tx
+                .as_ref()
+                .unwrap()
+                .send(Action::DeleteMessages(
+                    self.chat_id,
+                    vec![message_id],
+                    revoke,
+                ))
+                .unwrap();
+            // Should probably wait for Action::DeleteMessagesResponse()
+            // but it is rare for this to fail. Will do in future.
+            self.message_list.retain(|m| m.id() != message_id);
         }
     }
 
@@ -156,11 +175,17 @@ impl ChatWindow {
             }
             let message = self.message_list[selected].message_content_to_string();
             let message_id = self.message_list[selected].id();
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                event_tx
-                    .send(Event::EditMessage(message_id, message))
-                    .unwrap();
-            }
+
+            self.app_tx
+                .as_ref()
+                .unwrap()
+                .send(Action::FocusComponent(ComponentName::Prompt))
+                .unwrap();
+            self.app_tx
+                .as_ref()
+                .unwrap()
+                .send(Action::EditMessage(message_id, message))
+                .unwrap();
         }
     }
 
@@ -169,12 +194,26 @@ impl ChatWindow {
         if let Some(selected) = self.message_list_state.selected() {
             let message_id = self.message_list[selected].id();
             let text = self.message_list[selected].message_content_to_string();
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                event_tx
-                    .send(Event::ReplyMessage(message_id, text))
-                    .unwrap();
-            }
+
+            self.app_tx
+                .as_ref()
+                .unwrap()
+                .send(Action::FocusComponent(ComponentName::Prompt))
+                .unwrap();
+            self.app_tx
+                .as_ref()
+                .unwrap()
+                .send(Action::ReplyMessage(message_id, text))
+                .unwrap();
         }
+    }
+
+    fn update_messages(&mut self, chat_id: i64, resp: Vec<MessageEntry>) {
+        if chat_id != self.chat_id {
+            return;
+        }
+        self.message_list.extend_from_slice(&resp);
+        self.message_list.sort_by(|a, b| a.id().cmp(&b.id()));
     }
 }
 
@@ -194,10 +233,11 @@ impl HandleFocus for ChatWindow {
 /// Implement the `Component` trait for the `ChatListWindow` struct.
 impl Component for ChatWindow {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
-        self.action_tx = Some(tx);
+        self.app_tx = Some(tx);
         Ok(())
     }
 
+    // Read comments in delete_selected() for missing checks
     fn update(&mut self, action: Action) {
         match action {
             Action::ChatWindowNext => self.next(),
@@ -208,6 +248,7 @@ impl Component for ChatWindow {
             Action::ChatWindowCopy => self.copy_selected(),
             Action::ChatWindowEdit => self.edit_selected(),
             Action::ShowChatWindowReply => self.reply_selected(),
+            Action::GetChatHistoryResponse(chat_id, resp) => self.update_messages(chat_id, resp),
             _ => {}
         }
     }
@@ -216,9 +257,6 @@ impl Component for ChatWindow {
         if !self.focused {
             self.message_list_state.select(None);
         }
-
-        self.message_list
-            .clone_from(&self.app_context.tg_context().open_chat_messages());
 
         let chat_layout = Layout::default()
             .direction(Direction::Vertical)
