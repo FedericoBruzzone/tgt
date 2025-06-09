@@ -64,7 +64,7 @@ nucleo-matcher = "0.3.1"
 
 [build-dependencies]
 dirs = "6.0.0"
-reqwest = { version = "0.12.18", features = ["blocking"] }
+reqwest = { version = "0.12.19", features = ["blocking"] }
 zip = { version = "3.0.0" }
 tdlib-rs = "1.0.5"
 
