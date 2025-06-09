@@ -8,7 +8,7 @@ use tdlib_rs::types::FormattedText;
 
 use super::td_enums::{TdMessageReplyTo, TdMessageSender};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct DateTimeEntry {
     pub timestamp: i32,
 }
@@ -33,7 +33,7 @@ impl DateTimeEntry {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MessageEntry {
     id: i64,
     sender_id: TdMessageSender,
