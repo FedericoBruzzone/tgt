@@ -17,7 +17,7 @@ use {
 };
 
 fn ask_user(string: &str) -> String {
-    println!("{}", string);
+    println!("{string}");
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     input.trim().to_string()

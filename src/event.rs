@@ -152,52 +152,52 @@ impl Display for Event {
             Event::Init => write!(f, "Init"),
             Event::Render => write!(f, "Render"),
             Event::Resize(width, height) => {
-                write!(f, "Resize({}, {})", width, height)
+                write!(f, "Resize({width}, {height})")
             }
             Event::Key(key, modifiers) => {
                 let k = if let KeyCode::Char(c) = key {
                     c.to_string()
                 } else {
-                    format!("{:?}", key)
+                    format!("{key:?}")
                 };
 
                 match *modifiers {
-                    KeyModifiers::NONE => write!(f, "{}", k),
-                    KeyModifiers::CONTROL => write!(f, "Ctrl+{}", k),
-                    KeyModifiers::ALT => write!(f, "Alt+{}", k),
-                    KeyModifiers::SHIFT => write!(f, "Shift+{}", k),
-                    KeyModifiers::SUPER => write!(f, "Super+{}", k),
-                    KeyModifiers::META => write!(f, "Meta+{}", k),
-                    KeyModifiers::HYPER => write!(f, "Hyper+{}", k),
-                    _ => write!(f, "{:?}+{}", modifiers, k),
+                    KeyModifiers::NONE => write!(f, "{k}"),
+                    KeyModifiers::CONTROL => write!(f, "Ctrl+{k}"),
+                    KeyModifiers::ALT => write!(f, "Alt+{k}"),
+                    KeyModifiers::SHIFT => write!(f, "Shift+{k}"),
+                    KeyModifiers::SUPER => write!(f, "Super+{k}"),
+                    KeyModifiers::META => write!(f, "Meta+{k}"),
+                    KeyModifiers::HYPER => write!(f, "Hyper+{k}"),
+                    _ => write!(f, "{modifiers:?}+{k}"),
                 }
             }
-            Event::Mouse(mouse) => write!(f, "Mouse({:?})", mouse),
-            Event::UpdateArea(area) => write!(f, "UpdateArea({:?})", area),
-            Event::Paste(s) => write!(f, "Paste({})", s),
+            Event::Mouse(mouse) => write!(f, "Mouse({mouse:?})"),
+            Event::UpdateArea(area) => write!(f, "UpdateArea({area:?})"),
+            Event::Paste(s) => write!(f, "Paste({s})"),
             Event::FocusLost => write!(f, "FocusLost"),
             Event::FocusGained => write!(f, "FocusGained"),
             Event::GetMe => write!(f, "GetMe"),
             Event::LoadChats(chat_list, limit) => {
-                write!(f, "LoadChats({:?}, {})", chat_list, limit)
+                write!(f, "LoadChats({chat_list:?}, {limit})")
             }
             Event::SendMessage(s, reply_to) => {
-                write!(f, "SendMessage({}, {:?})", s, reply_to)
+                write!(f, "SendMessage({s}, {reply_to:?})")
             }
             Event::SendMessageEdited(message_id, s) => {
-                write!(f, "SendMessageEdited({}, {})", message_id, s)
+                write!(f, "SendMessageEdited({message_id}, {s})")
             }
             Event::GetChatHistory => {
                 write!(f, "GetChatHistory")
             }
             Event::DeleteMessages(message_ids, revoke) => {
-                write!(f, "DeleteMessages({:?}, {})", message_ids, revoke)
+                write!(f, "DeleteMessages({message_ids:?}, {revoke})")
             }
             Event::EditMessage(message_id, text) => {
-                write!(f, "EditMessage({}, {})", message_id, text)
+                write!(f, "EditMessage({message_id}, {text})")
             }
             Event::ReplyMessage(message_id, text) => {
-                write!(f, "ReplyMessage({}, {})", message_id, text)
+                write!(f, "ReplyMessage({message_id}, {text})")
             }
             Event::ViewAllMessages => write!(f, "ViewAllMessages"),
         }

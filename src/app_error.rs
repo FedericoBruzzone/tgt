@@ -45,20 +45,20 @@ impl<T> From<ConfigError> for AppError<T> {
 impl<T> Display for AppError<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::Io(error) => write!(f, "IO error: {}", error),
-            Self::Send(error) => write!(f, "Send error: {}", error),
-            Self::Config(error) => write!(f, "Config error: {}", error),
+            Self::Io(error) => write!(f, "IO error: {error}"),
+            Self::Send(error) => write!(f, "Send error: {error}"),
+            Self::Config(error) => write!(f, "Config error: {error}"),
             Self::InvalidAction(action) => {
-                write!(f, "Invalid action: {}", action)
+                write!(f, "Invalid action: {action}")
             }
             Self::InvalidEvent(event) => {
-                write!(f, "Invalid event: {}", event)
+                write!(f, "Invalid event: {event}")
             }
             Self::AlreadyBound => {
                 write!(f, "Key already bound")
             }
             Self::InvalidColor(color) => {
-                write!(f, "Invalid color: {}", color)
+                write!(f, "Invalid color: {color}")
             }
         }
     }

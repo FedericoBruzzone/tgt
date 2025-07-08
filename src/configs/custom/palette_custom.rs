@@ -92,7 +92,7 @@ impl From<PaletteRaw> for PaletteConfig {
                     match ThemeStyle::str_to_color(&v) {
                         Ok(color) => color,
                         Err(e) => {
-                            eprintln!("In the palette config: {}", e);
+                            eprintln!("In the palette config: {e}");
                             std::process::exit(1);
                         }
                     },

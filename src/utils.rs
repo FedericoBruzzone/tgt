@@ -16,12 +16,12 @@ pub fn tgt_dir() -> io::Result<PathBuf> {
 
     // Release
     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
-    let tgt = format!("{}/.tgt", home);
+    let tgt = format!("{home}/.tgt");
     // Check if the directory exists
     if PathBuf::from(&tgt).exists() {
         Ok(PathBuf::from(&tgt))
     } else {
-        panic!("The directory {} does not exist.", tgt);
+        panic!("The directory {tgt} does not exist.");
     }
 }
 /// Get the default configuration directory.
@@ -41,7 +41,7 @@ pub fn tgt_config_dir() -> io::Result<PathBuf> {
 /// # Returns
 /// * `!` - This function does not return a value.
 fn fail_with<E: std::fmt::Debug>(msg: &str, e: E) -> ! {
-    eprintln!("[ERROR]: {} {:?}", msg, e);
+    eprintln!("[ERROR]: {msg} {e:?}");
     std::process::exit(1);
 }
 

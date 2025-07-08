@@ -211,7 +211,7 @@ impl Component for CoreWindow {
                 self.component_focused = Some(component_name);
                 self.components
                     .get_mut(&component_name)
-                    .unwrap_or_else(|| panic!("Failed to get component: {}", component_name))
+                    .unwrap_or_else(|| panic!("Failed to get component: {component_name}"))
                     .focus();
                 self.components
                     .iter_mut()
@@ -272,7 +272,7 @@ impl Component for CoreWindow {
         if let Some(focused) = self.component_focused {
             self.components
                 .get_mut(&focused)
-                .unwrap_or_else(|| panic!("Failed to get component: {}", focused))
+                .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
                 .update(action);
         }
     }

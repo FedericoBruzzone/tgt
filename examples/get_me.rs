@@ -9,7 +9,7 @@ use tdlib_rs::{
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
 fn ask_user(string: &str) -> String {
-    println!("{}", string);
+    println!("{string}");
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     input.trim().to_string()
@@ -158,7 +158,7 @@ async fn main() {
     // Wait for the previously spawned task to end the execution
     match handle.await {
         Ok(_) => (),
-        Err(e) => println!("Error: {:?}", e),
+        Err(e) => println!("Error: {e:?}"),
     }
 
     println!("AFTER");

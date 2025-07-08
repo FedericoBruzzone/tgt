@@ -355,12 +355,12 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                 let chats_vec = chat.chat_ids;
                 if total_chats == 0 {
                     tracing::error!("No chat found with the name: {}", chat_name);
-                    println!("No chat found with the name: {}", chat_name);
+                    println!("No chat found with the name: {chat_name}");
                     return HandleCliOutcome::Quit;
                 }
                 if total_chats > 1 {
                     tracing::error!("Multiple chats found with the name: {}", chat_name);
-                    println!("Multiple chats found with the name: {}", chat_name);
+                    println!("Multiple chats found with the name: {chat_name}");
                     return HandleCliOutcome::Quit;
                 }
                 let chat_id = chats_vec[0];
@@ -375,8 +375,8 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Error sending message: {:?}", e);
-                        println!("Error sending message: {:?}", e);
+                        tracing::error!("Error sending message: {e:?}");
+                        println!("Error sending message: {e:?}");
                         return HandleCliOutcome::Quit;
                     }
                 }
@@ -390,8 +390,8 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                 return HandleCliOutcome::Quit;
             }
             Err(e) => {
-                tracing::error!("Error searching for chat: {:?}", e);
-                println!("Error searching for chat: {:?}", e);
+                tracing::error!("Error searching for chat: {e:?}");
+                println!("Error searching for chat: {e:?}");
                 return HandleCliOutcome::Quit;
             }
         }

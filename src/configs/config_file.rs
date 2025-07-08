@@ -111,8 +111,8 @@ pub trait ConfigFile: Sized + Default + Clone {
                     Some(s)
                 }
                 Err(e) => {
-                    tracing::error!("Failed to parse {}: {}", file_name, e);
-                    eprintln!("Failed to parse {}: {}", file_name, e);
+                    tracing::error!("Failed to parse {file_name}: {e}");
+                    eprintln!("Failed to parse {file_name}: {e}");
                     std::process::exit(1);
                 }
             },
@@ -152,7 +152,7 @@ pub trait ConfigFile: Sized + Default + Clone {
                     }
                     Err(e) => {
                         tracing::error!("Failed to parse {}: {}", file_name, e);
-                        eprintln!("Failed to parse {}: {}", file_name, e);
+                        eprintln!("Failed to parse {file_name}: {e}");
                         std::process::exit(1);
                         // S::default()
                     }

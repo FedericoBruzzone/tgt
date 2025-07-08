@@ -801,7 +801,7 @@ impl TgBackend {
                             } else {
                                 0
                             };
-                            println!("sender_id: {:?}, content: {:?}", sender_id, content,)
+                            println!("sender_id: {sender_id:?}, content: {content:?}")
                         }
                     }
                     Err(error) => eprintln!("[GET CHAT HISTORY]: {error:?}"),
@@ -838,7 +838,7 @@ impl TgBackend {
 }
 
 fn ask_user(string: &str) -> String {
-    println!("{}", string);
+    println!("{string}");
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     input.trim().to_string()
