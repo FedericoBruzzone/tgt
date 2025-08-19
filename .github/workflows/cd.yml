@@ -21,7 +21,7 @@ jobs:
     needs: release_github
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Publish to crates.io
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
