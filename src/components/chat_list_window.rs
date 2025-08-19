@@ -74,7 +74,7 @@ impl ChatListEntry {
         self.last_read_outbox_message_id = Some(last_read_outbox_message_id);
     }
 
-    fn get_text_styled(&self, app_context: &AppContext) -> Text {
+    fn get_text_styled(&self, app_context: &AppContext) -> Text<'_> {
         let mut online_symbol = "";
         let mut verificated_symbol = "";
         if let Some(user) = &self.user {

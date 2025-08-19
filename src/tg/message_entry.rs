@@ -25,7 +25,7 @@ impl DateTimeEntry {
         datetime.format("%Y-%m-%d %H:%M").to_string() // :%S
     }
 
-    pub fn get_span_styled(&self, app_context: &AppContext) -> Span {
+    pub fn get_span_styled(&self, app_context: &AppContext) -> Span<'_> {
         Span::styled(
             Self::convert_time(self.timestamp),
             app_context.style_timestamp(),
@@ -83,7 +83,7 @@ impl MessageEntry {
         name_style: Style,
         content_style: Style,
         wrap_width: i32,
-    ) -> Text {
+    ) -> Text<'_> {
         let (message_reply_name, message_reply_content) = if myself {
             (
                 app_context.style_chat_message_myself_reply_name(),
