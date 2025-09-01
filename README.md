@@ -64,6 +64,16 @@ After the installation, you can run `tgt` with the following command:
 tgt --help
 ```
 
+### Arch Linux
+
+Thanks to [x-leehe](https://github.com/x-leehe) for creating the [AUR package](https://aur.archlinux.org/packages/tgt-client-git). You can install `tgt` from the AUR:
+
+```bash
+yay -S tgt-client-git
+```
+
+### NixOS
+
 **From `flake.nix`**
 
 First, create the required TOML configuration files in `~/.tgt/config` using these commands:
