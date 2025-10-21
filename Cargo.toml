@@ -59,7 +59,7 @@ chrono = "0.4.42"
 ratatui-image = "8.0.2"
 image = "0.25.8"
 signal-hook = "0.3.18"
-clap = { version = "4.5.48", features = ["derive"] }
+clap = { version = "4.5.50", features = ["derive"] }
 nucleo-matcher = "0.3.1"
 
 [build-dependencies]
