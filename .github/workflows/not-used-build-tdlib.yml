@@ -36,7 +36,7 @@ jobs:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
           path: ./td/tdlib/lib/libtdjson.so.*
@@ -77,7 +77,7 @@ jobs:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
           path: ./td/tdlib/lib/libtdjson.*.dylib
@@ -117,7 +117,7 @@ jobs:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
           path: ./td/tdlib/bin/
