@@ -38,7 +38,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
