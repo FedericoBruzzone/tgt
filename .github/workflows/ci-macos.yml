@@ -2,24 +2,24 @@ name: CI macOS
 
 on:
   push:
-    branches-ignore: [ 'dependabot/**' ]
-    tags-ignore: [ '**' ]
+    branches-ignore: ["dependabot/**"]
+    tags-ignore: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
   pull_request:
-    branches: [ '**' ]
+    branches: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -33,7 +33,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, macos-14]
+        # os: [macos-13, macos-14]
+        os: [macos-15-intel, macos-14]
         feature: [local-tdlib, download-tdlib, pkg-config]
 
     runs-on: ${{ matrix.os }}
