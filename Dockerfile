@@ -34,14 +34,12 @@ FROM debian:trixie-slim AS runtime
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/tgt /app/
-COPY --from=builder /deps/tdlib/tdlib-install-dir/lib/libtdjson.so.1.8.0 /usr/lib/
+COPY --from=builder /app/target/release/tgt /usr/bin/
+COPY --from=builder /root/.tgt/tdlib/lib/libtdjson.so.1.8.29 /usr/lib/
 
 RUN mkdir ~/.tgt -p
 
 COPY --from=builder /app/config ~/.tgt/config
-
-ENV PATH="/app:${PATH}"
 
 CMD [ "bash" ]
 
