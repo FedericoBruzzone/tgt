@@ -20,13 +20,14 @@ RUN cd /deps/tdlib && \
     git clone https://github.com/tdlib/td.git . && \
     git checkout v1.8.0 && \
     mkdir build && cd build && \
-    CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang CXX=/usr/bin/clang++ && \
+    export CXXFLAGS="-stdlib=libc++" && export CC=/usr/bin/clang && export CXX=/usr/bin/clang++ && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib-install-dir .. && \
-    cmake --build . --target install && \
-    export LOCAL_TDLIB_PATH=/deps/tdlib/tdlib-install-dir
+    cmake --build . --target install -j$(nproc)
+
+ENV LOCAL_TDLIB_PATH=/deps/tdlib/tdlib-install-dir
 
 # build the application
-RUN cargo build --release --features=local-tdlib
+RUN cargo build --release --features=default
 
 # final image
 FROM debian:trixie-slim AS runtime
@@ -34,10 +35,13 @@ FROM debian:trixie-slim AS runtime
 WORKDIR /app
 
 COPY --from=builder /app/target/release/tgt /app/
+COPY --from=builder /deps/tdlib/tdlib-install-dir/lib/libtdjson.so.1.8.29 /usr/lib/
 
 RUN mkdir ~/.tgt -p
 
 COPY --from=builder /app/config ~/.tgt/config
+
+ENV PATH="/app:${PATH}"
 
 CMD [ "bash" ]
 
