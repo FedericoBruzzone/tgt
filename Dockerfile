@@ -21,7 +21,7 @@ RUN cd /deps/tdlib && \
     git checkout v1.8.0 && \
     mkdir build && cd build && \
     export CXXFLAGS="-stdlib=libc++" && export CC=/usr/bin/clang && export CXX=/usr/bin/clang++ && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib-install-dir .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/deps/tdlib/tdlib-install-dir .. && \
     cmake --build . --target install -j$(nproc)
 
 ENV LOCAL_TDLIB_PATH=/deps/tdlib/tdlib-install-dir
