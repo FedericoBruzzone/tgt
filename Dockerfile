@@ -9,6 +9,19 @@ COPY . .
 # build the application
 RUN cargo build --release --features=download-tdlib
 
+# final image
+FROM debian:trixie-slim AS runtime
+
+WORKDIR /app
+
+COPY --from=builder /app/target/release/tgt /app/
+
+RUN mkdir ~/.tgt -p
+
+COPY --from=builder /app/config ~/.tgt/config
+
+CMD [ "bash" ]
+
 #
 # end of file
 #
