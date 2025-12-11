@@ -37,9 +37,13 @@ WORKDIR /app
 COPY --from=builder /app/target/release/tgt /usr/bin/
 COPY --from=builder /root/.tgt/tdlib/lib/libtdjson.so.1.8.29 /usr/lib/
 
-RUN mkdir ~/.tgt -p
+RUN mkdir -p /root/.tgt
 
-COPY --from=builder /app/config ~/.tgt/config
+COPY --from=builder /app/config /root/.tgt/config
+
+RUN apt update && \
+    apt install -y libc++1 && \
+    rm -rf /var/lib/apt/lists/*
 
 CMD [ "bash" ]
 
