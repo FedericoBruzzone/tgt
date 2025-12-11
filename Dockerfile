@@ -11,9 +11,11 @@ COPY . .
 # build TDLib from source
 
 RUN mkdir -p /deps/tdlib
+
 RUN apt-get update && \
-    apt-get install -y git cmake zlib1g-dev libssl-dev clang libc++-dev libc++abi-dev && \
+    apt-get install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev && \
     rm -rf /var/lib/apt/lists/*
+
 RUN cd /deps/tdlib && \
     git clone https://github.com/tdlib/td.git . && \
     git checkout v1.8.0 && \
