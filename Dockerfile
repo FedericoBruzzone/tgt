@@ -12,17 +12,17 @@ COPY . .
 
 RUN mkdir -p /deps/tdlib
 
-RUN apt-get update && \
-    apt-get install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev && \
+RUN apt update && \
+    apt install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN cd /deps/tdlib && \
-    git clone https://github.com/tdlib/td.git . && \
+    git clone https://github.com/tdlib/td.git && \
+    cd td && \
     git checkout v1.8.0 && \
-    mkdir build && cd build && \
     export CXXFLAGS="-stdlib=libc++" && export CC=/usr/bin/clang && export CXX=/usr/bin/clang++ && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/deps/tdlib/tdlib-install-dir .. && \
-    cmake --build . --target install -j$(nproc)
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/deps/tdlib/tdlib-install-dir && \
+    cmake --build build --target install -j$(nproc)
 
 ENV LOCAL_TDLIB_PATH=/deps/tdlib/tdlib-install-dir
 
@@ -35,7 +35,7 @@ FROM debian:trixie-slim AS runtime
 WORKDIR /app
 
 COPY --from=builder /app/target/release/tgt /app/
-COPY --from=builder /deps/tdlib/tdlib-install-dir/lib/libtdjson.so.1.8.29 /usr/lib/
+COPY --from=builder /deps/tdlib/tdlib-install-dir/lib/libtdjson.so.1.8.0 /usr/lib/
 
 RUN mkdir ~/.tgt -p
 
