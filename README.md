@@ -140,6 +140,22 @@ To use a specific version of the program, override the `src` attribute:
 }
 ```
 
+### Docker build
+
+- Docker image is build using Debian Trixie as base.
+
+- Run docker image in interactive mode and bash shell will be opened. Give a container name and re-use when required
+
+```bash
+git run -it --name <container_name> ghcr.io/maiananthan/tgt:<version>
+```
+
+- run `tgt` command from bash shell
+
+```bash
+$ tgt
+```
+
 ### Configuration
 
 Note that `tgt` is fully customizable. For more information about the **configuration**, please look at [here](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration).
