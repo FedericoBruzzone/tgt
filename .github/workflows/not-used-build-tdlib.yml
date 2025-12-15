@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Restore cache TDLib
         id: cache-tdlib-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: td/
           key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
@@ -30,7 +30,7 @@ jobs:
           CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
         with:
           path: td/
@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Restore cache TDLib
         id: cache-tdlib-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
@@ -71,7 +71,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl/' || '/usr/local/opt/openssl/' }} -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
       - name: Save cache TDLib
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
         with:
           path: td/
@@ -88,7 +88,7 @@ jobs:
     steps:
       - name: Restore cache TDLib
         id: cache-tdlib-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: td/
           key: ${{ runner.os }}-TDLib-${{ env.TDLIB_VERSION }}
@@ -111,7 +111,7 @@ jobs:
           cmake --build . --target install --config Release
         shell: bash
       - name: Save cache TDLib
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true'
         with:
           path: td/
