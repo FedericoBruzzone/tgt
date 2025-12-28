@@ -16,10 +16,11 @@ RUN apt update && \
     apt install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# build TDLib with v1.8.0 version as base and using clang compiler
 RUN cd /deps/tdlib && \
     git clone https://github.com/tdlib/td.git && \
     cd td && \
-    git checkout v1.8.0 && \
+    git checkout b3ab664a18f8611f4dfcd3054717504271eeaa7a && \
     export CXXFLAGS="-stdlib=libc++" && export CC=/usr/bin/clang && export CXX=/usr/bin/clang++ && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/deps/tdlib/tdlib-install-dir && \
     cmake --build build --target install -j$(nproc)
@@ -45,6 +46,7 @@ RUN apt update && \
     apt install -y libc++1 && \
     rm -rf /var/lib/apt/lists/*
 
+# opening bash shell to run tgt interactively
 CMD [ "bash" ]
 
 #

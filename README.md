@@ -142,18 +142,30 @@ To use a specific version of the program, override the `src` attribute:
 
 ### Docker build
 
-- Docker image is build using Debian Trixie as base.
+- The Docker image is built using `rust:1.91-trixie` as the base.
 
-- Run docker image in interactive mode and bash shell will be opened. Give a container name and re-use when required
+- Run Docker image in interactive mode to open a bash shell. Specify a container name to reuse when required.
 
 ```bash
-git run -it --name <container_name> ghcr.io/maiananthan/tgt:<version>
+docker run -it --name <container_name> ghcr.io/FedericoBruzzone/tgt:<version>
 ```
 
-- run `tgt` command from bash shell
+- Run `tgt` command from bash shell.
 
 ```bash
-$ tgt
+tgt
+```
+
+- for reusing the same container for next boot cycles, start the container
+
+```bash
+docker container start <container_name>
+```
+
+- run `tgt` by opening interactive shell from the container
+
+```bash
+docker exec -it <container_name> bash
 ```
 
 ### Configuration
