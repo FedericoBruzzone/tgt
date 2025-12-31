@@ -56,7 +56,7 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
 arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.42"
-ratatui-image = "8.1.1"
+ratatui-image = "10.0.2"
 image = "0.25.9"
 signal-hook = "0.4.1"
 clap = { version = "4.5.53", features = ["derive"] }
