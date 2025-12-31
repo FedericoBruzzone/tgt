@@ -7,7 +7,7 @@ use {
     ratatui::{
         layout::{Alignment, Constraint, Direction, Layout, Rect},
         text::{Line, Span},
-        widgets::{block::Block, Borders, Paragraph, Wrap},
+        widgets::{Block, Borders, Paragraph, Wrap},
     },
     ratatui_image::picker::Picker,
     std::{io, sync::Arc},

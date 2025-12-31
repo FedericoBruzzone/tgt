@@ -11,7 +11,7 @@ use {
             line::NORMAL,
         },
         text::{Line, Span, Text},
-        widgets::{block::Block, Borders, Paragraph, Wrap},
+        widgets::{Block, Borders, Paragraph, Wrap},
     },
     std::{io, sync::Arc},
     tokio::sync::mpsc,

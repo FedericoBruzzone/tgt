@@ -8,7 +8,7 @@ use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::layout::Rect;
 use ratatui::symbols::border::PLAIN;
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::block::{Block, Title};
+use ratatui::widgets::Block;
 use ratatui::widgets::Borders;
 use ratatui::widgets::{List, ListDirection, ListState};
 use ratatui::Frame;
@@ -337,7 +337,7 @@ impl Component for ChatListWindow {
             .border_set(PLAIN)
             .border_style(style_border_focused)
             .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
-            .title(Title::from(self.name.as_str()));
+            .title(Line::from(self.name.as_str()));
 
         let list = List::new(items)
             .block(block)

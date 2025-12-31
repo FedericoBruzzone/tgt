@@ -15,7 +15,7 @@ use ratatui::{
         line::NORMAL,
     },
     text::{Line, Span},
-    widgets::{block::Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 use std::{io, sync::Arc};

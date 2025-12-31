@@ -8,7 +8,7 @@ use {
     ratatui::{
         layout::{Alignment, Rect},
         text::{Line, Span},
-        widgets::{block::Block, Borders, Paragraph, Wrap},
+        widgets::{Block, Borders, Paragraph, Wrap},
     },
     std::sync::Arc,
     tokio::sync::mpsc::UnboundedSender,
