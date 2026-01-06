@@ -195,7 +195,10 @@ fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     mut app: App,
     tick_rate: Duration,
-) -> io::Result<()> {
+) -> io::Result<()>
+where
+    std::io::Error: From<<B as ratatui::backend::Backend>::Error>,
+{
     let mut last_tick = Instant::now();
     loop {
         terminal.draw(|f| ui(f, &mut app))?;
