@@ -99,6 +99,10 @@ jobs:
       #       target/
       #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       #     restore-keys: ${{ runner.os }}-cargo-
+      - name: Cargo and rustc versions
+        run: |
+          cargo --version
+          rustc --version
       - name: Run cargo build
         run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
       - name: Run cargo test
