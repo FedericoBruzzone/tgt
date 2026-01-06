@@ -65,6 +65,11 @@ Note that after the finding the first configuration file, `tgt` stops looking fo
 
 ### Example of a custom telegram configuration
 
+Generally, end-users are expected to supply their own api\_id and api\_hash.
+While some open-source clients, including `tgt`, may provide "default" credentials to make the "out-of-the-box" experience smoother, shipping shared credentials carries risks.
+The [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) file contains more information about this topic.
+
+
 Example of `telegram.toml`:
 
 ```toml

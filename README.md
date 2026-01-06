@@ -170,7 +170,19 @@ docker exec -it <container_name> bash
 
 ### Configuration
 
-Note that `tgt` is fully customizable. For more information about the **configuration**, please look at [here](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration).
+Note that `tgt` is fully customizable. 
+For more information about the **configuration**, please look at [here](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration).
+The configuration files are manyfold.
+1. [`app.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/app.toml): contains general configurations about the application (see [`app.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/app.toml.md) for explanations about each field).
+2. [`keymap.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/keymap.toml): contains the keybindings used in the application (see [`keymap.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/keymap.toml.md) for explanations about each field).
+3. [`logger.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/logger.toml): contains the logging configurations (see [`logger.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/logger.toml.md) for explanations about each field).
+4. [`telegram.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/telegram.toml): contains the Telegram API and TDLib configurations (see [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) for explanations about each field).
+5. [`theme.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/theme.toml): contains the color theme configurations (see [`theme.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/theme.toml.md) for explanations about each field).
+
+> [!WARNING]
+> Generally, end-users are expected to supply their own api\_id and api\_hash.
+> While some open-source clients, including `tgt`, may provide "default" credentials to make the "out-of-the-box" experience smoother, shipping shared credentials carries risks.
+> The [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) file contains more information about this topic.
 
 **Default keybindings**:
 
@@ -270,12 +282,11 @@ You can find the road map of the project [here](https://github.com/FedericoBruzz
 
 ## Commands
 
-You can use `just`, `make` or `cargo`,  as build tools.
-If you want to use `cargo`, please make sure to read the `Justfile` or the `Makefile` to understand the flags used for each command.
+You can use `make` or `cargo`,  as build tools.
+If you want to use `cargo`, please make sure to read the the `Makefile` to understand the flags used for each command.
 Here are the available commands:
 
 ```text
-just COMMAND
 make COMMAND
 
 COMMAND:
