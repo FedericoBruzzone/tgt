@@ -51,6 +51,9 @@ lazy_static! {
 async fn tokio_main() -> Result<(), AppError<()>> {
     tracing::info!("Starting tokio main");
 
+    let cli_args = cli::CliArgs::parse();
+    tracing::info!("Parsed CLI arguments: {:?}", cli_args);
+
     // Initialize the lazy static variables
     // This is done to ensure that the configuration files are read only once
     // and the values are shared across the application.
@@ -60,9 +63,6 @@ async fn tokio_main() -> Result<(), AppError<()>> {
     lazy_static::initialize(&PALETTE_CONFIG);
     lazy_static::initialize(&THEME_CONFIG);
     lazy_static::initialize(&TELEGRAM_CONFIG);
-
-    let cli_args = cli::CliArgs::parse();
-    tracing::info!("Parsed CLI arguments: {:?}", cli_args);
 
     let logger = Logger::from_config(LOGGER_CONFIG.clone());
     logger.init();
