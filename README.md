@@ -301,7 +301,7 @@ COMMAND:
 
 ## License
 
-This repository are licensed under either of
+This repository is licensed under either of
 
 * Apache License, Version 2.0 ([LICENSE-APACHE][github-license-apache] or http://www.apache.org/licenses/LICENSE-2.0)
 
