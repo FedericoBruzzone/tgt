@@ -58,7 +58,7 @@ arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard
 chrono = "0.4.43"
 ratatui-image = "8.1.1"
 image = "0.25.9"
-signal-hook = "0.4.1"
+signal-hook = "0.4.3"
 clap = { version = "4.5.54", features = ["derive"] }
 nucleo-matcher = "0.3.1"
 
