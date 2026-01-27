@@ -122,6 +122,16 @@ impl Component for StatusBar {
             //
             Span::raw("     "),
             Span::styled(
+                "Help: ",
+                self.app_context.style_status_bar_message_quit_text(),
+            ),
+            Span::styled(
+                "alt+F1",
+                self.app_context.style_status_bar_message_quit_key(),
+            ),
+            //
+            Span::raw("     "),
+            Span::styled(
                 "Open chat: ",
                 self.app_context.style_status_bar_open_chat_text(),
             ),

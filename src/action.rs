@@ -134,6 +134,10 @@ pub enum Action {
     ShowChatWindowReply,
     /// HideChatWindowReply action.
     HideChatWindowReply,
+    /// ShowCommandGuide action.
+    ShowCommandGuide,
+    /// HideCommandGuide action.
+    HideCommandGuide,
 
     /// ChatListNext action.
     ChatListNext,
@@ -227,6 +231,8 @@ impl FromStr for Action {
             "chat_window_copy" => Ok(Action::ChatWindowCopy),
             "chat_window_edit" => Ok(Action::ChatWindowEdit),
             "chat_window_reply" => Ok(Action::ShowChatWindowReply),
+            "show_command_guide" => Ok(Action::ShowCommandGuide),
+            "hide_command_guide" => Ok(Action::HideCommandGuide),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

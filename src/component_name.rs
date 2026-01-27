@@ -18,6 +18,8 @@ pub enum ComponentName {
     TitleBar,
     /// The status bar.
     StatusBar,
+    /// The command guide popup.
+    CommandGuide,
 }
 
 impl Display for ComponentName {
@@ -30,6 +32,7 @@ impl Display for ComponentName {
             ComponentName::TitleBar => write!(f, "Title Bar"),
             ComponentName::StatusBar => write!(f, "Status Bar"),
             ComponentName::ReplyMessage => write!(f, "Reply Message"),
+            ComponentName::CommandGuide => write!(f, "Command Guide"),
         }
     }
 }
