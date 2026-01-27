@@ -116,19 +116,18 @@ impl CommandGuide {
     /// Build the help text content.
     fn build_help_text(&self) -> Text<'_> {
         let keymap_config = self.app_context.keymap_config();
-        let mut lines = Vec::new();
-
-        // Title
-        lines.push(Line::from(vec![Span::styled(
-            "Command Guide - Keybindings",
-            self.app_context.style_title_bar(),
-        )]));
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![Span::styled(
-            "Press Alt+F1 or Esc to close",
-            self.app_context.style_timestamp(),
-        )]));
-        lines.push(Line::from(""));
+        let mut lines = vec![
+            Line::from(vec![Span::styled(
+                "Command Guide - Keybindings",
+                self.app_context.style_title_bar(),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "Press Alt+F1 or Esc to close",
+                self.app_context.style_timestamp(),
+            )]),
+            Line::from(""),
+        ];
 
         // Core Window Keybindings
         let core_window_lines = self.get_keybindings_section(

@@ -442,19 +442,18 @@ mod tests {
 
         // Verify all sections exist (dynamic check - doesn't depend on specific counts)
         assert!(
-            keymap_config.core_window.len() > 0,
+            !keymap_config.core_window.is_empty(),
             "core_window should have keybindings"
         );
         assert!(
-            keymap_config.chat_list.len() > 0,
+            !keymap_config.chat_list.is_empty(),
             "chat_list should have keybindings"
         );
-        assert!(keymap_config.chat.len() > 0, "chat should have keybindings");
-        // prompt can be empty, so we just verify it exists
         assert!(
-            keymap_config.prompt.len() >= 0,
-            "prompt section should exist"
+            !keymap_config.chat.is_empty(),
+            "chat should have keybindings"
         );
+        // prompt can be empty, so no assertion needed (len() >= 0 is always true)
 
         // Verify that all keybindings are valid (no Unknown events)
         for (event, _binding) in keymap_config.core_window.iter() {
