@@ -4,6 +4,7 @@ use crate::{
     configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
     tui::Tui, tui_backend::TuiBackend,
 };
+use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use std::{collections::HashMap, io, sync::Arc, time::Instant};
 use tdlib_rs::enums::ChatList;
@@ -161,32 +162,44 @@ async fn handle_tui_backend_events(
                 .action_tx()
                 .send(Action::Resize(width, height))?,
             Event::Key(key, modifiers) => {
+                // Always send Key action first so components can check visibility state
                 app_context
                     .action_tx()
                     .send(Action::from_key_event(key, modifiers))?;
 
-                // Handle core_window key bindings.
-                if let Some(action_binding) = app_context
-                    .keymap_config()
-                    .core_window
-                    .get(&Event::Key(key, modifiers))
+                // Handle Esc and F1 specially - let them go through to components for command guide handling
+                // This allows CoreWindow to check if guide is visible and close it if needed
+                if key == KeyCode::Esc
+                    || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT))
                 {
-                    match action_binding {
-                        ActionBinding::Single { action, .. } => {
-                            app_context.action_tx().send(action.clone())?;
-                            return Ok(());
-                        }
-                        ActionBinding::Multiple(map_event_action) => {
-                            consume_until_single_action(
-                                &app_context.action_tx(),
-                                tui_backend,
-                                map_event_action.clone(),
-                            )
-                            .await;
-                            // We need to return here to avoid sending the
-                            // event to the tui. At the moment, the components
-                            // are not able to handle multiple events.
-                            return Ok(());
+                    // Esc/F1 (without Alt) is sent as Key action above, now let it go to Tui/CoreWindow
+                    // Don't check keymap for Esc/F1, let components handle it
+                    // CoreWindow will check visibility and close guide if visible
+                    // Alt+F1 is handled by the keymap system
+                } else {
+                    // Handle core_window key bindings for other keys.
+                    if let Some(action_binding) = app_context
+                        .keymap_config()
+                        .core_window
+                        .get(&Event::Key(key, modifiers))
+                    {
+                        match action_binding {
+                            ActionBinding::Single { action, .. } => {
+                                app_context.action_tx().send(action.clone())?;
+                                return Ok(());
+                            }
+                            ActionBinding::Multiple(map_event_action) => {
+                                consume_until_single_action(
+                                    &app_context.action_tx(),
+                                    tui_backend,
+                                    map_event_action.clone(),
+                                )
+                                .await;
+                                // We need to return here to avoid sending the
+                                // event to the tui. At the moment, the components
+                                // are not able to handle multiple events.
+                                return Ok(());
+                            }
                         }
                     }
                 }

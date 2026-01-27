@@ -6,6 +6,7 @@ use crate::{
     components::{
         chat_list_window::ChatListWindow,
         chat_window::ChatWindow,
+        command_guide::CommandGuide,
         component_traits::{Component, HandleFocus},
         prompt_window::PromptWindow,
     },
@@ -47,6 +48,8 @@ pub struct CoreWindow {
     focused: bool,
     /// Indicates whether the reply message should be shown.
     show_reply_message: bool,
+    /// Indicates whether the command guide should be shown.
+    show_command_guide: bool,
 }
 
 impl CoreWindow {
@@ -83,6 +86,12 @@ impl CoreWindow {
                     .with_name(ComponentName::ReplyMessage.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::CommandGuide,
+                CommandGuide::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::CommandGuide.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -97,6 +106,7 @@ impl CoreWindow {
         let component_focused = None;
         let focused = true;
         let show_reply_message = false;
+        let show_command_guide = false;
 
         CoreWindow {
             app_context,
@@ -110,6 +120,7 @@ impl CoreWindow {
             component_focused,
             focused,
             show_reply_message,
+            show_command_guide,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -255,6 +266,60 @@ impl Component for CoreWindow {
             Action::HideChatWindowReply => {
                 self.show_reply_message = false;
             }
+            Action::ShowCommandGuide => {
+                // Toggle command guide: if already visible, hide it; otherwise show it
+                if self.show_command_guide {
+                    self.show_command_guide = false;
+                    if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
+                        component.update(Action::HideCommandGuide);
+                    }
+                } else {
+                    self.show_command_guide = true;
+                    if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
+                        component.update(action.clone());
+                    }
+                }
+            }
+            Action::HideCommandGuide => {
+                self.show_command_guide = false;
+                if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
+                    component.update(action.clone());
+                }
+            }
+            Action::Key(key_code, modifiers) => {
+                // If command guide is visible, handle Esc/F1 to close it
+                if self.show_command_guide {
+                    match key_code {
+                        crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::F(1) => {
+                            self.show_command_guide = false;
+                            if let Some(component) =
+                                self.components.get_mut(&ComponentName::CommandGuide)
+                            {
+                                component.update(Action::HideCommandGuide);
+                            }
+                            return; // Don't process key event further
+                        }
+                        _ => {
+                            // Send other keys to command guide when visible
+                            if let Some(component) =
+                                self.components.get_mut(&ComponentName::CommandGuide)
+                            {
+                                component.update(Action::Key(key_code, modifiers.clone()));
+                            }
+                            return; // Don't send to focused component when guide is visible
+                        }
+                    }
+                }
+                // Note: Alt+F1 to open is handled by the keymap system via ShowCommandGuide action
+                // Send key events to focused component
+                if let Some(focused) = self.component_focused {
+                    self.components
+                        .get_mut(&focused)
+                        .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                        .update(Action::Key(key_code, modifiers));
+                }
+                return; // Don't pass action to focused component again below
+            }
             Action::ChatListSearch => {
                 self.component_focused = Some(ComponentName::Prompt);
                 self.components
@@ -323,6 +388,16 @@ impl Component for CoreWindow {
             .get_mut(&ComponentName::Prompt)
             .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
             .draw(frame, sub_core_layout[2])?;
+
+        // Draw command guide popup if visible (draws on top of everything)
+        if self.show_command_guide {
+            self.components
+                .get_mut(&ComponentName::CommandGuide)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", ComponentName::CommandGuide)
+                })
+                .draw(frame, area)?;
+        }
 
         Ok(())
     }

@@ -31,6 +31,8 @@ keymap = [
   { keys = ["alt+k"], command = "increase_prompt_size", description = "Increase the prompt size"},
   # Decrease the prompt size
   { keys = ["alt+j"], command = "decrease_prompt_size", description = "Decrease the prompt size"},
+  # Show command guide with keybindings
+  { keys = ["alt+f1"], command = "show_command_guide", description = "Show command guide with all keybindings"},
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
