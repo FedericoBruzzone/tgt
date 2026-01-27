@@ -8,6 +8,7 @@ Here we write upgrading notes for brands. It's a team effort to make them as str
 ### Added
 ### Changed
 ### Fixed
+- Fixed stack overflow crash when typing text in prompt field that reaches window edge. The `insert_newline()` function was recursively calling `insert('\n')` which created infinite recursion. Refactored to directly handle line splitting without recursive calls, allowing prompt to dynamically expand as expected.
 
 ## [1.0.0] - 2024-08-09
 
