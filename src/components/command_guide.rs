@@ -288,3 +288,262 @@ impl Component for CommandGuide {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        action::{Action, Modifiers},
+        app_context::AppContext,
+        cli::CliArgs,
+        configs::custom::{
+            app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
+            telegram_custom::TelegramConfig, theme_custom::ThemeConfig,
+        },
+        tg::tg_context::TgContext,
+    };
+    use clap::Parser;
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use std::sync::Arc;
+    use tokio::sync::mpsc;
+
+    /// Helper function to create a test AppContext
+    fn create_test_app_context() -> Arc<AppContext> {
+        let app_config = AppConfig::default();
+        let keymap_config = KeymapConfig::default();
+        let theme_config = ThemeConfig::default();
+        let palette_config = PaletteConfig::default();
+        let telegram_config = TelegramConfig::default();
+        let tg_context = TgContext::default();
+        // Create CliArgs by parsing empty args (default behavior)
+        let cli_args = CliArgs::parse_from::<[&str; 0], &str>([]);
+
+        Arc::new(
+            AppContext::new(
+                app_config,
+                keymap_config,
+                theme_config,
+                palette_config,
+                telegram_config,
+                tg_context,
+                cli_args,
+            )
+            .unwrap(),
+        )
+    }
+
+    #[test]
+    fn test_command_guide_initial_state() {
+        let app_context = create_test_app_context();
+        let guide = CommandGuide::new(app_context);
+
+        assert!(
+            !guide.is_visible(),
+            "Command guide should not be visible initially"
+        );
+        assert!(
+            !guide.focused,
+            "Command guide should not be focused initially"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_show() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        guide.show();
+        assert!(
+            guide.is_visible(),
+            "Command guide should be visible after show()"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_hide() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        guide.show();
+        assert!(
+            guide.is_visible(),
+            "Command guide should be visible after show()"
+        );
+
+        guide.hide();
+        assert!(
+            !guide.is_visible(),
+            "Command guide should not be visible after hide()"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_toggle() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        // Initially hidden
+        assert!(!guide.is_visible());
+
+        // Show
+        guide.show();
+        assert!(guide.is_visible());
+
+        // Hide
+        guide.hide();
+        assert!(!guide.is_visible());
+
+        // Show again
+        guide.show();
+        assert!(guide.is_visible());
+    }
+
+    #[test]
+    fn test_command_guide_show_action() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        assert!(!guide.is_visible());
+
+        guide.update(Action::ShowCommandGuide);
+        assert!(
+            guide.is_visible(),
+            "Command guide should be visible after ShowCommandGuide action"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_hide_action() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        guide.show();
+        assert!(guide.is_visible());
+
+        guide.update(Action::HideCommandGuide);
+        assert!(
+            !guide.is_visible(),
+            "Command guide should not be visible after HideCommandGuide action"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_close_with_esc_when_visible() {
+        let app_context = create_test_app_context();
+        let (tx, _rx) = mpsc::unbounded_channel();
+        let mut guide = CommandGuide::new(app_context);
+
+        guide.register_action_handler(tx).unwrap();
+        guide.show();
+        assert!(guide.is_visible(), "Guide should be visible before Esc");
+
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        guide.update(Action::Key(KeyCode::Esc, modifiers));
+        assert!(
+            !guide.is_visible(),
+            "Command guide should be hidden after Esc key when visible"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_close_with_f1_when_visible() {
+        let app_context = create_test_app_context();
+        let (tx, _rx) = mpsc::unbounded_channel();
+        let mut guide = CommandGuide::new(app_context);
+
+        guide.register_action_handler(tx).unwrap();
+        guide.show();
+        assert!(guide.is_visible(), "Guide should be visible before F1");
+
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        guide.update(Action::Key(KeyCode::F(1), modifiers));
+        assert!(
+            !guide.is_visible(),
+            "Command guide should be hidden after F1 key when visible"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_ignores_keys_when_hidden() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        assert!(!guide.is_visible());
+
+        // Send various keys when hidden - should not affect visibility
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        guide.update(Action::Key(KeyCode::Esc, modifiers.clone()));
+        assert!(
+            !guide.is_visible(),
+            "Esc should not affect visibility when hidden"
+        );
+
+        guide.update(Action::Key(KeyCode::F(1), modifiers.clone()));
+        assert!(
+            !guide.is_visible(),
+            "F1 should not affect visibility when hidden"
+        );
+
+        guide.update(Action::Key(KeyCode::Char('a'), modifiers));
+        assert!(
+            !guide.is_visible(),
+            "Other keys should not affect visibility when hidden"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_ignores_other_keys_when_visible() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        guide.show();
+        assert!(guide.is_visible());
+
+        // Other keys should not close the guide
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        guide.update(Action::Key(KeyCode::Char('a'), modifiers.clone()));
+        assert!(guide.is_visible(), "Other keys should not close the guide");
+
+        guide.update(Action::Key(KeyCode::Enter, modifiers));
+        assert!(guide.is_visible(), "Enter should not close the guide");
+    }
+
+    #[test]
+    fn test_command_guide_register_action_handler() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+        let (tx, _rx) = mpsc::unbounded_channel();
+
+        let result = guide.register_action_handler(tx);
+        assert!(result.is_ok(), "register_action_handler should succeed");
+        assert!(
+            guide.action_tx.is_some(),
+            "action_tx should be set after registration"
+        );
+    }
+
+    #[test]
+    fn test_command_guide_with_name() {
+        let app_context = create_test_app_context();
+        let guide = CommandGuide::new(app_context).with_name("Test Guide");
+
+        assert_eq!(guide.name, "Test Guide");
+    }
+
+    #[test]
+    fn test_command_guide_focus_unfocus() {
+        let app_context = create_test_app_context();
+        let mut guide = CommandGuide::new(app_context);
+
+        assert!(!guide.focused);
+
+        guide.focus();
+        assert!(guide.focused, "Guide should be focused after focus()");
+
+        guide.unfocus();
+        assert!(
+            !guide.focused,
+            "Guide should not be focused after unfocus()"
+        );
+    }
+}
