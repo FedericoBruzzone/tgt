@@ -318,7 +318,7 @@ impl Component for CoreWindow {
                         .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
                         .update(Action::Key(key_code, modifiers));
                 }
-                return; // Don't pass action to focused component again below
+                // Don't pass action to focused component again below
             }
             Action::ChatListSearch => {
                 // Always activate search if ChatList is focused, nothing is focused, or Chat is focused
@@ -431,16 +431,6 @@ impl Component for CoreWindow {
                             .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
                             .update(action);
                     }
-                }
-            }
-            Action::Key(_, _) => {
-                // Send key events only to the focused component to prevent double processing
-                // Components will handle search mode internally
-                if let Some(focused) = self.component_focused {
-                    self.components
-                        .get_mut(&focused)
-                        .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
-                        .update(action);
                 }
             }
             _ => {
