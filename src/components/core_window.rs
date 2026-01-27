@@ -256,24 +256,134 @@ impl Component for CoreWindow {
                 self.show_reply_message = false;
             }
             Action::ChatListSearch => {
-                self.component_focused = Some(ComponentName::Prompt);
+                // Always activate search if ChatList is focused, nothing is focused, or Chat is focused
+                // ChatWindow will handle switching from its search mode to ChatList search
+                let should_activate_search = match self.component_focused {
+                    None => true, // No component focused - activate search
+                    Some(ComponentName::ChatList) => true, // ChatList focused - activate search
+                    Some(ComponentName::Chat) => true, // Chat focused - allow switching to ChatList search
+                    Some(ComponentName::Prompt) => false, // Prompt focused - don't activate
+                    _ => false, // Other components - don't activate
+                };
+                
+                if should_activate_search {
+                    // First, if ChatWindow is focused, let it handle the switch (it will stop search if in search mode)
+                    if let Some(ComponentName::Chat) = self.component_focused {
+                        if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                            component.update(action.clone());
+                        }
+                    }
+                    
+                    // Focus ChatList and activate search mode
+                    self.component_focused = Some(ComponentName::ChatList);
+                    self.components
+                        .get_mut(&ComponentName::ChatList)
+                        .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
+                        .focus();
+                    self.components
+                        .iter_mut()
+                        .filter(|(name, _)| *name != &ComponentName::ChatList)
+                        .for_each(|(_, component)| component.unfocus());
+                    // Activate search mode
+                    if let Some(component) = self.components.get_mut(&ComponentName::ChatList) {
+                        component.update(action.clone());
+                    }
+                }
+            }
+            Action::ChatWindowSearch => {
+                // Focus Chat and activate search mode
+                self.component_focused = Some(ComponentName::Chat);
                 self.components
-                    .get_mut(&ComponentName::Prompt)
-                    .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Prompt))
+                    .get_mut(&ComponentName::Chat)
+                    .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
                     .focus();
                 self.components
                     .iter_mut()
-                    .filter(|(name, _)| *name != &ComponentName::Prompt)
+                    .filter(|(name, _)| *name != &ComponentName::Chat)
                     .for_each(|(_, component)| component.unfocus());
+                // Activate search mode
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.update(action.clone());
+                }
             }
-            _ => {}
-        }
-
-        if let Some(focused) = self.component_focused {
-            self.components
-                .get_mut(&focused)
-                .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
-                .update(action);
+            Action::ChatListSortWithString(_) => {
+                // Propagate to ChatList component even if not focused
+                if let Some(component) = self.components.get_mut(&ComponentName::ChatList) {
+                    component.update(action.clone());
+                }
+                // Also update focused component if it's not ChatList
+                if let Some(focused) = self.component_focused {
+                    if focused != ComponentName::ChatList {
+                        self.components
+                            .get_mut(&focused)
+                            .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                            .update(action);
+                    }
+                }
+            }
+            Action::ChatWindowSortWithString(_) => {
+                // Propagate to Chat component even if not focused
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.update(action.clone());
+                }
+                // Also update focused component if it's not Chat
+                if let Some(focused) = self.component_focused {
+                    if focused != ComponentName::Chat {
+                        self.components
+                            .get_mut(&focused)
+                            .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                            .update(action);
+                    }
+                }
+            }
+            Action::ChatListRestoreSort => {
+                // Propagate to ChatList component even if not focused
+                if let Some(component) = self.components.get_mut(&ComponentName::ChatList) {
+                    component.update(action.clone());
+                }
+                // Also update focused component if it's not ChatList
+                if let Some(focused) = self.component_focused {
+                    if focused != ComponentName::ChatList {
+                        self.components
+                            .get_mut(&focused)
+                            .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                            .update(action);
+                    }
+                }
+            }
+            Action::ChatWindowRestoreSort => {
+                // Propagate to Chat component even if not focused
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.update(action.clone());
+                }
+                // Also update focused component if it's not Chat
+                if let Some(focused) = self.component_focused {
+                    if focused != ComponentName::Chat {
+                        self.components
+                            .get_mut(&focused)
+                            .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                            .update(action);
+                    }
+                }
+            }
+            Action::Key(_, _) => {
+                // Send key events only to the focused component to prevent double processing
+                // Components will handle search mode internally
+                if let Some(focused) = self.component_focused {
+                    self.components
+                        .get_mut(&focused)
+                        .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                        .update(action);
+                }
+            }
+            _ => {
+                if let Some(focused) = self.component_focused {
+                    self.components
+                        .get_mut(&focused)
+                        .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                        .update(action);
+                }
+            }
         }
     }
 

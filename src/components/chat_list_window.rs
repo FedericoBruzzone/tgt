@@ -4,13 +4,12 @@ use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
+use crossterm::event::KeyCode;
 use nucleo_matcher::{Matcher, Utf32Str};
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::symbols::border::PLAIN;
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::Block;
-use ratatui::widgets::Borders;
-use ratatui::widgets::{List, ListDirection, ListState};
+use ratatui::widgets::{Block, Borders, List, ListDirection, ListState, Paragraph};
 use ratatui::Frame;
 use std::sync::Arc;
 use tdlib_rs::enums::{ChatList, UserStatus};
@@ -143,6 +142,10 @@ pub struct ChatListWindow {
     focused: bool,
     /// String used to sort chats.
     sort_string: Option<String>,
+    /// Search input string for filtering chats.
+    search_input: String,
+    /// Whether search mode is active.
+    search_mode: bool,
 }
 /// Implementation of the `ChatListWindow` struct.
 impl ChatListWindow {
@@ -169,6 +172,8 @@ impl ChatListWindow {
             chat_list_state,
             focused,
             sort_string,
+            search_input: String::new(),
+            search_mode: false,
         }
     }
     /// Set the name of the `ChatListWindow`.
@@ -257,6 +262,35 @@ impl ChatListWindow {
     fn default_sort(&mut self) {
         self.sort_string = None;
     }
+
+    /// Enter search mode.
+    fn start_search(&mut self) {
+        self.search_mode = true;
+        self.search_input.clear();
+    }
+
+    /// Exit search mode.
+    fn stop_search(&mut self) {
+        self.search_mode = false;
+        self.search_input.clear();
+        self.default_sort();
+    }
+
+    /// Handle character input in search mode.
+    fn handle_search_char(&mut self, c: char) {
+        self.search_input.push(c);
+        self.sort(self.search_input.clone());
+    }
+
+    /// Handle backspace in search mode.
+    fn handle_search_backspace(&mut self) {
+        self.search_input.pop();
+        if self.search_input.is_empty() {
+            self.default_sort();
+        } else {
+            self.sort(self.search_input.clone());
+        }
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatListWindow` struct.
@@ -281,12 +315,63 @@ impl Component for ChatListWindow {
 
     fn update(&mut self, action: Action) {
         match action {
-            Action::ChatListNext => self.next(),
-            Action::ChatListPrevious => self.previous(),
-            Action::ChatListUnselect => self.unselect(),
-            Action::ChatListOpen => self.confirm_selection(),
+            Action::ChatListNext => {
+                // Allow navigation even in search mode
+                // But skip if we're handling the key event directly (to avoid double processing)
+                if !self.search_mode {
+                    self.next();
+                }
+            }
+            Action::ChatListPrevious => {
+                // Allow navigation even in search mode
+                // But skip if we're handling the key event directly (to avoid double processing)
+                if !self.search_mode {
+                    self.previous();
+                }
+            }
+            Action::ChatListUnselect => {
+                if self.search_mode {
+                    self.stop_search();
+                } else {
+                    self.unselect();
+                }
+            }
+            Action::ChatListOpen => {
+                if !self.search_mode {
+                    self.confirm_selection();
+                }
+            }
             Action::ChatListSortWithString(s) => self.sort(s),
             Action::ChatListRestoreSort => self.default_sort(),
+            Action::ChatListSearch => self.start_search(),
+            Action::Key(key_code, modifiers) => {
+                if self.search_mode {
+                    match key_code {
+                        KeyCode::Char(c) if !modifiers.control && !modifiers.alt && !modifiers.shift => {
+                            self.handle_search_char(c);
+                        }
+                        KeyCode::Backspace => {
+                            self.handle_search_backspace();
+                        }
+                        KeyCode::Enter | KeyCode::Esc => {
+                            self.stop_search();
+                        }
+                        KeyCode::Down => {
+                            // Allow arrow key navigation in search mode
+                            self.next();
+                        }
+                        KeyCode::Up => {
+                            // Allow arrow key navigation in search mode
+                            self.previous();
+                        }
+                        KeyCode::Tab => {
+                            // Allow tab navigation in search mode
+                            self.next();
+                        }
+                        _ => {}
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -297,35 +382,84 @@ impl Component for ChatListWindow {
         } else {
             self.app_context.style_chat_list()
         };
+        
+        // Split area to include search bar if in search mode
+        let (list_area, search_area) = if self.search_mode {
+            let layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Fill(1)])
+                .split(area);
+            (layout[1], Some(layout[0]))
+        } else {
+            (area, None)
+        };
+
         if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
             self.chat_list = items;
 
-            // Sort before drawing
+            // Filter and sort before drawing
             if let Some(s) = self.sort_string.as_ref() {
-                let mut config = nucleo_matcher::Config::DEFAULT;
-                config.prefer_prefix = true;
-                let mut matcher = Matcher::new(config);
-                let s: Vec<char> = s.chars().collect();
-                self.chat_list.sort_by(|a, b| {
-                    let a: Vec<char> = a.chat_name.chars().collect();
-                    let b: Vec<char> = b.chat_name.chars().collect();
-                    let a_score = matcher
-                        .fuzzy_indices(
-                            Utf32Str::Unicode(&a),
-                            Utf32Str::Unicode(&s),
-                            &mut Vec::new(),
-                        )
-                        .unwrap_or(0);
-                    let b_score = matcher
-                        .fuzzy_indices(
-                            Utf32Str::Unicode(&b),
-                            Utf32Str::Unicode(&s),
-                            &mut Vec::new(),
-                        )
-                        .unwrap_or(0);
-                    a_score.cmp(&b_score)
+                if !s.is_empty() {
+                    let mut config = nucleo_matcher::Config::DEFAULT;
+                    config.prefer_prefix = true;
+                    let mut matcher = Matcher::new(config.clone());
+                    let search_chars: Vec<char> = s.chars().collect();
+                    // Filter chats that match the search query
+                    self.chat_list.retain(|chat| {
+                        let chat_name_chars: Vec<char> = chat.chat_name.chars().collect();
+                        matcher
+                            .fuzzy_indices(
+                                Utf32Str::Unicode(&chat_name_chars),
+                                Utf32Str::Unicode(&search_chars),
+                                &mut Vec::new(),
+                            )
+                            .is_some()
+                    });
+                    // Sort remaining chats by relevance score
+                    let mut matcher = Matcher::new(config);
+                    self.chat_list.sort_by(|a, b| {
+                        let a: Vec<char> = a.chat_name.chars().collect();
+                        let b: Vec<char> = b.chat_name.chars().collect();
+                        let a_score = matcher
+                            .fuzzy_indices(
+                                Utf32Str::Unicode(&a),
+                                Utf32Str::Unicode(&search_chars),
+                                &mut Vec::new(),
+                            )
+                            .unwrap_or(0);
+                        let b_score = matcher
+                            .fuzzy_indices(
+                                Utf32Str::Unicode(&b),
+                                Utf32Str::Unicode(&search_chars),
+                                &mut Vec::new(),
+                            )
+                            .unwrap_or(0);
+                        a_score.cmp(&b_score)
+                    });
+                    self.chat_list.reverse();
+                }
+            }
+        }
+
+        // Draw search bar if in search mode
+        if let Some(search_rect) = search_area {
+            let search_block = Block::default()
+                .border_set(PLAIN)
+                .border_style(style_border_focused)
+                .borders(Borders::ALL)
+                .title("Search chats");
+            let search_text = format!("{}_", self.search_input);
+            let search_paragraph = Paragraph::new(search_text)
+                .block(search_block)
+                .style(self.app_context.style_chat_list());
+            frame.render_widget(search_paragraph, search_rect);
+            
+            // Set cursor position in search bar
+            if self.focused && self.search_mode {
+                frame.set_cursor_position(Position {
+                    x: search_rect.x + self.search_input.len() as u16 + 1,
+                    y: search_rect.y + 1,
                 });
-                self.chat_list.reverse();
             }
         }
 
@@ -347,7 +481,7 @@ impl Component for ChatListWindow {
         // .highlight_symbol("➤ ")
         // .repeat_highlight_symbol(true)
 
-        frame.render_stateful_widget(list, area, &mut self.chat_list_state);
+        frame.render_stateful_widget(list, list_area, &mut self.chat_list_state);
         Ok(())
     }
 }

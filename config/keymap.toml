@@ -31,6 +31,8 @@ keymap = [
   { keys = ["alt+k"], command = "increase_prompt_size", description = "Increase the prompt size"},
   # Decrease the prompt size
   { keys = ["alt+j"], command = "decrease_prompt_size", description = "Decrease the prompt size"},
+  # Start chat list search (when nothing is selected)
+  { keys = ["alt+r"], command = "chat_list_search", description = "Start searching chats"},
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
@@ -75,6 +77,10 @@ keymap = [
   { keys = ["e"], command = "chat_window_edit", description = "Edit the selected message"},
   # Reply to the selected message
   { keys = ["r"], command = "chat_window_reply", description = "Reply to the selected message"},
+  # Move focus to the prompt and set its state to search messages in the chat window.
+  { keys = ["alt+r"], command = "chat_window_search", description = "Focus on prompt to start searching messages"},
+  # Restore the default message ordering in the chat window.
+  { keys = ["alt+c"], command = "chat_window_restore_sort", description = "Restore the default ordering of messages"},
 ]
 
 # The prompt key bindings are only usable in the prompt component.

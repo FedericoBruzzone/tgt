@@ -179,6 +179,16 @@ pub enum Action {
     /// This event is used to restore the default ordering.
     /// I.e. pinned first then chronological order.
     ChatListRestoreSort,
+    /// ChatWindowSearch event.
+    /// This event is used to set the prompt to search mode for filtering messages
+    /// in the ChatWindow.
+    ChatWindowSearch,
+    /// ChatWindowSortWithString action.
+    /// This action is used to filter messages in the chat window based on a search string.
+    ChatWindowSortWithString(String),
+    /// ChatWindowRestoreSort event.
+    /// This event is used to restore the default message ordering in the chat window.
+    ChatWindowRestoreSort,
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -219,6 +229,8 @@ impl FromStr for Action {
             "chat_list_open" => Ok(Action::ChatListOpen),
             "chat_list_search" => Ok(Action::ChatListSearch),
             "chat_list_restore_sort" => Ok(Action::ChatListRestoreSort),
+            "chat_window_search" => Ok(Action::ChatWindowSearch),
+            "chat_window_restore_sort" => Ok(Action::ChatWindowRestoreSort),
             "chat_window_next" => Ok(Action::ChatWindowNext),
             "chat_window_previous" => Ok(Action::ChatWindowPrevious),
             "chat_window_unselect" => Ok(Action::ChatWindowUnselect),
