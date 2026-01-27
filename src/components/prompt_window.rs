@@ -154,13 +154,16 @@ impl Input {
     /// A newline is inserted at the current cursor position.
     /// The text after the cursor position is moved to the next line.
     fn insert_newline(&mut self) {
-        self.insert('\n');
+        // Split the current line at the cursor position
         let line = &mut self.text[self.cursor.1];
         let right = line[self.cursor.0..].to_vec();
         line.truncate(self.cursor.0);
+        // Insert a new empty line after the current line
         self.text.insert(self.cursor.1 + 1, right);
+        // Move cursor to the start of the new line
         self.cursor.0 = 0;
         self.cursor.1 += 1;
+        // Increase the prompt size to accommodate the new line
         if let Some(tx) = self.action_tx.as_ref() {
             self.correct_prompt_size += 1;
             tx.send(Action::IncreasePromptSize).unwrap()
