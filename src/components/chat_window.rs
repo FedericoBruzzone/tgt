@@ -220,20 +220,23 @@ impl ChatWindow {
     /// Exit search mode.
     fn stop_search(&mut self) {
         // Preserve the selected message ID before exiting search mode
-        let selected_message_id = self.message_list_state.selected()
+        let selected_message_id = self
+            .message_list_state
+            .selected()
             .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
-        
+
         self.search_mode = false;
         self.search_input.clear();
         self.default_sort();
-        
+
         // Restore full message list
         self.message_list
             .clone_from(&self.app_context.tg_context().open_chat_messages());
-        
+
         // Find and select the message by ID in the full list
         if let Some(message_id) = selected_message_id {
-            if let Some(full_list_idx) = self.message_list.iter().position(|m| m.id() == message_id) {
+            if let Some(full_list_idx) = self.message_list.iter().position(|m| m.id() == message_id)
+            {
                 self.message_list_state.select(Some(full_list_idx));
             }
         }
@@ -245,10 +248,13 @@ impl ChatWindow {
         self.sort(self.search_input.clone());
         // Re-filter the message list when search input changes
         // Preserve selection if possible
-        let selected_id = self.message_list_state.selected()
+        let selected_id = self
+            .message_list_state
+            .selected()
             .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
-        
-        let source_messages: Vec<MessageEntry> = self.app_context.tg_context().open_chat_messages().clone();
+
+        let source_messages: Vec<MessageEntry> =
+            self.app_context.tg_context().open_chat_messages().clone();
         self.message_list = source_messages;
         // Apply filter
         if !self.search_input.is_empty() {
@@ -268,7 +274,7 @@ impl ChatWindow {
                     .is_some()
             });
         }
-        
+
         // Restore selection if message still exists in filtered list
         if let Some(id) = selected_id {
             if let Some(new_idx) = self.message_list.iter().position(|m| m.id() == id) {
@@ -285,9 +291,11 @@ impl ChatWindow {
     /// Handle backspace in search mode.
     fn handle_search_backspace(&mut self) {
         // Preserve selection if possible
-        let selected_id = self.message_list_state.selected()
+        let selected_id = self
+            .message_list_state
+            .selected()
             .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
-        
+
         self.search_input.pop();
         if self.search_input.is_empty() {
             self.default_sort();
@@ -297,7 +305,8 @@ impl ChatWindow {
         } else {
             self.sort(self.search_input.clone());
             // Re-filter the message list when search input changes
-            let source_messages: Vec<MessageEntry> = self.app_context.tg_context().open_chat_messages().clone();
+            let source_messages: Vec<MessageEntry> =
+                self.app_context.tg_context().open_chat_messages().clone();
             self.message_list = source_messages;
             // Apply filter
             let mut config = nucleo_matcher::Config::DEFAULT;
@@ -316,7 +325,7 @@ impl ChatWindow {
                     .is_some()
             });
         }
-        
+
         // Restore selection if message still exists in filtered list
         if let Some(id) = selected_id {
             if let Some(new_idx) = self.message_list.iter().position(|m| m.id() == id) {
@@ -427,7 +436,9 @@ impl Component for ChatWindow {
                                 tx.send(Action::ChatListSearch).unwrap();
                             }
                         }
-                        KeyCode::Char(c) if !modifiers.control && !modifiers.alt && !modifiers.shift => {
+                        KeyCode::Char(c)
+                            if !modifiers.control && !modifiers.alt && !modifiers.shift =>
+                        {
                             self.handle_search_char(c);
                         }
                         KeyCode::Backspace => {
@@ -465,12 +476,14 @@ impl Component for ChatWindow {
         // This prevents jumping back to bottom when selecting messages during search
         if !self.search_mode {
             // Preserve selection by message ID before updating list
-            let selected_message_id = self.message_list_state.selected()
+            let selected_message_id = self
+                .message_list_state
+                .selected()
                 .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
-            
+
             self.message_list
                 .clone_from(&self.app_context.tg_context().open_chat_messages());
-            
+
             // Filter messages based on search string
             if let Some(s) = self.sort_string.as_ref() {
                 if !s.is_empty() {
@@ -491,7 +504,7 @@ impl Component for ChatWindow {
                     });
                 }
             }
-            
+
             // Restore selection by message ID in the updated list
             if let Some(message_id) = selected_message_id {
                 if let Some(new_idx) = self.message_list.iter().position(|m| m.id() == message_id) {
@@ -627,7 +640,7 @@ impl Component for ChatWindow {
                 .block(search_block)
                 .style(self.app_context.style_chat());
             frame.render_widget(search_paragraph, search_rect);
-            
+
             // Set cursor position in search bar
             if self.focused && self.search_mode {
                 frame.set_cursor_position(Position {

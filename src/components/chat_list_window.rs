@@ -347,7 +347,9 @@ impl Component for ChatListWindow {
             Action::Key(key_code, modifiers) => {
                 if self.search_mode {
                     match key_code {
-                        KeyCode::Char(c) if !modifiers.control && !modifiers.alt && !modifiers.shift => {
+                        KeyCode::Char(c)
+                            if !modifiers.control && !modifiers.alt && !modifiers.shift =>
+                        {
                             self.handle_search_char(c);
                         }
                         KeyCode::Backspace => {
@@ -382,7 +384,7 @@ impl Component for ChatListWindow {
         } else {
             self.app_context.style_chat_list()
         };
-        
+
         // Split area to include search bar if in search mode
         let (list_area, search_area) = if self.search_mode {
             let layout = Layout::default()
@@ -453,7 +455,7 @@ impl Component for ChatListWindow {
                 .block(search_block)
                 .style(self.app_context.style_chat_list());
             frame.render_widget(search_paragraph, search_rect);
-            
+
             // Set cursor position in search bar
             if self.focused && self.search_mode {
                 frame.set_cursor_position(Position {

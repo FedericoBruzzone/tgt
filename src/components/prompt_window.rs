@@ -976,7 +976,7 @@ impl Component for PromptWindow {
             Mode::SearchChatMessages => "Search messages",
             _ => self.name.as_str(),
         };
-        
+
         let block = Block::new()
             .border_set(collapsed_top_and_left_border_set)
             .border_style(style_border_focused)
