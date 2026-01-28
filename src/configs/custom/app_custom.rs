@@ -421,8 +421,10 @@ mod tests {
         // Set TGT_CONFIG_DIR to point to user config directory directly
         env::set_var("TGT_CONFIG_DIR", user_config_dir.to_string_lossy().as_ref());
 
-        let mut app_config = AppConfig::default();
-        app_config.theme_filename = "themes/user_theme.toml".to_string();
+        let app_config = AppConfig {
+            theme_filename: "themes/user_theme.toml".to_string(),
+            ..AppConfig::default()
+        };
 
         // Save should write to user config directory, not repo config directory
         let result = app_config.save();
