@@ -46,6 +46,15 @@ lazy_static! {
             tracing::info!("Using {} for config", p.display());
         }
 
+        // Also check ~/.tgt/config (where build.rs copies files in release mode)
+        if let Some(home) = dirs::home_dir() {
+            let tgt_config = home.join(format!(".{}", TGT)).join("config");
+            if tgt_config.is_dir() {
+                config_dirs.push(tgt_config);
+                tracing::info!("Using ~/.tgt/config for config");
+            }
+        }
+
         config_dirs
     };
 }

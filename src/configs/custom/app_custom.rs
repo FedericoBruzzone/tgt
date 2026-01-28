@@ -2,7 +2,7 @@ use crate::{
     app_error::AppError,
     configs::{self, config_file::ConfigFile, config_type::ConfigType, raw::app_raw::AppRaw},
 };
-use std::{fs, path::Path};
+use std::{fs, path::Path, path::PathBuf};
 
 #[derive(Clone, Debug)]
 /// The application configuration.
@@ -39,26 +39,76 @@ impl AppConfig {
     }
 
     /// Save the application configuration to disk.
-    /// This function searches for the config file location (using the same logic as loading)
-    /// and saves the configuration there. If no existing config file is found, it saves to
-    /// the default location in the user's config directory.
+    /// This function saves the configuration to the user's config directory only,
+    /// skipping any repo config directories (like ./config/ in debug mode).
+    /// This ensures that theme switches during development don't override the repo's
+    /// default config files.
+    ///
+    /// Precedence order for saving:
+    /// 1. User config directory (~/.config/tgt/config/app.toml or ~/.tgt/config/app.toml)
+    /// 2. If no user config exists, create it in the user's config directory
     ///
     /// # Returns
     /// `Ok(())` if the configuration was saved successfully, or an error if it failed.
     pub fn save(&self) -> Result<(), AppError<()>> {
-        use crate::configs::config_file::ConfigFile;
+        use crate::utils::{TGT, TGT_CONFIG_DIR};
+        use std::env;
 
-        // Try to find existing config file location
-        let config_path = if let Some(existing_path) = Self::search_config_file("app.toml") {
-            existing_path
+        // Find user config directory (skip repo config directories)
+        // Priority: TGT_CONFIG_DIR > ~/.config/tgt/config > ~/.tgt/config
+        let user_config_path = if let Ok(config_dir_str) = env::var(TGT_CONFIG_DIR) {
+            // Use TGT_CONFIG_DIR if set - this is the highest priority
+            let config_dir = PathBuf::from(config_dir_str);
+            // TGT_CONFIG_DIR can point to the config directory directly
+            // or to a parent directory (e.g., ~/.config/tgt)
+            if config_dir.join("app.toml").exists() {
+                // Direct config directory with existing app.toml
+                Some(config_dir.join("app.toml"))
+            } else if config_dir.join("config").join("app.toml").exists() {
+                // Parent directory with config subdirectory and existing app.toml
+                Some(config_dir.join("config").join("app.toml"))
+            } else if config_dir.is_dir() {
+                // Directory exists - use it as config directory (will create app.toml)
+                Some(config_dir.join("app.toml"))
+            } else {
+                // Directory doesn't exist - try to use it anyway (will be created)
+                Some(config_dir.join("app.toml"))
+            }
         } else {
-            // If no existing config found, use the default location
-            // This will be in the user's config directory (e.g., ~/.config/tgt/config/app.toml)
-            let default_path = configs::custom::default_config_app_file_path().map_err(|e| {
-                AppError::InvalidAction(format!("Failed to get config path: {}", e))
-            })?;
-            Path::new(&default_path).to_path_buf()
+            // Use standard user config directory
+            if let Some(user_config_dir) = if cfg!(target_os = "macos") {
+                dirs::home_dir().map(|h| h.join(".config"))
+            } else {
+                dirs::config_dir()
+            } {
+                // Try ~/.config/tgt/config/app.toml first
+                let tgt_config = user_config_dir.join(TGT).join("config");
+                if tgt_config.is_dir() || tgt_config.join("app.toml").exists() {
+                    Some(tgt_config.join("app.toml"))
+                } else {
+                    // Fallback to ~/.tgt/config/app.toml
+                    if let Some(home) = dirs::home_dir() {
+                        let tgt_dir = home.join(format!(".{}", TGT));
+                        if tgt_dir.join("config").is_dir()
+                            || tgt_dir.join("config").join("app.toml").exists()
+                        {
+                            Some(tgt_dir.join("config").join("app.toml"))
+                        } else {
+                            // Create ~/.config/tgt/config/app.toml as default
+                            Some(tgt_config.join("app.toml"))
+                        }
+                    } else {
+                        None
+                    }
+                }
+            } else {
+                None
+            }
         };
+
+        let config_path = user_config_path.ok_or_else(|| {
+            AppError::InvalidAction("Failed to determine user config directory".to_string())
+        })?;
 
         // Ensure the directory exists
         if let Some(parent) = config_path.parent() {
@@ -183,6 +233,11 @@ mod tests {
     use crate::configs::{
         config_file::ConfigFile, custom::app_custom::AppConfig, raw::app_raw::AppRaw,
     };
+    use std::sync::Mutex;
+
+    // Mutex to serialize tests that modify TGT_CONFIG_DIR environment variable
+    // This prevents race conditions when tests run in parallel
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_app_config_default() {
@@ -294,5 +349,200 @@ mod tests {
             AppConfig::get_type(),
             crate::configs::config_type::ConfigType::App
         );
+    }
+
+    #[test]
+    fn test_save_creates_user_config_directory() {
+        use std::env;
+        use tempfile::TempDir;
+
+        // Acquire lock to prevent other tests from modifying TGT_CONFIG_DIR simultaneously
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original value to restore later
+        let original_value = env::var("TGT_CONFIG_DIR").ok();
+
+        // Create a temporary directory to simulate user config directory
+        let temp_dir = TempDir::new().unwrap();
+        let temp_config_dir = temp_dir.path().join("tgt").join("config");
+
+        // Set TGT_CONFIG_DIR to point to the config directory itself
+        env::set_var("TGT_CONFIG_DIR", temp_config_dir.to_string_lossy().as_ref());
+
+        let app_config = AppConfig::default();
+
+        // Save should succeed
+        let result = app_config.save();
+        assert!(result.is_ok(), "Save should succeed: {:?}", result);
+
+        // Verify file was created in user config directory (not repo config)
+        let expected_path = temp_config_dir.join("app.toml");
+        assert!(
+            expected_path.exists(),
+            "Config file should be created in user config directory"
+        );
+
+        // Clean up - restore original value
+        match original_value {
+            Some(val) => env::set_var("TGT_CONFIG_DIR", val),
+            None => env::remove_var("TGT_CONFIG_DIR"),
+        }
+    }
+
+    #[test]
+    fn test_save_skips_repo_config_directory() {
+        use std::env;
+        use std::fs;
+        use tempfile::TempDir;
+
+        // Acquire lock to prevent other tests from modifying TGT_CONFIG_DIR simultaneously
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original value to restore later
+        let original_value = env::var("TGT_CONFIG_DIR").ok();
+
+        // Create temp directories for both repo and user config
+        let temp_base = TempDir::new().unwrap();
+        let repo_config_dir = temp_base.path().join("repo_config");
+        let user_config_dir = temp_base
+            .path()
+            .join("user_config")
+            .join("tgt")
+            .join("config");
+
+        // Create repo config directory with an existing app.toml
+        fs::create_dir_all(&repo_config_dir).unwrap();
+        fs::write(
+            repo_config_dir.join("app.toml"),
+            "theme_filename = \"themes/repo_theme.toml\"\n",
+        )
+        .unwrap();
+
+        // Set TGT_CONFIG_DIR to point to user config directory directly
+        env::set_var("TGT_CONFIG_DIR", user_config_dir.to_string_lossy().as_ref());
+
+        let mut app_config = AppConfig::default();
+        app_config.theme_filename = "themes/user_theme.toml".to_string();
+
+        // Save should write to user config directory, not repo config directory
+        let result = app_config.save();
+        assert!(result.is_ok(), "Save should succeed: {:?}", result);
+
+        // Verify file was created in user config directory
+        let user_config_file = user_config_dir.join("app.toml");
+        assert!(
+            user_config_file.exists(),
+            "Config should be saved to user config directory"
+        );
+
+        // Verify repo config was not modified
+        let repo_config_content = fs::read_to_string(repo_config_dir.join("app.toml")).unwrap();
+        assert!(
+            repo_config_content.contains("repo_theme"),
+            "Repo config should not be modified"
+        );
+
+        // Verify user config has correct content
+        let user_config_content = fs::read_to_string(&user_config_file).unwrap();
+        assert!(
+            user_config_content.contains("user_theme"),
+            "User config should have correct theme"
+        );
+
+        // Clean up - restore original value
+        match original_value {
+            Some(val) => env::set_var("TGT_CONFIG_DIR", val),
+            None => env::remove_var("TGT_CONFIG_DIR"),
+        }
+    }
+
+    #[test]
+    fn test_save_serializes_all_fields() {
+        use std::env;
+        use std::fs;
+        use tempfile::TempDir;
+
+        // Acquire lock to prevent other tests from modifying TGT_CONFIG_DIR simultaneously
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original value to restore later
+        let original_value = env::var("TGT_CONFIG_DIR").ok();
+
+        let temp_dir = TempDir::new().unwrap();
+        let temp_config_dir = temp_dir.path().join("tgt").join("config");
+        env::set_var("TGT_CONFIG_DIR", temp_config_dir.to_string_lossy().as_ref());
+
+        let app_config = AppConfig {
+            mouse_support: false,
+            paste_support: false,
+            frame_rate: 30.0,
+            show_status_bar: false,
+            show_title_bar: false,
+            theme_enable: false,
+            theme_filename: "themes/test.toml".to_string(),
+            take_api_id_from_telegram_config: false,
+            take_api_hash_from_telegram_config: false,
+        };
+
+        let result = app_config.save();
+        assert!(result.is_ok(), "Save should succeed");
+
+        // Read back and verify all fields are present
+        let saved_content = fs::read_to_string(temp_config_dir.join("app.toml")).unwrap();
+        assert!(saved_content.contains("mouse_support"));
+        assert!(saved_content.contains("paste_support"));
+        assert!(saved_content.contains("frame_rate"));
+        assert!(saved_content.contains("show_status_bar"));
+        assert!(saved_content.contains("show_title_bar"));
+        assert!(saved_content.contains("theme_enable"));
+        assert!(saved_content.contains("theme_filename"));
+        assert!(saved_content.contains("take_api_id_from_telegram_config"));
+        assert!(saved_content.contains("take_api_hash_from_telegram_config"));
+
+        // Clean up - restore original value
+        match original_value {
+            Some(val) => env::set_var("TGT_CONFIG_DIR", val),
+            None => env::remove_var("TGT_CONFIG_DIR"),
+        }
+    }
+
+    #[test]
+    fn test_save_handles_missing_directory() {
+        use std::env;
+        use tempfile::TempDir;
+
+        // Acquire lock to prevent other tests from modifying TGT_CONFIG_DIR simultaneously
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original value to restore later
+        let original_value = env::var("TGT_CONFIG_DIR").ok();
+
+        let temp_dir = TempDir::new().unwrap();
+        let temp_config_dir = temp_dir.path().join("nonexistent");
+        env::set_var("TGT_CONFIG_DIR", temp_config_dir.to_string_lossy().as_ref());
+
+        let app_config = AppConfig::default();
+
+        // Save should create the directory structure
+        let result = app_config.save();
+        assert!(
+            result.is_ok(),
+            "Save should create missing directories: {:?}",
+            result
+        );
+        assert!(
+            temp_config_dir.exists(),
+            "Config directory should be created"
+        );
+        assert!(
+            temp_config_dir.join("app.toml").exists(),
+            "Config file should be created"
+        );
+
+        // Clean up - restore original value
+        match original_value {
+            Some(val) => env::set_var("TGT_CONFIG_DIR", val),
+            None => env::remove_var("TGT_CONFIG_DIR"),
+        }
     }
 }

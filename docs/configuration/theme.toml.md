@@ -115,6 +115,43 @@ title2 = { fg = "secondary_light", bg = "surface", bold = true, underline = true
 title3 = { fg = "ternary_light", bg = "surface", bold = true, underline = true, italic = false }
 ```
 
+## Theme Discovery and Switching
+
+`tgt` automatically discovers available themes by scanning for `.toml` files in the `themes/` subdirectory of your configuration directories. Themes are discovered dynamically at runtime, so you can add new theme files without restarting the application.
+
+### Theme File Locations
+
+Theme files should be placed in the `themes/` subdirectory within your configuration directory:
+
+- **Default location**: `~/.tgt/config/themes/` (Linux/macOS) or `C:\Users\<name>\.tgt\config\themes\` (Windows)
+- **Custom location**: `~/.config/tgt/config/themes/` (Linux/macOS) or `C:\Users\<name>\AppData\Roaming\tgt\config\themes\` (Windows)
+- **Environment variable**: `$TGT_CONFIG_DIR/themes/` (if `TGT_CONFIG_DIR` is set)
+
+### Theme Discovery Order
+
+Themes are discovered in the following order (first match wins):
+
+1. `$TGT_CONFIG_DIR/themes/` (if `TGT_CONFIG_DIR` environment variable is set)
+2. `./config/themes/` (debug mode only, for development)
+3. `~/.config/tgt/config/themes/` (if exists)
+4. `~/.tgt/config/themes/` (if exists)
+
+### Theme Naming
+
+- Theme files must have a `.toml` extension
+- The theme name is derived from the filename (without the `.toml` extension)
+- For example, `monokai.toml` becomes the theme name `monokai`
+- Themes are sorted alphabetically, with `theme` (the default) always appearing first
+
+### Switching Themes
+
+You can switch themes in two ways:
+
+1. **Cycle through themes**: Use the theme switching keybinding (default: see keymap configuration) to cycle through all available themes
+2. **Select specific theme**: Use the theme selector popup (default: see keymap configuration) to choose a specific theme from the list
+
+When you switch themes, the selected theme is saved to your `app.toml` configuration file so it persists across restarts.
+
 ## Custom configuration
 
 ### How create a custom configuration file
@@ -127,15 +164,31 @@ title3 = { fg = "ternary_light", bg = "surface", bold = true, underline = true, 
 We suggest you to not modify this file, but to create your own **custom** configuration file in the following directories (in order of precedence):
 
 - `$TGT_CONFIG_DIR` (if set)
-- `$HOME/.config/tgt/` (for Linux and macOS) and `C:\Users\<name>\AppData\Roaming\tgt\` (for Windows)
+- `$HOME/.config/tgt/config` (for Linux and macOS) and `C:\Users\<name>\AppData\Roaming\tgt\config` (for Windows)
 
 Reading configurations from the following directories will override the fields defined in the default configuration files.
 It means that the fields that are not present in the custom configuration will be taken from the default configuration, while the fields that are present in the custom configuration will override the default configuration.
 Note that after the finding the first configuration file, `tgt` stops looking for more configurations, it is short-circuited.
 
+### Creating Custom Themes
+
+To create a custom theme:
+
+1. Create a new `.toml` file in the `themes/` subdirectory of your configuration directory
+2. Name it something descriptive (e.g., `my_theme.toml`)
+3. Copy the structure from an existing theme file (like `theme.toml`) and modify the colors and styles
+4. The theme will be automatically discovered and available for selection
+
+**Example**: To create a custom theme called `dark_blue`:
+
+1. Create `~/.config/tgt/config/themes/dark_blue.toml` (or in your preferred config directory)
+2. Add your theme configuration following the structure shown in the default theme example above
+3. The theme will appear in the theme selector automatically
+4. Set `theme_filename = "themes/dark_blue.toml"` in your `app.toml` to make it the default
+
 ### Example of a custom theme configuration
 
-Example of `theme.toml`:
+Example of a custom theme file (e.g., `themes/my_custom_theme.toml`):
 
 ```toml
 [palette]
@@ -145,4 +198,6 @@ background = "#ffffff"
 [common]
 border_component_focused = { fg = "test_color", bg = "background", bold = false, underline = false, italic = false }
 ```
+
+**Note**: When creating custom themes, place them in the `themes/` subdirectory. The theme will be automatically discovered and can be selected via the theme switcher or by setting `theme_filename = "themes/my_custom_theme.toml"` in your `app.toml`.
 

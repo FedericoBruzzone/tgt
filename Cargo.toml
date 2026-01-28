@@ -69,6 +69,9 @@ reqwest = { version = "0.13.1", features = ["blocking"] }
 zip = { version = "7.2.0" }
 tdlib-rs = "1.0.5"
 
+[dev-dependencies]
+tempfile = "3.10.0"
+
 [profile.release]
 lto = true
 opt-level = 'z'

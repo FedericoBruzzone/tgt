@@ -14,7 +14,7 @@ use crate::{
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
     configs::custom::keymap_custom::ActionBinding,
     event::Event,
-    theme_switcher::ThemeSwitcher,
+    theme_switcher::{discover_available_themes, ThemeSwitcher},
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, io, sync::Arc};
@@ -54,8 +54,6 @@ pub struct CoreWindow {
     show_command_guide: bool,
     /// Indicates whether the theme selector should be shown.
     show_theme_selector: bool,
-    /// The theme switcher instance.
-    theme_switcher: ThemeSwitcher,
 }
 
 impl CoreWindow {
@@ -120,20 +118,6 @@ impl CoreWindow {
         let show_reply_message = false;
         let show_command_guide = false;
         let show_theme_selector = false;
-        let mut theme_switcher = ThemeSwitcher::new();
-
-        // Initialize theme switcher to match current theme
-        let current_theme_filename = app_context.app_config().theme_filename.clone();
-        if let Some(theme_name) = current_theme_filename.strip_suffix(".toml") {
-            // Remove "themes/" prefix if present
-            let theme_name = theme_name.strip_prefix("themes/").unwrap_or(theme_name);
-            if theme_switcher.switch_to_theme(theme_name).is_err() {
-                tracing::warn!(
-                    "Current theme '{}' not found in available themes, using default",
-                    theme_name
-                );
-            }
-        }
 
         CoreWindow {
             app_context,
@@ -149,7 +133,6 @@ impl CoreWindow {
             show_reply_message,
             show_command_guide,
             show_theme_selector,
-            theme_switcher,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -338,37 +321,51 @@ impl Component for CoreWindow {
                 }
             }
             Action::SwitchTheme => {
-                if self.theme_switcher.next_theme().is_some() {
-                    if self
-                        .theme_switcher
-                        .apply_current_theme(&self.app_context)
-                        .is_ok()
-                    {
-                        // Trigger a redraw after theme change
-                        if let Some(tx) = self.action_tx.as_ref() {
-                            let _ = tx.send(Action::Render);
-                        }
-                    } else {
-                        tracing::error!("Failed to switch theme");
+                // Discover available themes and find current theme index
+                let themes = discover_available_themes();
+                if themes.is_empty() {
+                    tracing::warn!("No themes available");
+                    return;
+                }
+
+                // Get current theme from app config
+                let current_theme_filename = self.app_context.app_config().theme_filename.clone();
+                let current_theme_name = current_theme_filename
+                    .strip_suffix(".toml")
+                    .and_then(|s| s.strip_prefix("themes/"))
+                    .unwrap_or_else(|| {
+                        current_theme_filename
+                            .strip_suffix(".toml")
+                            .unwrap_or(&current_theme_filename)
+                    });
+
+                // Find current index and switch to next
+                let current_index = themes
+                    .iter()
+                    .position(|t| t == current_theme_name)
+                    .unwrap_or(0);
+                let next_index = (current_index + 1) % themes.len();
+                let next_theme = &themes[next_index];
+
+                // Apply the next theme
+                if ThemeSwitcher::apply_theme(&self.app_context, next_theme).is_ok() {
+                    // Trigger a redraw after theme change
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::Render);
                     }
+                } else {
+                    tracing::error!("Failed to switch theme");
                 }
             }
             Action::SwitchThemeTo(theme_name) => {
-                if self.theme_switcher.switch_to_theme(&theme_name).is_ok() {
-                    if self
-                        .theme_switcher
-                        .apply_current_theme(&self.app_context)
-                        .is_ok()
-                    {
-                        // Trigger a redraw after theme change
-                        if let Some(tx) = self.action_tx.as_ref() {
-                            let _ = tx.send(Action::Render);
-                        }
-                    } else {
-                        tracing::error!("Failed to switch theme to {}", theme_name);
+                // Apply the specified theme directly using static method
+                if ThemeSwitcher::apply_theme(&self.app_context, &theme_name).is_ok() {
+                    // Trigger a redraw after theme change
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::Render);
                     }
                 } else {
-                    tracing::warn!("Theme '{}' not found", theme_name);
+                    tracing::error!("Failed to switch theme to {}", theme_name);
                 }
             }
             Action::Key(key_code, modifiers) => {
