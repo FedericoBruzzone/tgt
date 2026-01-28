@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// The raw application configuration.
 pub struct AppRaw {
     /// A boolean flag that represents whether the mouse is enabled or not.

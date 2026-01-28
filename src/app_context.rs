@@ -43,8 +43,8 @@ macro_rules! theme_style_generate {
                 self.theme_config()
                     .$map
                     .get(stringify!($attr_name))
-                    .unwrap()
-                    .as_style()
+                    .map(|style| style.as_style())
+                    .unwrap_or_else(|| Style::default())
             } else {
                 Style::default()
             }

@@ -5,6 +5,7 @@ pub mod cli;
 pub mod component_name;
 pub mod event;
 pub mod logger;
+pub mod theme_switcher;
 pub mod tui;
 pub mod tui_backend;
 pub mod utils;

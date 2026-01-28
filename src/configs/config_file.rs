@@ -18,6 +18,17 @@ lazy_static! {
             tracing::info!("Using {} for config", TGT_CONFIG_DIR);
         }
 
+        // In debug mode, also check the current directory's config folder
+        if cfg!(debug_assertions) {
+            if let Ok(current_dir) = std::env::current_dir() {
+                let config_dir = current_dir.join("config");
+                if config_dir.is_dir() {
+                    config_dirs.push(config_dir);
+                    tracing::info!("Using current directory config folder for debug mode");
+                }
+            }
+        }
+
         if let Some(p) = if cfg!(target_os = "macos") {
             dirs::home_dir().map(|h| h.join(".config"))
         } else {
@@ -33,6 +44,15 @@ lazy_static! {
                 config_dirs.push(p.clone());
             }
             tracing::info!("Using {} for config", p.display());
+        }
+
+        // Also check ~/.tgt/config (where build.rs copies files in release mode)
+        if let Some(home) = dirs::home_dir() {
+            let tgt_config = home.join(format!(".{}", TGT)).join("config");
+            if tgt_config.is_dir() {
+                config_dirs.push(tgt_config);
+                tracing::info!("Using ~/.tgt/config for config");
+            }
         }
 
         config_dirs

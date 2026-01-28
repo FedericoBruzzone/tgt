@@ -35,6 +35,8 @@ keymap = [
   { keys = ["alt+r"], command = "chat_list_search", description = "Start searching chats"},
   # Show command guide with keybindings
   { keys = ["alt+f1"], command = "show_command_guide", description = "Show command guide with all keybindings"},
+  # Show theme selector
+  { keys = ["alt+t"], command = "show_theme_selector", description = "Show theme selector"},
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
