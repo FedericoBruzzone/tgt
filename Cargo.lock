@@ -4037,6 +4037,7 @@ dependencies = [
  "serde",
  "signal-hook 0.4.3",
  "tdlib-rs",
+ "tempfile",
  "tokio",
  "toml 0.8.22",
  "tracing",

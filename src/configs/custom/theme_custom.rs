@@ -32,8 +32,16 @@ pub struct ThemeConfig {
 impl ThemeConfig {
     /// Get the default theme configuration.
     ///
+    /// This is used as a fallback when `get_config()` cannot find the theme file specified
+    /// in `APP_CONFIG.theme_filename`. It tries to load from standard locations:
+    /// 1. Default theme.toml location (`~/.tgt/config/theme.toml`)
+    /// 2. Themes subdirectory (`~/.tgt/config/themes/theme.toml`)
+    ///
+    /// **Note:** In normal operation, `get_config()` is called instead (see `get_config()` documentation).
+    /// This function is primarily used as a fallback or when `Default::default()` is called.
+    ///
     /// # Returns
-    /// * `Result<Self>` - The default theme configuration.
+    /// * `Result<Self>` - The default theme configuration, or empty HashMaps if no theme file is found.
     pub fn default_result() -> Result<Self, AppError<()>> {
         // First try to load from the default theme.toml location
         let file_path = configs::custom::default_config_theme_file_path()?;
@@ -52,6 +60,7 @@ impl ThemeConfig {
 
         // If neither exists, return empty HashMaps
         // The actual theme will be loaded via get_config() which uses APP_CONFIG.theme_filename
+        // See get_config() documentation for details on when and how it's called.
         Ok(Self {
             common: HashMap::new(),
             chat_list: HashMap::new(),
@@ -74,9 +83,28 @@ impl ConfigFile for ThemeConfig {
         true
     }
 
-    // We need to override the default implementation of the get_config function
-    // to use the theme_filename from the app config.
-    // The default value of theme_filename is "theme.toml".
+    /// Override the default implementation of `get_config()` to use the theme filename from app config.
+    ///
+    /// **When is this called?**
+    /// - Called during application initialization in `main.rs` as part of the `THEME_CONFIG` lazy static
+    /// - This happens once at startup, before the application context is created
+    ///
+    /// **How does it work?**
+    /// - Uses `APP_CONFIG.theme_filename` to determine which theme file to load
+    /// - Searches for the theme file in the config directory hierarchy (see `CONFIG_DIR_HIERARCHY`)
+    /// - The default value of `theme_filename` is "themes/theme.toml" (as set in `config/app.toml`)
+    /// - If the theme file is found, it loads and deserializes it
+    /// - If not found, returns the default theme configuration (empty HashMaps)
+    ///
+    /// **Theme file search order:**
+    /// 1. `TGT_CONFIG_DIR/themes/{theme_filename}` (if `TGT_CONFIG_DIR` is set)
+    /// 2. `./config/themes/{theme_filename}` (debug mode only)
+    /// 3. `~/.config/tgt/config/themes/{theme_filename}` (if exists)
+    /// 4. `~/.tgt/config/themes/{theme_filename}` (if exists)
+    ///
+    /// **Example:**
+    /// If `APP_CONFIG.theme_filename = "themes/monokai.toml"`, this function will search for
+    /// `monokai.toml` in the `themes/` subdirectory of each config directory in the hierarchy.
     fn get_config() -> Self {
         if Self::override_fields() {
             // Use deserialize_config_or_default directly with APP_CONFIG.theme_filename
