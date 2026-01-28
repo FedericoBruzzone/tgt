@@ -1,26 +1,9 @@
-# `mouse_support` enables mouse support in the terminal.
 mouse_support = true
-# `paste_support` enables paste support in the terminal.
 paste_support = true
-# `frame_rate` is the frame rate of the terminal in frames per second.
-# The suggested frame rate are:
-# - 120.0 for ultra smooth animations
-# - 60.0 for smooth animations
-# - 30.0 for normal animations
-# - 15.0 for slow animations
 frame_rate = 60.0
-# `show_status_bar` enables the status bar at the bottom of the terminal.
 show_status_bar = true
-# `show_title_bar` enables the title bar at the top of the terminal.
 show_title_bar = true
-# `theme_enable` enables the theme.
 theme_enable = true
-# `theme_filename` is the name of the file that contains the theme.
-# This file must be in the configuration directory.
-theme_filename = "theme.toml"
-# `take_api_id_from_telegram_config` enables taking the API_ID from the Telegram configuration file
-# or from the environment variable `API_ID`.
+theme_filename = "themes/onedark.toml"
 take_api_id_from_telegram_config = true
-# `take_api_hash_from_telegram_config` enables taking the API_HASH from the Telegram configuration file
-# or from the environment variable `API_HASH`.
 take_api_hash_from_telegram_config = true

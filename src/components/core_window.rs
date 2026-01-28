@@ -9,10 +9,12 @@ use crate::{
         command_guide::CommandGuide,
         component_traits::{Component, HandleFocus},
         prompt_window::PromptWindow,
+        theme_selector::ThemeSelector,
     },
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
     configs::custom::keymap_custom::ActionBinding,
     event::Event,
+    theme_switcher::ThemeSwitcher,
 };
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, io, sync::Arc};
@@ -50,6 +52,10 @@ pub struct CoreWindow {
     show_reply_message: bool,
     /// Indicates whether the command guide should be shown.
     show_command_guide: bool,
+    /// Indicates whether the theme selector should be shown.
+    show_theme_selector: bool,
+    /// The theme switcher instance.
+    theme_switcher: ThemeSwitcher,
 }
 
 impl CoreWindow {
@@ -92,6 +98,12 @@ impl CoreWindow {
                     .with_name(ComponentName::CommandGuide.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::ThemeSelector,
+                ThemeSelector::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::ThemeSelector.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -107,6 +119,21 @@ impl CoreWindow {
         let focused = true;
         let show_reply_message = false;
         let show_command_guide = false;
+        let show_theme_selector = false;
+        let mut theme_switcher = ThemeSwitcher::new();
+
+        // Initialize theme switcher to match current theme
+        let current_theme_filename = app_context.app_config().theme_filename.clone();
+        if let Some(theme_name) = current_theme_filename.strip_suffix(".toml") {
+            // Remove "themes/" prefix if present
+            let theme_name = theme_name.strip_prefix("themes/").unwrap_or(theme_name);
+            if theme_switcher.switch_to_theme(theme_name).is_err() {
+                tracing::warn!(
+                    "Current theme '{}' not found in available themes, using default",
+                    theme_name
+                );
+            }
+        }
 
         CoreWindow {
             app_context,
@@ -121,6 +148,8 @@ impl CoreWindow {
             focused,
             show_reply_message,
             show_command_guide,
+            show_theme_selector,
+            theme_switcher,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -286,7 +315,71 @@ impl Component for CoreWindow {
                     component.update(action.clone());
                 }
             }
+            Action::ShowThemeSelector => {
+                // Toggle theme selector: if already visible, hide it; otherwise show it
+                if self.show_theme_selector {
+                    self.show_theme_selector = false;
+                    if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
+                    {
+                        component.update(Action::HideThemeSelector);
+                    }
+                } else {
+                    self.show_theme_selector = true;
+                    if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
+                    {
+                        component.update(action.clone());
+                    }
+                }
+            }
+            Action::HideThemeSelector => {
+                self.show_theme_selector = false;
+                if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector) {
+                    component.update(action.clone());
+                }
+            }
+            Action::SwitchTheme => {
+                if self.theme_switcher.next_theme().is_some() {
+                    if self
+                        .theme_switcher
+                        .apply_current_theme(&self.app_context)
+                        .is_ok()
+                    {
+                        // Trigger a redraw after theme change
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            let _ = tx.send(Action::Render);
+                        }
+                    } else {
+                        tracing::error!("Failed to switch theme");
+                    }
+                }
+            }
+            Action::SwitchThemeTo(theme_name) => {
+                if self.theme_switcher.switch_to_theme(&theme_name).is_ok() {
+                    if self
+                        .theme_switcher
+                        .apply_current_theme(&self.app_context)
+                        .is_ok()
+                    {
+                        // Trigger a redraw after theme change
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            let _ = tx.send(Action::Render);
+                        }
+                    } else {
+                        tracing::error!("Failed to switch theme to {}", theme_name);
+                    }
+                } else {
+                    tracing::warn!("Theme '{}' not found", theme_name);
+                }
+            }
             Action::Key(key_code, modifiers) => {
+                // If theme selector is visible, send keys to it
+                if self.show_theme_selector {
+                    if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
+                    {
+                        component.update(Action::Key(key_code, modifiers.clone()));
+                    }
+                    return; // Don't send to focused component when theme selector is visible
+                }
                 // If command guide is visible, handle Esc/F1 to close it
                 if self.show_command_guide {
                     match key_code {
@@ -497,6 +590,15 @@ impl Component for CoreWindow {
                 .get_mut(&ComponentName::CommandGuide)
                 .unwrap_or_else(|| {
                     panic!("Failed to get component: {}", ComponentName::CommandGuide)
+                })
+                .draw(frame, area)?;
+        }
+
+        if self.show_theme_selector {
+            self.components
+                .get_mut(&ComponentName::ThemeSelector)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", ComponentName::ThemeSelector)
                 })
                 .draw(frame, area)?;
         }

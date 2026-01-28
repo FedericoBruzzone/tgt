@@ -15,4 +15,5 @@ pub mod reply_message;
 #[cfg(test)]
 pub mod search_tests;
 pub mod status_bar;
+pub mod theme_selector;
 pub mod title_bar;
