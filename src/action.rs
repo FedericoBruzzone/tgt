@@ -193,6 +193,18 @@ pub enum Action {
     /// ChatWindowRestoreSort event.
     /// This event is used to restore the default message ordering in the chat window.
     ChatWindowRestoreSort,
+    /// SwitchTheme action.
+    /// This action is used to switch to the next theme in the theme list.
+    SwitchTheme,
+    /// SwitchThemeTo action with a theme name.
+    /// This action is used to switch to a specific theme by name.
+    SwitchThemeTo(String),
+    /// ShowThemeSelector action.
+    /// This action is used to show the theme selector popup.
+    ShowThemeSelector,
+    /// HideThemeSelector action.
+    /// This action is used to hide the theme selector popup.
+    HideThemeSelector,
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -245,6 +257,9 @@ impl FromStr for Action {
             "chat_window_reply" => Ok(Action::ShowChatWindowReply),
             "show_command_guide" => Ok(Action::ShowCommandGuide),
             "hide_command_guide" => Ok(Action::HideCommandGuide),
+            "show_theme_selector" => Ok(Action::ShowThemeSelector),
+            "hide_theme_selector" => Ok(Action::HideThemeSelector),
+            "switch_theme" => Ok(Action::SwitchTheme),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

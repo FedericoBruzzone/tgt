@@ -22,9 +22,26 @@ impl PaletteConfig {
     /// # Returns
     /// * `Result<Self>` - The default palette configuration.
     pub fn default_result() -> Result<Self, AppError<()>> {
-        configs::deserialize_to_config_into::<PaletteRaw, Self>(Path::new(
-            &configs::custom::default_config_palette_file_path()?,
-        ))
+        // First try to load from the default theme.toml location
+        let file_path = configs::custom::default_config_palette_file_path()?;
+        let path = Path::new(&file_path);
+        if path.exists() {
+            return configs::deserialize_to_config_into::<PaletteRaw, Self>(path);
+        }
+
+        // If not found, try to load from themes/theme.toml
+        if let Ok(config_dir) = crate::utils::tgt_config_dir() {
+            let themes_path = config_dir.join("themes").join("theme.toml");
+            if themes_path.exists() {
+                return configs::deserialize_to_config_into::<PaletteRaw, Self>(&themes_path);
+            }
+        }
+
+        // If neither exists, return empty HashMap
+        // The actual palette will be loaded via get_config() which uses APP_CONFIG.theme_filename
+        Ok(Self {
+            palette: HashMap::new(),
+        })
     }
 }
 /// The implementation of the configuration file for the palette.
@@ -44,11 +61,9 @@ impl ConfigFile for PaletteConfig {
     // The default value of theme_filename is "theme.toml".
     fn get_config() -> Self {
         if Self::override_fields() {
-            let mut default = Self::default();
-            default.merge(Self::deserialize_custom_config::<Self::Raw>(
-                // Self::get_type().as_default_filename().as_str(),
-                &APP_CONFIG.theme_filename,
-            ))
+            // Use deserialize_config_or_default directly with APP_CONFIG.theme_filename
+            // This will load the palette from the theme file if found, or return default if not found
+            Self::deserialize_config_or_default::<Self::Raw, Self>(&APP_CONFIG.theme_filename)
         } else {
             Self::deserialize_config_or_default::<Self::Raw, Self>(
                 Self::get_type().as_default_filename().as_str(),
