@@ -53,6 +53,9 @@ enum Mode {
     /// The search mode of the prompt.
     /// Used to sort the chat list window based on the search string.
     SearchChatList,
+    /// The search mode for chat messages.
+    /// Used to filter and search messages within the current chat.
+    SearchChatMessages,
 }
 /// `InputCell` is a struct that represents a cell of the input.
 /// It is responsible for managing the input cell of the prompt.
@@ -114,6 +117,23 @@ impl Input {
     fn text(&mut self) -> &Vec<Vec<InputCell>> {
         &self.text
     }
+    /// Send search updates if in search mode.
+    /// This method sends the current search string to the appropriate component.
+    fn send_search_update(&mut self) {
+        match self.mode {
+            Mode::SearchChatList => {
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::ChatListSortWithString(self.text_to_string()));
+                }
+            }
+            Mode::SearchChatMessages => {
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::ChatWindowSortWithString(self.text_to_string()));
+                }
+            }
+            _ => {}
+        }
+    }
     /// Insert a character into the `Input` struct.
     /// The character is inserted at the current cursor position.
     /// If the cursor is at the end of the line, a new line is inserted.
@@ -127,6 +147,8 @@ impl Input {
         }
         self.text[self.cursor.1].insert(self.cursor.0, InputCell { c, selected: false });
         self.cursor.0 += 1;
+        // Send search update if in search mode
+        self.send_search_update();
     }
     /// Insert a newline into the `Input` struct.
     /// A newline is inserted at the current cursor position.
@@ -166,6 +188,8 @@ impl Input {
             self.text[self.cursor.1].remove(self.cursor.0 - 1);
             self.cursor.0 -= 1;
         }
+        // Send search update if in search mode
+        self.send_search_update();
     }
     /// Delete the character next to the cursor position.
     fn delete(&mut self) {
@@ -177,6 +201,8 @@ impl Input {
         } else {
             self.text[self.cursor.1].remove(self.cursor.0);
         }
+        // Send search update if in search mode
+        self.send_search_update();
     }
     /// Move the cursor to the left.
     fn move_cursor_left(&mut self) {
@@ -256,6 +282,8 @@ impl Input {
         }
         line.drain(i..self.cursor.0);
         self.cursor.0 = i;
+        // Send search update if in search mode
+        self.send_search_update();
     }
     /// Restore the prompt size of the `Input` struct.
     /// It is used to restore the prompt size to the correct prompt size when
@@ -513,6 +541,22 @@ impl Input {
                     self.mode = Mode::Normal;
                     self.set_prompt_size_to_one_focused();
                 }
+                Mode::SearchChatMessages => {
+                    // Send search string to chat window for filtering messages
+                    self.action_tx
+                        .as_ref()
+                        .unwrap()
+                        .send(Action::FocusComponent(ComponentName::Chat))
+                        .unwrap();
+                    self.action_tx
+                        .as_ref()
+                        .unwrap()
+                        .send(Action::ChatWindowSortWithString(self.text_to_string()))
+                        .unwrap();
+                    self.text = vec![vec![]];
+                    self.mode = Mode::Normal;
+                    self.set_prompt_size_to_one_focused();
+                }
             }
         }
     }
@@ -625,6 +669,20 @@ impl HandleFocus for PromptWindow {
     /// Set the `focused` flag for the `PromptWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
+        // Clear search when unfocusing
+        match self.input.mode {
+            Mode::SearchChatList => {
+                if let Some(tx) = self.input.action_tx.as_ref() {
+                    let _ = tx.send(Action::ChatListRestoreSort);
+                }
+            }
+            Mode::SearchChatMessages => {
+                if let Some(tx) = self.input.action_tx.as_ref() {
+                    let _ = tx.send(Action::ChatWindowRestoreSort);
+                }
+            }
+            _ => {}
+        }
         self.input.mode = Mode::Normal;
         self.input.text = vec![vec![]];
     }
@@ -784,9 +842,41 @@ impl Component for PromptWindow {
                     self.input.delete();
                 }
 
+                (KeyCode::Char('r'), Modifiers { alt: true, .. }) => {
+                    // Alt+R from prompt: activate chat message search if in chat context
+                    self.input.unselect_all();
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        tx.send(Action::ChatWindowSearch).unwrap();
+                    }
+                }
                 (KeyCode::Enter, ..) => {
                     self.input.unselect_all();
-                    self.input.insert_newline();
+                    // In search mode, Enter exits search mode instead of inserting newline
+                    match self.input.mode {
+                        Mode::SearchChatList => {
+                            self.action_tx
+                                .as_ref()
+                                .unwrap()
+                                .send(Action::ChatListRestoreSort)
+                                .unwrap();
+                            self.input.text = vec![vec![]];
+                            self.input.mode = Mode::Normal;
+                            self.input.set_prompt_size_to_one_focused();
+                        }
+                        Mode::SearchChatMessages => {
+                            self.action_tx
+                                .as_ref()
+                                .unwrap()
+                                .send(Action::ChatWindowRestoreSort)
+                                .unwrap();
+                            self.input.text = vec![vec![]];
+                            self.input.mode = Mode::Normal;
+                            self.input.set_prompt_size_to_one_focused();
+                        }
+                        _ => {
+                            self.input.insert_newline();
+                        }
+                    }
                 }
 
                 (KeyCode::Left, ..) => {
@@ -821,6 +911,7 @@ impl Component for PromptWindow {
                 self.input.mode = Mode::Reply(message_id);
             }
             Action::ChatListSearch => self.input.mode = Mode::SearchChatList,
+            Action::ChatWindowSearch => self.input.mode = Mode::SearchChatMessages,
             _ => {}
         }
     }
@@ -882,11 +973,18 @@ impl Component for PromptWindow {
             )
         };
 
+        // Set title based on search mode
+        let title = match self.input.mode {
+            Mode::SearchChatList => "Search chats",
+            Mode::SearchChatMessages => "Search messages",
+            _ => self.name.as_str(),
+        };
+
         let block = Block::new()
             .border_set(collapsed_top_and_left_border_set)
             .border_style(style_border_focused)
             .borders(Borders::ALL)
-            .title(self.name.as_str());
+            .title(title);
 
         let input = Paragraph::new(text).style(style_text).block(block);
 

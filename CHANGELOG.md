@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ## [Unreleased] - yyyy-mm-dd
 Here we write upgrading notes for brands. It's a team effort to make them as straightforward as possible.
 ### Added
+- Added search functionality for messages within chat windows. Users can now search through messages in the current chat using fuzzy matching. Press `Alt+R` when focused on the chat window to start searching, and `Alt+C` to restore default message ordering.
 ### Changed
 ### Fixed
 - Fixed stack overflow crash when typing text in prompt field that reaches window edge. The `insert_newline()` function was recursively calling `insert('\n')` which created infinite recursion. Refactored to directly handle line splitting without recursive calls, allowing prompt to dynamically expand as expected.

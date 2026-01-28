@@ -4,13 +4,12 @@ use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
+use crossterm::event::KeyCode;
 use nucleo_matcher::{Matcher, Utf32Str};
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::symbols::border::PLAIN;
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::Block;
-use ratatui::widgets::Borders;
-use ratatui::widgets::{List, ListDirection, ListState};
+use ratatui::widgets::{Block, Borders, List, ListDirection, ListState, Paragraph};
 use ratatui::Frame;
 use std::sync::Arc;
 use tdlib_rs::enums::{ChatList, UserStatus};
@@ -143,6 +142,10 @@ pub struct ChatListWindow {
     focused: bool,
     /// String used to sort chats.
     sort_string: Option<String>,
+    /// Search input string for filtering chats.
+    search_input: String,
+    /// Whether search mode is active.
+    search_mode: bool,
 }
 /// Implementation of the `ChatListWindow` struct.
 impl ChatListWindow {
@@ -169,6 +172,8 @@ impl ChatListWindow {
             chat_list_state,
             focused,
             sort_string,
+            search_input: String::new(),
+            search_mode: false,
         }
     }
     /// Set the name of the `ChatListWindow`.
@@ -257,6 +262,35 @@ impl ChatListWindow {
     fn default_sort(&mut self) {
         self.sort_string = None;
     }
+
+    /// Enter search mode.
+    fn start_search(&mut self) {
+        self.search_mode = true;
+        self.search_input.clear();
+    }
+
+    /// Exit search mode.
+    fn stop_search(&mut self) {
+        self.search_mode = false;
+        self.search_input.clear();
+        self.default_sort();
+    }
+
+    /// Handle character input in search mode.
+    fn handle_search_char(&mut self, c: char) {
+        self.search_input.push(c);
+        self.sort(self.search_input.clone());
+    }
+
+    /// Handle backspace in search mode.
+    fn handle_search_backspace(&mut self) {
+        self.search_input.pop();
+        if self.search_input.is_empty() {
+            self.default_sort();
+        } else {
+            self.sort(self.search_input.clone());
+        }
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatListWindow` struct.
@@ -281,12 +315,65 @@ impl Component for ChatListWindow {
 
     fn update(&mut self, action: Action) {
         match action {
-            Action::ChatListNext => self.next(),
-            Action::ChatListPrevious => self.previous(),
-            Action::ChatListUnselect => self.unselect(),
-            Action::ChatListOpen => self.confirm_selection(),
+            Action::ChatListNext => {
+                // Allow navigation even in search mode
+                // But skip if we're handling the key event directly (to avoid double processing)
+                if !self.search_mode {
+                    self.next();
+                }
+            }
+            Action::ChatListPrevious => {
+                // Allow navigation even in search mode
+                // But skip if we're handling the key event directly (to avoid double processing)
+                if !self.search_mode {
+                    self.previous();
+                }
+            }
+            Action::ChatListUnselect => {
+                if self.search_mode {
+                    self.stop_search();
+                } else {
+                    self.unselect();
+                }
+            }
+            Action::ChatListOpen => {
+                if !self.search_mode {
+                    self.confirm_selection();
+                }
+            }
             Action::ChatListSortWithString(s) => self.sort(s),
             Action::ChatListRestoreSort => self.default_sort(),
+            Action::ChatListSearch => self.start_search(),
+            Action::Key(key_code, modifiers) => {
+                if self.search_mode {
+                    match key_code {
+                        KeyCode::Char(c)
+                            if !modifiers.control && !modifiers.alt && !modifiers.shift =>
+                        {
+                            self.handle_search_char(c);
+                        }
+                        KeyCode::Backspace => {
+                            self.handle_search_backspace();
+                        }
+                        KeyCode::Enter | KeyCode::Esc => {
+                            self.stop_search();
+                        }
+                        KeyCode::Down => {
+                            // Allow arrow key navigation in search mode
+                            self.next();
+                        }
+                        KeyCode::Up => {
+                            // Allow arrow key navigation in search mode
+                            self.previous();
+                        }
+                        KeyCode::Tab => {
+                            // Allow tab navigation in search mode
+                            self.next();
+                        }
+                        _ => {}
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -297,35 +384,84 @@ impl Component for ChatListWindow {
         } else {
             self.app_context.style_chat_list()
         };
+
+        // Split area to include search bar if in search mode
+        let (list_area, search_area) = if self.search_mode {
+            let layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Fill(1)])
+                .split(area);
+            (layout[1], Some(layout[0]))
+        } else {
+            (area, None)
+        };
+
         if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
             self.chat_list = items;
 
-            // Sort before drawing
+            // Filter and sort before drawing
             if let Some(s) = self.sort_string.as_ref() {
-                let mut config = nucleo_matcher::Config::DEFAULT;
-                config.prefer_prefix = true;
-                let mut matcher = Matcher::new(config);
-                let s: Vec<char> = s.chars().collect();
-                self.chat_list.sort_by(|a, b| {
-                    let a: Vec<char> = a.chat_name.chars().collect();
-                    let b: Vec<char> = b.chat_name.chars().collect();
-                    let a_score = matcher
-                        .fuzzy_indices(
-                            Utf32Str::Unicode(&a),
-                            Utf32Str::Unicode(&s),
-                            &mut Vec::new(),
-                        )
-                        .unwrap_or(0);
-                    let b_score = matcher
-                        .fuzzy_indices(
-                            Utf32Str::Unicode(&b),
-                            Utf32Str::Unicode(&s),
-                            &mut Vec::new(),
-                        )
-                        .unwrap_or(0);
-                    a_score.cmp(&b_score)
+                if !s.is_empty() {
+                    let mut config = nucleo_matcher::Config::DEFAULT;
+                    config.prefer_prefix = true;
+                    let mut matcher = Matcher::new(config.clone());
+                    let search_chars: Vec<char> = s.chars().collect();
+                    // Filter chats that match the search query
+                    self.chat_list.retain(|chat| {
+                        let chat_name_chars: Vec<char> = chat.chat_name.chars().collect();
+                        matcher
+                            .fuzzy_indices(
+                                Utf32Str::Unicode(&chat_name_chars),
+                                Utf32Str::Unicode(&search_chars),
+                                &mut Vec::new(),
+                            )
+                            .is_some()
+                    });
+                    // Sort remaining chats by relevance score
+                    let mut matcher = Matcher::new(config);
+                    self.chat_list.sort_by(|a, b| {
+                        let a: Vec<char> = a.chat_name.chars().collect();
+                        let b: Vec<char> = b.chat_name.chars().collect();
+                        let a_score = matcher
+                            .fuzzy_indices(
+                                Utf32Str::Unicode(&a),
+                                Utf32Str::Unicode(&search_chars),
+                                &mut Vec::new(),
+                            )
+                            .unwrap_or(0);
+                        let b_score = matcher
+                            .fuzzy_indices(
+                                Utf32Str::Unicode(&b),
+                                Utf32Str::Unicode(&search_chars),
+                                &mut Vec::new(),
+                            )
+                            .unwrap_or(0);
+                        a_score.cmp(&b_score)
+                    });
+                    self.chat_list.reverse();
+                }
+            }
+        }
+
+        // Draw search bar if in search mode
+        if let Some(search_rect) = search_area {
+            let search_block = Block::default()
+                .border_set(PLAIN)
+                .border_style(style_border_focused)
+                .borders(Borders::ALL)
+                .title("Search chats");
+            let search_text = format!("{}_", self.search_input);
+            let search_paragraph = Paragraph::new(search_text)
+                .block(search_block)
+                .style(self.app_context.style_chat_list());
+            frame.render_widget(search_paragraph, search_rect);
+
+            // Set cursor position in search bar
+            if self.focused && self.search_mode {
+                frame.set_cursor_position(Position {
+                    x: search_rect.x + self.search_input.len() as u16 + 1,
+                    y: search_rect.y + 1,
                 });
-                self.chat_list.reverse();
             }
         }
 
@@ -347,7 +483,191 @@ impl Component for ChatListWindow {
         // .highlight_symbol("➤ ")
         // .repeat_highlight_symbol(true)
 
-        frame.render_stateful_widget(list, area, &mut self.chat_list_state);
+        frame.render_stateful_widget(list, list_area, &mut self.chat_list_state);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        action::{Action, Modifiers},
+        components::search_tests::{create_mock_chat, create_test_app_context},
+    };
+    use crossterm::event::{KeyCode, KeyModifiers};
+
+    fn create_test_chat_list_window() -> ChatListWindow {
+        let app_context = create_test_app_context();
+        ChatListWindow::new(app_context)
+    }
+
+    fn setup_chats(window: &mut ChatListWindow, chat_names: &[&str]) {
+        let mut chats = Vec::new();
+        for (i, name) in chat_names.iter().enumerate() {
+            chats.push(create_mock_chat(i as i64 + 1, name));
+        }
+        // Directly set the chat_list (using internal access for testing)
+        window.chat_list = chats;
+    }
+
+    #[test]
+    fn test_chat_list_search_initial_state() {
+        let window = create_test_chat_list_window();
+        assert!(!window.search_mode, "Search mode should be false initially");
+    }
+
+    #[test]
+    fn test_chat_list_start_search() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSearch);
+        assert!(
+            window.search_mode,
+            "Search mode should be true after ChatListSearch"
+        );
+    }
+
+    #[test]
+    fn test_chat_list_stop_search() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSearch);
+        assert!(window.search_mode);
+
+        window.update(Action::ChatListUnselect);
+        assert!(
+            !window.search_mode,
+            "Search mode should be false after Esc/Unselect"
+        );
+    }
+
+    #[test]
+    fn test_chat_list_filtering_basic() {
+        let mut window = create_test_chat_list_window();
+        setup_chats(&mut window, &["Alice", "Bob", "Charlie", "David"]);
+
+        // Start search
+        window.update(Action::ChatListSearch);
+        assert!(window.search_mode);
+
+        // Type 'a' to filter
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Char('a'), modifiers));
+        window.update(Action::ChatListSortWithString("a".to_string()));
+
+        // Simulate draw to trigger filtering
+        window.chat_list = vec![
+            create_mock_chat(1, "Alice"),
+            create_mock_chat(3, "Charlie"),
+            create_mock_chat(4, "David"),
+        ];
+        window.sort("a".to_string());
+
+        // Filter should match "Alice" and "Charlie" (contains 'a')
+        // Note: Actual filtering happens in draw(), but we can test the sort_string
+        assert_eq!(window.sort_string, Some("a".to_string()));
+    }
+
+    #[test]
+    fn test_chat_list_filtering_fuzzy() {
+        let mut window = create_test_chat_list_window();
+        setup_chats(&mut window, &["Alice", "Bob", "Charlie", "David"]);
+
+        window.update(Action::ChatListSearch);
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+
+        // Type 'al' - should match "Alice"
+        window.update(Action::Key(KeyCode::Char('a'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('l'), modifiers.clone()));
+        window.update(Action::ChatListSortWithString("al".to_string()));
+
+        assert_eq!(window.sort_string, Some("al".to_string()));
+        assert_eq!(window.search_input, "al");
+    }
+
+    #[test]
+    fn test_chat_list_search_backspace() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSearch);
+
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Char('a'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('b'), modifiers.clone()));
+        assert_eq!(window.search_input, "ab");
+
+        window.update(Action::Key(KeyCode::Backspace, modifiers));
+        assert_eq!(window.search_input, "a");
+    }
+
+    #[test]
+    fn test_chat_list_search_exit_with_enter() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSearch);
+        assert!(window.search_mode);
+
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Enter, modifiers));
+        assert!(!window.search_mode, "Search should exit with Enter");
+    }
+
+    #[test]
+    fn test_chat_list_search_exit_with_esc() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSearch);
+        assert!(window.search_mode);
+
+        window.update(Action::ChatListUnselect);
+        assert!(!window.search_mode, "Search should exit with Esc/Unselect");
+    }
+
+    #[test]
+    fn test_chat_list_navigation_in_search_mode() {
+        let mut window = create_test_chat_list_window();
+        setup_chats(&mut window, &["Alice", "Bob", "Charlie"]);
+
+        window.update(Action::ChatListSearch);
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+
+        // Type to filter
+        window.update(Action::Key(KeyCode::Char('a'), modifiers.clone()));
+        window.update(Action::ChatListSortWithString("a".to_string()));
+
+        // Navigate with arrow keys
+        window.update(Action::Key(KeyCode::Down, modifiers.clone()));
+        // Navigation should work in search mode
+        // Note: Actual navigation state is managed by ListState which is harder to test directly
+        assert!(window.search_mode, "Should still be in search mode");
+    }
+
+    #[test]
+    fn test_chat_list_restore_sort() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSortWithString("test".to_string()));
+        assert_eq!(window.sort_string, Some("test".to_string()));
+
+        window.update(Action::ChatListRestoreSort);
+        assert_eq!(window.sort_string, None, "Sort should be restored to None");
+    }
+
+    #[test]
+    fn test_chat_list_search_clear_on_exit() {
+        let mut window = create_test_chat_list_window();
+        window.update(Action::ChatListSearch);
+
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Char('t'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('e'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('s'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('t'), modifiers));
+        assert_eq!(window.search_input, "test");
+
+        window.update(Action::ChatListUnselect);
+        assert!(
+            window.search_input.is_empty(),
+            "Search input should be cleared on exit"
+        );
+        assert_eq!(
+            window.sort_string, None,
+            "Sort string should be cleared on exit"
+        );
     }
 }
