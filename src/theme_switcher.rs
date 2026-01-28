@@ -509,7 +509,7 @@ mod tests {
             );
         } else {
             // If we can't count files (e.g., in CI), just verify we have themes
-            assert!(themes.len() >= 1, "Should discover at least one theme");
+            assert!(!themes.is_empty(), "Should discover at least one theme");
         }
     }
 
