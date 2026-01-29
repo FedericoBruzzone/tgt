@@ -179,6 +179,9 @@ The configuration files are manyfold.
 4. [`telegram.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/telegram.toml): contains the Telegram API and TDLib configurations (see [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) for explanations about each field).
 5. [`theme.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/theme.toml): contains the color theme configurations (see [`theme.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/theme.toml.md) for explanations about each field).
 
+> [!NOTE]
+> The theme switcher only persists the selected theme in **release** mode. In debug mode, the chosen theme is not saved between sessions.
+
 > [!WARNING]
 > Generally, end-users are expected to supply their own api\_id and api\_hash.
 > While some open-source clients, including `tgt`, may provide "default" credentials to make the "out-of-the-box" experience smoother, shipping shared credentials carries risks.
