@@ -33,7 +33,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [macos-13, macos-14]
         os: [macos-15-intel, macos-14]
         feature: [local-tdlib, download-tdlib, pkg-config]
 
@@ -42,15 +41,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
       - name: Restore cache TDLib
-        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         id: cache-tdlib-restore
         uses: actions/cache/restore@v5
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
+
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           brew install gperf openssl
@@ -60,54 +61,72 @@ jobs:
           rm -rf build
           mkdir build
           cd build
-          cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl/' || '/usr/local/opt/openssl/' }} -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          cmake \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOPENSSL_ROOT_DIR=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl/' || '/usr/local/opt/openssl/' }} \
+            -DCMAKE_INSTALL_PREFIX:PATH=../tdlib \
+            ..
           cmake --build . --target install
+
       - name: Save cache TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
         uses: actions/cache/save@v5
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
+
       - name: Extract TDLib x86_64
-        if: runner.arch == 'x64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: runner.arch == 'x64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
         run: |
           cp -r ./td/tdlib ./
-          # cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
+
       - name: Extract TDLib ARM64
-        if: runner.arch == 'ARM64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: runner.arch == 'ARM64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
+        run: |
+          cp -r ./td/tdlib ./
+       
+      - name: Fix TDLib permissions (files + directories)
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" tdlib
+          chmod -R u+rwX tdlib
+
+      # # 🔧 FIX: rewrite TDLib install_name so it does NOT point at /usr/lib
+      # - name: Fix TDLib install_name (macOS)
+      #   if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
+      #   run: |
+      #     for lib in tdlib/lib/libtdjson*.dylib; do
+      #       install_name_tool -id "@rpath/$(basename "$lib")" "$lib"
+      #     done
+
+      # Install dylib into /usr/local/lib so build script (and dyld) can find it at runtime
+      - name: Install TDLib dylib to /usr/local/lib (macOS)
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         run: |
           sudo mkdir -p /usr/local/lib
-          sudo cp -r ./td/tdlib ./
-          # sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
+          sudo cp -f tdlib/lib/libtdjson.*.dylib /usr/local/lib/
+          ls -la tdlib/lib/libtdjson*.dylib
+          ls -la /usr/local/lib/libtdjson*.dylib || true
+
       - name: Set PKG_CONFIG_PATH and DYLD_LIBRARY_PATH
         if: matrix.feature == 'pkg-config'
         run: |
           echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
-      - name: Set LOCAL_TDLIB_PATH
+
+      - name: Set LOCAL_TDLIB_PATH and DYLD_LIBRARY_PATH
         if: matrix.feature == 'local-tdlib'
         run: |
           echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
 
-      - name: Setup TDLib Environment
-        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+      # dyld looks in target/debug/deps first; put dylib there so build script finds it (macOS ignores DYLD_LIBRARY_PATH in some contexts). For download-tdlib we bootstrap with our TDLib build so the build script can run; it then downloads its own copy for the app.
+      - name: Place TDLib dylib in target/debug/deps (macOS)
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         run: |
-          # Create local lib directory if it doesn't exist
-          sudo mkdir -p /usr/local/lib
-          
-          # Move built library to the project folder for local-tdlib feature
-          # The TDLib build step installs to ../../tdlib (relative to td/build)
-          
-          # Export variables for the build system
-          echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
-          
-          # CRITICAL FIX: Link the dylib to a system path so dyld (and Clippy) can find it
-          # This avoids SIP issues with DYLD_LIBRARY_PATH
-          if [ -f "$(pwd)/tdlib/lib/libtdjson.dylib" ]; then
-            sudo ln -sf $(pwd)/tdlib/lib/libtdjson.dylib /usr/local/lib/
-            sudo ln -sf $(pwd)/tdlib/lib/libtdjson.1.8.29.dylib /usr/local/lib/ || true
-          fi
+          mkdir -p target/debug/deps
+          cp -f tdlib/lib/libtdjson.*.dylib target/debug/deps/
 
       # - name: Cache cargo
       #   uses: actions/cache@v4
@@ -120,18 +139,30 @@ jobs:
       #       target/
       #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       #     restore-keys: ${{ runner.os }}-cargo-
+      
       - name: Cargo and rustc versions
         run: |
           cargo --version
           rustc --version
+
       - name: Run cargo build
-        run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
+        run: |
+          if [ -d "tdlib/lib" ]; then export DYLD_LIBRARY_PATH="$(pwd)/tdlib/lib"; fi
+          cargo build --no-default-features --verbose --features ${{ matrix.feature }}
+
       - name: Run cargo test
-        run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        run: |
+          if [ -d "tdlib/lib" ]; then export DYLD_LIBRARY_PATH="$(pwd)/tdlib/lib"; fi
+          cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+
       - name: Run cargo clippy
-        run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: |
+          if [ -d "tdlib/lib" ]; then export DYLD_LIBRARY_PATH="$(pwd)/tdlib/lib"; fi
+          cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
+
       # - name: Upload artifact
       #   uses: actions/upload-artifact@v4
       #   with:
