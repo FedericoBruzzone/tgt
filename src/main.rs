@@ -51,7 +51,6 @@ lazy_static! {
 /// * `Result<(), AppError>` - An Ok result or an error.
 async fn tokio_main() -> Result<(), AppError<()>> {
     tracing::info!("Starting tokio main");
-
     let cli_args = cli::CliArgs::parse();
     tracing::info!("Parsed CLI arguments: {:?}", cli_args);
 
