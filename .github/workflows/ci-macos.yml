@@ -88,6 +88,27 @@ jobs:
         if: matrix.feature == 'local-tdlib'
         run: |
           echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
+
+      - name: Setup TDLib Environment
+        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+        run: |
+          # Create local lib directory if it doesn't exist
+          sudo mkdir -p /usr/local/lib
+          
+          # Move built library to the project folder for local-tdlib feature
+          # The TDLib build step installs to ../../tdlib (relative to td/build)
+          
+          # Export variables for the build system
+          echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
+          
+          # CRITICAL FIX: Link the dylib to a system path so dyld (and Clippy) can find it
+          # This avoids SIP issues with DYLD_LIBRARY_PATH
+          if [ -f "$(pwd)/tdlib/lib/libtdjson.dylib" ]; then
+            sudo ln -sf $(pwd)/tdlib/lib/libtdjson.dylib /usr/local/lib/
+            sudo ln -sf $(pwd)/tdlib/lib/libtdjson.1.8.29.dylib /usr/local/lib/ || true
+          fi
+
       # - name: Cache cargo
       #   uses: actions/cache@v4
       #   with:
