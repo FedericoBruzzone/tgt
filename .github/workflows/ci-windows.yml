@@ -2,24 +2,24 @@ name: CI Windows
 
 on:
   push:
-    branches-ignore: [ 'dependabot/**' ]
-    tags-ignore: [ '**' ]
+    branches-ignore: ["dependabot/**"]
+    tags-ignore: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
   pull_request:
-    branches: [ '**' ]
+    branches: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -55,7 +55,7 @@ jobs:
           git checkout $TDLIB_VERSION
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
-          git checkout 07b30b49e5136a36100a2ce644476e60d7f3ddc1 
+          git checkout 07b30b49e5136a36100a2ce644476e60d7f3ddc1
           ./bootstrap-vcpkg.bat
           ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
           cd ..

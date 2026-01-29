@@ -2,24 +2,24 @@ name: CI Linux
 
 on:
   push:
-    branches-ignore: [ 'dependabot/**' ]
-    tags-ignore: [ '**' ]
+    branches-ignore: ["dependabot/**"]
+    tags-ignore: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
   pull_request:
-    branches: [ '**' ]
+    branches: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
 
 env:
   CARGO_TERM_COLOR: always
