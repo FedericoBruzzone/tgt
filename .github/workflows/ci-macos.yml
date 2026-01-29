@@ -33,6 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # os: [macos-13, macos-14]
         os: [macos-15-intel, macos-14]
         feature: [local-tdlib, download-tdlib, pkg-config]
 
@@ -80,25 +81,19 @@ jobs:
         if: runner.arch == 'x64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
         run: |
           cp -r ./td/tdlib ./
+          # cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
 
       - name: Extract TDLib ARM64
         if: runner.arch == 'ARM64' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
         run: |
           cp -r ./td/tdlib ./
+          # sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
        
       - name: Fix TDLib permissions (files + directories)
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         run: |
           sudo chown -R "$(id -u):$(id -g)" tdlib
           chmod -R u+rwX tdlib
-
-      # # 🔧 FIX: rewrite TDLib install_name so it does NOT point at /usr/lib
-      # - name: Fix TDLib install_name (macOS)
-      #   if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
-      #   run: |
-      #     for lib in tdlib/lib/libtdjson*.dylib; do
-      #       install_name_tool -id "@rpath/$(basename "$lib")" "$lib"
-      #     done
 
       # Install dylib into /usr/local/lib so build script (and dyld) can find it at runtime
       - name: Install TDLib dylib to /usr/local/lib (macOS)
