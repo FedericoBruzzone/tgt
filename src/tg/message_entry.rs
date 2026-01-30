@@ -285,132 +285,135 @@ impl MessageEntry {
         }
     }
 
+    /// Extract a substring by character range (start..end). Used for entity segments.
+    fn text_slice_chars(text: &str, start: usize, end: usize) -> String {
+        text.chars()
+            .skip(start)
+            .take(end.saturating_sub(start))
+            .collect()
+    }
+
     fn format_message_content(message: &FormattedText) -> Vec<Line<'static>> {
         let text = &message.text;
         let entities = &message.entities;
 
         if entities.is_empty() {
-            return Self::from_span_to_lines(Span::raw(text));
+            return Self::from_span_to_lines(Span::raw(text.clone()));
         }
 
-        let mut message_vec = Vec::new();
-        entities.iter().for_each(|e| {
+        // Build disjoint segments (start, end, style, optional url for TextUrl).
+        // TDLib uses UTF-16 offset/length; we treat as char indices for simplicity (see PR3 doc).
+        type Segment = (usize, usize, Style, Option<String>);
+        let mut segments: Vec<Segment> = Vec::new();
+        for e in entities.iter() {
             let offset = e.offset as usize;
             let length = e.length as usize;
-            message_vec.push(Span::raw(text.chars().take(offset).collect::<String>()));
-            match &e.r#type {
+            let end = offset.saturating_add(length);
+            let style_content = match &e.r#type {
                 tdlib_rs::enums::TextEntityType::Italic => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::ITALIC),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::ITALIC), None))
                 }
                 tdlib_rs::enums::TextEntityType::Bold => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::BOLD), None))
                 }
                 tdlib_rs::enums::TextEntityType::Underline => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::UNDERLINED), None))
                 }
                 tdlib_rs::enums::TextEntityType::Strikethrough => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::CROSSED_OUT),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::CROSSED_OUT), None))
                 }
                 tdlib_rs::enums::TextEntityType::Url => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::UNDERLINED), None))
                 }
-                tdlib_rs::enums::TextEntityType::TextUrl(text_url) => {
-                    message_vec.push(Span::styled(
-                        text_url.url.clone(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
-                }
+                tdlib_rs::enums::TextEntityType::TextUrl(text_url) => Some((
+                    Style::default().add_modifier(Modifier::UNDERLINED),
+                    Some(text_url.url.clone()),
+                )),
                 tdlib_rs::enums::TextEntityType::EmailAddress => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::UNDERLINED), None))
                 }
                 tdlib_rs::enums::TextEntityType::Mention => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::BOLD), None))
                 }
                 tdlib_rs::enums::TextEntityType::Hashtag => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::BOLD), None))
                 }
                 tdlib_rs::enums::TextEntityType::PhoneNumber => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::UNDERLINED), None))
                 }
-                tdlib_rs::enums::TextEntityType::MentionName(mention_name) => {
-                    message_vec.push(Span::styled(
-                        // TODO: Fix from user_id to username
-                        mention_name.user_id.to_string(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
-                }
+                tdlib_rs::enums::TextEntityType::MentionName(mention_name) => Some((
+                    Style::default().add_modifier(Modifier::BOLD),
+                    Some(mention_name.user_id.to_string()),
+                )),
                 tdlib_rs::enums::TextEntityType::Code => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::DIM),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::DIM), None))
                 }
                 tdlib_rs::enums::TextEntityType::Pre => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::DIM),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::DIM), None))
                 }
-                tdlib_rs::enums::TextEntityType::PreCode(_pre_code) => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::DIM),
-                    ));
+                tdlib_rs::enums::TextEntityType::PreCode(_) => {
+                    Some((Style::default().add_modifier(Modifier::DIM), None))
                 }
                 tdlib_rs::enums::TextEntityType::Cashtag => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::BOLD), None))
                 }
                 tdlib_rs::enums::TextEntityType::BankCardNumber => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::UNDERLINED),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::UNDERLINED), None))
                 }
                 tdlib_rs::enums::TextEntityType::BlockQuote => {
-                    message_vec.push(Span::styled(
-                        text.chars().skip(offset).take(length).collect::<String>(),
-                        Style::default().add_modifier(Modifier::DIM),
-                    ));
+                    Some((Style::default().add_modifier(Modifier::DIM), None))
                 }
-                tdlib_rs::enums::TextEntityType::Spoiler => {}
-                tdlib_rs::enums::TextEntityType::MediaTimestamp(_) => {}
-                tdlib_rs::enums::TextEntityType::CustomEmoji(_) => {}
-                tdlib_rs::enums::TextEntityType::BotCommand => {}
+                tdlib_rs::enums::TextEntityType::Spoiler
+                | tdlib_rs::enums::TextEntityType::MediaTimestamp(_)
+                | tdlib_rs::enums::TextEntityType::CustomEmoji(_)
+                | tdlib_rs::enums::TextEntityType::BotCommand => None,
+            };
+            if let Some((style, url_override)) = style_content {
+                segments.push((offset, end, style, url_override));
             }
-            message_vec.push(Span::raw(
-                text.chars().skip(offset + length).collect::<String>(),
-            ));
-        });
+        }
+
+        // Sort by start; merge overlapping (later segment wins for overlap).
+        segments.sort_by_key(|(s, _, _, _)| *s);
+        let mut disjoint: Vec<Segment> = Vec::new();
+        for (start, end, style, url_override) in segments {
+            if start >= end {
+                continue;
+            }
+            if let Some(last) = disjoint.last_mut() {
+                let (_, last_end, _, _) = *last;
+                if start < last_end {
+                    // Trim last segment so it doesn't overlap with this one
+                    *last = (last.0, start, last.2.clone(), last.3.clone());
+                }
+            }
+            disjoint.push((start, end, style, url_override));
+        }
+
+        // Build spans in order: raw before first, styled(seg), raw between, ... raw after last.
+        let char_count = text.chars().count();
+        let mut message_vec = Vec::new();
+        let mut prev_end = 0usize;
+        for (start, end, style, url_override) in disjoint {
+            if start > prev_end {
+                let raw_slice = Self::text_slice_chars(text, prev_end, start);
+                if !raw_slice.is_empty() {
+                    message_vec.push(Span::raw(raw_slice));
+                }
+            }
+            let content = url_override
+                .unwrap_or_else(|| Self::text_slice_chars(text, start, end));
+            if !content.is_empty() {
+                message_vec.push(Span::styled(content, style));
+            }
+            prev_end = end;
+        }
+        if prev_end < char_count {
+            let raw_slice = Self::text_slice_chars(text, prev_end, char_count);
+            if !raw_slice.is_empty() {
+                message_vec.push(Span::raw(raw_slice));
+            }
+        }
 
         Self::from_spans_to_lines(message_vec)
     }
@@ -438,5 +441,138 @@ impl From<&tdlib_rs::types::Message> for MessageEntry {
             },
             is_edited: message.edit_date != 0,
         }
+    }
+}
+
+#[cfg(test)]
+mod message_parsing_tests {
+    use super::*;
+    use tdlib_rs::enums::{MessageContent, MessageSender, TextEntityType};
+    use tdlib_rs::types::{
+        FormattedText, Message, MessageSenderUser, MessageText, TextEntity,
+    };
+
+    fn message_with_entities(text: &str, entities: Vec<TextEntity>) -> Message {
+        Message {
+            id: 1,
+            sender_id: MessageSender::User(MessageSenderUser { user_id: 1 }),
+            chat_id: 1,
+            author_signature: String::new(),
+            via_bot_user_id: 0,
+            reply_to: None,
+            date: 0,
+            edit_date: 0,
+            message_thread_id: 0,
+            content: MessageContent::MessageText(MessageText {
+                text: FormattedText {
+                    text: text.to_string(),
+                    entities,
+                },
+                link_preview_options: None,
+                web_page: None,
+            }),
+            sending_state: None,
+            scheduling_state: None,
+            is_outgoing: false,
+            is_pinned: false,
+            is_from_offline: false,
+            can_be_edited: false,
+            can_be_forwarded: false,
+            can_be_deleted_only_for_self: false,
+            can_be_deleted_for_all_users: false,
+            can_get_added_reactions: false,
+            can_get_statistics: false,
+            can_get_message_thread: false,
+            can_get_viewers: false,
+            can_get_media_timestamp_links: false,
+            can_report_reactions: false,
+            is_channel_post: false,
+            is_topic_message: false,
+            contains_unread_mention: false,
+            interaction_info: None,
+            unread_reactions: vec![],
+            self_destruct_type: None,
+            auto_delete_in: 0.0,
+            media_album_id: 0,
+            restriction_reason: String::new(),
+            can_be_replied_in_another_chat: false,
+            can_be_saved: false,
+            can_get_read_date: false,
+            has_timestamped_media: false,
+            forward_info: None,
+            import_info: None,
+            saved_messages_topic_id: 0,
+            sender_business_bot_user_id: 0,
+            sender_boost_count: 0,
+            reply_markup: None,
+            self_destruct_in: 0.0,
+        }
+    }
+
+    /// No duplicate or overlapping spans: output must equal the original text.
+    #[test]
+    fn format_message_content_single_entity_no_duplicate() {
+        let msg = message_with_entities(
+            "hello",
+            vec![TextEntity {
+                offset: 0,
+                length: 5,
+                r#type: TextEntityType::Bold,
+            }],
+        );
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "hello");
+    }
+
+    /// Two adjacent entities: output must be exact text, no duplicate segments.
+    #[test]
+    fn format_message_content_two_adjacent_entities_no_duplicate() {
+        let msg = message_with_entities(
+            "ab",
+            vec![
+                TextEntity {
+                    offset: 0,
+                    length: 1,
+                    r#type: TextEntityType::Bold,
+                },
+                TextEntity {
+                    offset: 1,
+                    length: 1,
+                    r#type: TextEntityType::Italic,
+                },
+            ],
+        );
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "ab");
+    }
+
+    /// Two non-overlapping entities: output must be exact text.
+    #[test]
+    fn format_message_content_two_non_overlapping_no_duplicate() {
+        let msg = message_with_entities(
+            "hello world",
+            vec![
+                TextEntity {
+                    offset: 0,
+                    length: 5,
+                    r#type: TextEntityType::Bold,
+                },
+                TextEntity {
+                    offset: 6,
+                    length: 5,
+                    r#type: TextEntityType::Italic,
+                },
+            ],
+        );
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "hello world");
+    }
+
+    /// Empty entities: plain text.
+    #[test]
+    fn format_message_content_empty_entities() {
+        let msg = message_with_entities("plain", vec![]);
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "plain");
     }
 }
