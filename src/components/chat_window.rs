@@ -351,9 +351,17 @@ impl Component for ChatWindow {
             self.app_context.style_chat()
         };
 
+        let block = Block::new()
+            .border_set(border)
+            .border_style(style_border_focused)
+            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+            .style(self.app_context.style_chat());
+        let list_area = chat_layout[1];
+        let list_inner = block.inner(list_area);
+        let wrap_width = list_inner.width as i32;
+
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;
-        let wrap_width = (area.width / 2) as i32;
         let mut items: Vec<ListItem<'_>> = self
             .message_list
             .iter()
@@ -405,11 +413,6 @@ impl Component for ChatWindow {
             ))));
         }
 
-        let block = Block::new()
-            .border_set(border)
-            .border_style(style_border_focused)
-            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .style(self.app_context.style_chat());
         let list = List::new(items)
             .block(block)
             .style(self.app_context.style_chat())
