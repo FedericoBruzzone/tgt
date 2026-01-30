@@ -84,6 +84,10 @@ pub struct AppContext {
     /// A boolean flag that represents whether the application should quit or
     /// not.
     quit: AtomicBool,
+    /// A boolean flag that represents whether the UI needs to be re-rendered.
+    /// When true, the main loop will call `terminal.draw()` once and then clear
+    /// this flag. Thread-safe so that any component or handler can set it.
+    needs_render: AtomicBool,
     /// The Telegram context.
     tg_context: Arc<TgContext>,
     /// The CLI arguments for the application.
@@ -124,6 +128,7 @@ impl AppContext {
             action_rx: Mutex::new(action_rx),
             action_tx: Mutex::new(action_tx),
             quit: AtomicBool::new(quit),
+            needs_render: AtomicBool::new(false),
             tg_context: Arc::new(tg_context),
             cli_args: Mutex::new(cli_args),
         })
@@ -214,6 +219,41 @@ impl AppContext {
     pub fn quit_store(&self, value: bool) {
         self.quit.store(value, Ordering::Release);
     }
+
+    // ----- Render-on-demand (needs_render) -----
+
+    /// Returns whether a render is needed. Used by the main loop to decide
+    /// whether to call `terminal.draw()`.
+    #[inline]
+    pub fn needs_render(&self) -> bool {
+        self.needs_render.load(Ordering::Acquire)
+    }
+
+    /// Alias for `needs_render()`. Returns true when the UI should be drawn.
+    #[inline]
+    pub fn should_render(&self) -> bool {
+        self.needs_render()
+    }
+
+    /// Sets the render-needed flag. Idempotent; safe to call multiple times.
+    pub fn set_needs_render(&self, value: bool) {
+        self.needs_render.store(value, Ordering::Release);
+    }
+
+    /// Marks the UI as dirty so that the next render pass will redraw.
+    /// Prefer this over sending `Action::Render` from components.
+    #[inline]
+    pub fn mark_dirty(&self) {
+        self.set_needs_render(true);
+    }
+
+    /// Clears the render flag and returns the previous value.
+    /// The main loop uses this after drawing so we only draw when dirty.
+    #[inline]
+    pub fn clear_render_flag(&self) -> bool {
+        self.needs_render.swap(false, Ordering::SeqCst)
+    }
+
     /// Get the Telegram context.
     /// This function returns the Telegram context.
     /// The Telegram context is a shared resource and the contained variables are
@@ -341,4 +381,72 @@ impl AppContext {
     theme_style_generate!(style_title_bar_title1, title_bar, title1);
     theme_style_generate!(style_title_bar_title2, title_bar, title2);
     theme_style_generate!(style_title_bar_title3, title_bar, title3);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    fn test_app_context() -> Arc<AppContext> {
+        Arc::new(
+            AppContext::new(
+                AppConfig::default(),
+                KeymapConfig::default(),
+                ThemeConfig::default(),
+                PaletteConfig::default(),
+                TelegramConfig::default(),
+                TgContext::default(),
+                CliArgs::parse_from::<[&str; 0], &str>([]),
+            )
+            .unwrap(),
+        )
+    }
+
+    #[test]
+    fn needs_render_returns_false_initially() {
+        let ctx = test_app_context();
+        assert!(!ctx.needs_render());
+    }
+
+    #[test]
+    fn set_needs_render_sets_flag() {
+        let ctx = test_app_context();
+        ctx.set_needs_render(true);
+        assert!(ctx.needs_render());
+        ctx.set_needs_render(false);
+        assert!(!ctx.needs_render());
+    }
+
+    #[test]
+    fn mark_dirty_sets_needs_render() {
+        let ctx = test_app_context();
+        ctx.mark_dirty();
+        assert!(ctx.needs_render());
+    }
+
+    #[test]
+    fn mark_dirty_idempotent() {
+        let ctx = test_app_context();
+        ctx.mark_dirty();
+        ctx.mark_dirty();
+        assert!(ctx.needs_render());
+    }
+
+    #[test]
+    fn should_render_matches_needs_render() {
+        let ctx = test_app_context();
+        assert!(!ctx.should_render());
+        ctx.mark_dirty();
+        assert!(ctx.should_render());
+    }
+
+    #[test]
+    fn clear_render_flag_returns_previous_and_clears() {
+        let ctx = test_app_context();
+        assert!(!ctx.clear_render_flag());
+        ctx.mark_dirty();
+        assert!(ctx.clear_render_flag());
+        assert!(!ctx.needs_render());
+    }
 }

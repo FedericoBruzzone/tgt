@@ -56,6 +56,7 @@ pub async fn run_app(
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
+    app_context.mark_dirty();
 
     // Main loop
     while tg_backend.have_authorization {
@@ -157,10 +158,11 @@ async fn handle_tui_backend_events(
 ) -> Result<(), AppError<Action>> {
     if let Some(event) = tui_backend.next().await {
         match event {
-            Event::Render => app_context.action_tx().send(Action::Render)?,
-            Event::Resize(width, height) => app_context
-                .action_tx()
-                .send(Action::Resize(width, height))?,
+            Event::Render => app_context.mark_dirty(),
+            Event::Resize(width, height) => {
+                app_context.mark_dirty();
+                app_context.action_tx().send(Action::Resize(width, height))?;
+            }
             Event::Key(key, modifiers) => {
                 // Always send Key action first so components can check visibility state
                 app_context
@@ -247,6 +249,39 @@ async fn consume_until_single_action(
         }
     }
 }
+/// Returns true for actions that change UI-visible state and should trigger a render.
+fn action_changes_ui(action: &Action) -> bool {
+    matches!(
+        action,
+        Action::FocusComponent(_)
+            | Action::ChatListNext
+            | Action::ChatListPrevious
+            | Action::ChatListSearch
+            | Action::ChatListOpen
+            | Action::ChatListSortWithString(_)
+            | Action::ChatListRestoreSort
+            | Action::ChatWindowNext
+            | Action::ChatWindowPrevious
+            | Action::ChatWindowSearch
+            | Action::ChatWindowSortWithString(_)
+            | Action::ChatWindowRestoreSort
+            | Action::SwitchTheme
+            | Action::SwitchThemeTo(_)
+            | Action::ShowThemeSelector
+            | Action::HideThemeSelector
+            | Action::ToggleChatList
+            | Action::IncreaseChatListSize
+            | Action::DecreaseChatListSize
+            | Action::IncreasePromptSize
+            | Action::DecreasePromptSize
+            | Action::ShowChatWindowReply
+            | Action::HideChatWindowReply
+            | Action::ShowCommandGuide
+            | Action::HideCommandGuide
+            | Action::UpdateArea(_)
+    )
+}
+
 #[allow(clippy::await_holding_lock)]
 /// Handle incoming actions from the application.
 ///
@@ -265,27 +300,30 @@ pub async fn handle_app_actions(
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
     while let Ok(action) = app_context.action_rx().try_recv() {
-        match action {
+        match &action {
             Action::Render => {
-                tui_backend.terminal.draw(|f| {
-                    tui.draw(f, f.area()).unwrap();
-                })?;
+                // Actual draw happens at end of loop when should_render()
             }
             Action::Resize(width, height) => {
                 tui_backend
                     .terminal
-                    .resize(Rect::new(0, 0, width, height))?;
-                tui_backend.terminal.draw(|f| {
-                    tui.draw(f, f.area()).unwrap();
-                })?;
+                    .resize(Rect::new(0, 0, *width, *height))?;
+                app_context.mark_dirty();
             }
-            Action::FocusLost => tui_backend.suspend()?,
-            Action::FocusGained => tui_backend.resume()?,
+            Action::FocusLost => {
+                tui_backend.suspend()?;
+                app_context.mark_dirty();
+            }
+            Action::FocusGained => {
+                tui_backend.resume()?;
+                app_context.mark_dirty();
+            }
             Action::Quit => {
                 app_context.quit_store(true);
             }
             Action::LoadChats(chat_list, limit) => {
-                tg_backend.load_chats(chat_list.into(), limit).await;
+                app_context.mark_dirty();
+                tg_backend.load_chats((*chat_list).into(), *limit).await;
             }
             Action::SendMessage(ref message, ref reply_to) => {
                 let _ = tg_backend
@@ -298,7 +336,7 @@ pub async fn handle_app_actions(
             }
             Action::SendMessageEdited(message_id, ref message) => {
                 tg_backend
-                    .send_message_edited(message_id, message.to_string())
+                    .send_message_edited(*message_id, message.to_string())
                     .await;
             }
             Action::GetChatHistory => {
@@ -311,14 +349,14 @@ pub async fn handle_app_actions(
                     .delete_messages(
                         app_context.tg_context().open_chat_id(),
                         message_ids.to_vec(),
-                        revoke,
+                        *revoke,
                     )
                     .await;
             }
             Action::ReplyMessage(message_id, ref message) => {
                 app_context
                     .tg_context()
-                    .set_reply_message(message_id, message.to_string());
+                    .set_reply_message(*message_id, message.to_string());
             }
             Action::ViewAllMessages => {
                 tg_backend.view_all_messages().await;
@@ -326,7 +364,17 @@ pub async fn handle_app_actions(
             _ => {}
         }
 
+        if action_changes_ui(&action) {
+            app_context.mark_dirty();
+        }
         tui.update(action.clone())
+    }
+
+    if app_context.should_render() {
+        tui_backend.terminal.draw(|f| {
+            tui.draw(f, f.area()).unwrap();
+        })?;
+        app_context.clear_render_flag();
     }
     Ok(())
 }

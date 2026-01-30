@@ -136,10 +136,7 @@ impl ThemeSelector {
                     .apply_current_theme(&self.app_context)
                     .is_ok()
             {
-                // Trigger a redraw after theme change
-                if let Some(tx) = self.action_tx.as_ref() {
-                    let _ = tx.send(Action::Render);
-                }
+                self.app_context.mark_dirty();
             }
         }
     }
@@ -163,10 +160,7 @@ impl ThemeSelector {
                     .apply_current_theme(&self.app_context)
                     .is_ok()
             {
-                // Trigger a redraw after theme change
-                if let Some(tx) = self.action_tx.as_ref() {
-                    let _ = tx.send(Action::Render);
-                }
+                self.app_context.mark_dirty();
             }
         }
     }
