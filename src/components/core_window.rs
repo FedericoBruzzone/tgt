@@ -286,10 +286,17 @@ impl Component for CoreWindow {
                 }
             }
             Action::ShowChatWindowReply => {
-                self.show_reply_message = true;
+                // Reply uses the prompt only (same as edit). Do not set show_reply_message.
+                // Dispatch to Chat so reply_selected() runs and sends FocusComponent(Prompt) + ReplyMessage.
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.update(action.clone());
+                }
             }
             Action::HideChatWindowReply => {
                 self.show_reply_message = false;
+                self.app_context
+                    .tg_context()
+                    .set_reply_message(-1, String::new());
             }
             Action::ShowCommandGuide => {
                 // Toggle command guide: if already visible, hide it; otherwise show it

@@ -126,10 +126,8 @@ async fn handle_tg_backend_events(
                     .send(Action::EditMessage(message_id, message))?;
             }
             Event::ReplyMessage(message_id, message) => {
-                // Show reply bar, focus prompt so user can type, then set reply data
-                app_context
-                    .action_tx()
-                    .send(Action::ShowChatWindowReply)?;
+                // Reply flow is now handled by ChatWindow sending FocusComponent(Prompt) + ReplyMessage
+                // directly to action_tx when user presses R. This branch is kept for any other caller.
                 app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))?;
