@@ -81,54 +81,96 @@ impl ChatWindow {
         self
     }
 
+    /// Build message_list from data layer (read-only API).
+    fn refresh_message_list_from_store(&mut self) {
+        let tg = self.app_context.tg_context();
+        self.message_list = tg
+            .ordered_message_ids()
+            .into_iter()
+            .filter_map(|id| tg.get_message(id))
+            .collect();
+    }
+
     /// Select the next message item in the list.
     fn next(&mut self) {
-        // Only load more history if not in search mode (to avoid disrupting search)
-        if !self.search_mode {
-            if let Some(i) = self.message_list_state.selected() {
-                if i == self.message_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx.send(Event::GetChatHistory).unwrap();
-                    }
+        let len = self.message_list.len();
+        // Load more history when near top of loaded range (and not already loading)
+        if len > 0
+            && !self.search_mode
+            && !self.app_context.tg_context().is_history_loading()
+        {
+            let oldest = self.app_context.tg_context().oldest_message_id();
+            let selected_id = self
+                .message_list_state
+                .selected()
+                .and_then(|i| self.message_list.get(i).map(|m| m.id()));
+            let near_top = match (oldest, selected_id) {
+                (Some(old), Some(sel)) => sel == old,
+                (_, Some(_)) => self.message_list_state.selected() == Some(0),
+                _ => false,
+            };
+            if near_top {
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    let _ = event_tx.send(Event::GetChatHistory);
                 }
             }
         }
 
-        let i = match self.message_list_state.selected() {
-            Some(i) => {
+        let i = match (len, self.message_list_state.selected()) {
+            (0, _) => {
+                self.message_list_state.select(None);
+                return;
+            }
+            (_, Some(i)) => {
                 if i == 0 {
                     0
                 } else {
                     i - 1
                 }
             }
-            None => 0,
+            (_, None) => 0,
         };
         self.message_list_state.select(Some(i));
     }
 
     /// Select the previous message item in the list.
     fn previous(&mut self) {
-        // Only load more history if not in search mode (to avoid disrupting search)
-        if !self.search_mode {
-            if let Some(i) = self.message_list_state.selected() {
-                if i == self.message_list.len() / 2 {
-                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                        event_tx.send(Event::GetChatHistory).unwrap();
-                    }
+        let len = self.message_list.len();
+        // Load more history when near top (same logic as next)
+        if len > 0
+            && !self.search_mode
+            && !self.app_context.tg_context().is_history_loading()
+        {
+            let oldest = self.app_context.tg_context().oldest_message_id();
+            let selected_id = self
+                .message_list_state
+                .selected()
+                .and_then(|i| self.message_list.get(i).map(|m| m.id()));
+            let near_top = match (oldest, selected_id) {
+                (Some(old), Some(sel)) => sel == old,
+                (_, Some(_)) => self.message_list_state.selected() == Some(0),
+                _ => false,
+            };
+            if near_top {
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    let _ = event_tx.send(Event::GetChatHistory);
                 }
             }
         }
 
-        let i = match self.message_list_state.selected() {
-            Some(i) => {
-                if i >= self.message_list.len() - 1 {
+        let i = match (len, self.message_list_state.selected()) {
+            (0, _) => {
+                self.message_list_state.select(None);
+                return;
+            }
+            (_, Some(i)) => {
+                if i >= len.saturating_sub(1) {
                     i
                 } else {
                     i + 1
                 }
             }
-            None => 0,
+            (_, None) => 0,
         };
         self.message_list_state.select(Some(i));
     }
@@ -212,9 +254,7 @@ impl ChatWindow {
     fn start_search(&mut self) {
         self.search_mode = true;
         self.search_input.clear();
-        // Initialize filtered list from current messages
-        self.message_list
-            .clone_from(&self.app_context.tg_context().open_chat_messages());
+        self.refresh_message_list_from_store();
     }
 
     /// Exit search mode.
@@ -229,9 +269,7 @@ impl ChatWindow {
         self.search_input.clear();
         self.default_sort();
 
-        // Restore full message list
-        self.message_list
-            .clone_from(&self.app_context.tg_context().open_chat_messages());
+        self.refresh_message_list_from_store();
 
         // Find and select the message by ID in the full list
         if let Some(message_id) = selected_message_id {
@@ -253,9 +291,7 @@ impl ChatWindow {
             .selected()
             .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
 
-        let source_messages: Vec<MessageEntry> =
-            self.app_context.tg_context().open_chat_messages().clone();
-        self.message_list = source_messages;
+        self.refresh_message_list_from_store();
         // Apply filter
         if !self.search_input.is_empty() {
             let mut config = nucleo_matcher::Config::DEFAULT;
@@ -299,15 +335,10 @@ impl ChatWindow {
         self.search_input.pop();
         if self.search_input.is_empty() {
             self.default_sort();
-            // Restore full message list
-            self.message_list
-                .clone_from(&self.app_context.tg_context().open_chat_messages());
+            self.refresh_message_list_from_store();
         } else {
             self.sort(self.search_input.clone());
-            // Re-filter the message list when search input changes
-            let source_messages: Vec<MessageEntry> =
-                self.app_context.tg_context().open_chat_messages().clone();
-            self.message_list = source_messages;
+            self.refresh_message_list_from_store();
             // Apply filter
             let mut config = nucleo_matcher::Config::DEFAULT;
             config.prefer_prefix = true;
@@ -447,12 +478,12 @@ impl Component for ChatWindow {
                         KeyCode::Enter | KeyCode::Esc => {
                             self.stop_search();
                         }
-                        KeyCode::Down => {
-                            // Allow arrow key navigation in search mode
+                        KeyCode::Up => {
+                            // Allow arrow key navigation in search mode (up = older)
                             self.next();
                         }
-                        KeyCode::Up => {
-                            // Allow arrow key navigation in search mode
+                        KeyCode::Down => {
+                            // Allow arrow key navigation in search mode (down = newer)
                             self.previous();
                         }
                         KeyCode::Tab => {
@@ -468,6 +499,12 @@ impl Component for ChatWindow {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> std::io::Result<()> {
+        // Capture selection by ID before any clear, so we can restore viewport on redraw (e.g. when unfocused)
+        let selected_message_id_before = self
+            .message_list_state
+            .selected()
+            .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
+
         if !self.focused {
             self.message_list_state.select(None);
         }
@@ -475,14 +512,10 @@ impl Component for ChatWindow {
         // Only update message list from source when not in search mode
         // This prevents jumping back to bottom when selecting messages during search
         if !self.search_mode {
-            // Preserve selection by message ID before updating list
-            let selected_message_id = self
-                .message_list_state
-                .selected()
-                .and_then(|idx| self.message_list.get(idx).map(|m| m.id()));
+            let selected_message_id = selected_message_id_before;
+            let prev_len = self.message_list.len();
 
-            self.message_list
-                .clone_from(&self.app_context.tg_context().open_chat_messages());
+            self.refresh_message_list_from_store();
 
             // Filter messages based on search string
             if let Some(s) = self.sort_string.as_ref() {
@@ -505,10 +538,25 @@ impl Component for ChatWindow {
                 }
             }
 
-            // Restore selection by message ID in the updated list
-            if let Some(message_id) = selected_message_id {
-                if let Some(new_idx) = self.message_list.iter().position(|m| m.id() == message_id) {
-                    self.message_list_state.select(Some(new_idx));
+            // Restore selection by message ID when possible (same technique as search).
+            let selection_restored = selected_message_id.and_then(|id| {
+                self.message_list.iter().position(|m| m.id() == id).map(|idx| {
+                    self.message_list_state.select(Some(idx));
+                    id
+                })
+            });
+            // When we have no valid selection (e.g. just entered chat, switched chat), jump to latest by ID.
+            // When list grew and we were at bottom (selected was newest), stay at bottom.
+            let at_bottom = selection_restored
+                .zip(self.app_context.tg_context().newest_message_id())
+                .map_or(false, |(sel_id, newest_id)| sel_id == newest_id);
+            let should_jump_to_latest = selection_restored.is_none()
+                || (at_bottom && prev_len < self.message_list.len());
+            if should_jump_to_latest && !self.message_list.is_empty() {
+                if let Some(newest_id) = self.app_context.tg_context().newest_message_id() {
+                    if let Some(new_idx) = self.message_list.iter().position(|m| m.id() == newest_id) {
+                        self.message_list_state.select(Some(new_idx));
+                    }
                 }
             }
         } else {
@@ -548,45 +596,56 @@ impl Component for ChatWindow {
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;
         let wrap_width = (area.width / 2) as i32;
-        let items = self.message_list.iter().map(|message_entry| {
-            let (myself, name_style, content_style, alignment) = if message_entry.sender_id()
-                == self.app_context.tg_context().me()
-            {
-                if message_entry.id() == self.app_context.tg_context().last_read_outbox_message_id()
-                {
-                    is_unread_outbox = false;
-                }
-                (
-                    true,
-                    self.app_context.style_chat_message_myself_name(),
-                    self.app_context.style_chat_message_myself_content(),
-                    Alignment::Right,
+        let mut items: Vec<ListItem<'_>> = self
+            .message_list
+            .iter()
+            .map(|message_entry| {
+                let (myself, name_style, content_style, alignment) =
+                    if message_entry.sender_id() == self.app_context.tg_context().me() {
+                        if message_entry.id()
+                            == self.app_context.tg_context().last_read_outbox_message_id()
+                        {
+                            is_unread_outbox = false;
+                        }
+                        (
+                            true,
+                            self.app_context.style_chat_message_myself_name(),
+                            self.app_context.style_chat_message_myself_content(),
+                            Alignment::Right,
+                        )
+                    } else {
+                        if message_entry.id()
+                            == self.app_context.tg_context().last_read_inbox_message_id()
+                        {
+                            is_unread_inbox = false;
+                        }
+                        (
+                            false,
+                            self.app_context.style_chat_message_other_name(),
+                            self.app_context.style_chat_message_other_content(),
+                            Alignment::Left,
+                        )
+                    };
+                ListItem::new(
+                    message_entry
+                        .get_text_styled(
+                            myself,
+                            &self.app_context,
+                            is_unread_outbox,
+                            name_style,
+                            content_style,
+                            wrap_width,
+                        )
+                        .alignment(alignment),
                 )
-            } else {
-                if message_entry.id() == self.app_context.tg_context().last_read_inbox_message_id()
-                {
-                    is_unread_inbox = false;
-                }
-                (
-                    false,
-                    self.app_context.style_chat_message_other_name(),
-                    self.app_context.style_chat_message_other_content(),
-                    Alignment::Left,
-                )
-            };
-            ListItem::new(
-                message_entry
-                    .get_text_styled(
-                        myself,
-                        &self.app_context,
-                        is_unread_outbox,
-                        name_style,
-                        content_style,
-                        wrap_width,
-                    )
-                    .alignment(alignment),
-            )
-        });
+            })
+            .collect();
+        if self.app_context.tg_context().is_history_loading() {
+            items.push(ListItem::new(Line::from(Span::styled(
+                "Loading…",
+                self.app_context.style_timestamp(),
+            ))));
+        }
 
         let block = Block::new()
             .border_set(border)
@@ -598,7 +657,7 @@ impl Component for ChatWindow {
             .style(self.app_context.style_chat())
             .highlight_style(self.app_context.style_item_selected())
             .repeat_highlight_symbol(true)
-            .direction(ListDirection::BottomToTop);
+            .direction(ListDirection::TopToBottom);
 
         let border_header = Set {
             top_left: line::NORMAL.horizontal_down,
@@ -674,11 +733,11 @@ mod tests {
     fn setup_messages(window: &mut ChatWindow, messages: Vec<MessageEntry>) {
         let tg_context = window.app_context.tg_context();
         {
-            let mut open_messages = tg_context.open_chat_messages();
-            *open_messages = messages;
+            let mut store = tg_context.open_chat_messages();
+            store.clear();
+            store.insert_messages(messages);
         }
-        // Update window's message list
-        window.message_list = tg_context.open_chat_messages().clone();
+        window.refresh_message_list_from_store();
     }
 
     #[test]

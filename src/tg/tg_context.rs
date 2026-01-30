@@ -1,10 +1,11 @@
 use super::message_entry::MessageEntry;
+use super::open_chat_store::OpenChatMessageStore;
 use crate::tg::message_entry::DateTimeEntry;
 use crate::{
     app_error::AppError, components::chat_list_window::ChatListEntry, event::Event,
     tg::ordered_chat::OrderedChat,
 };
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::{
     collections::{BTreeSet, HashMap},
     sync::{Mutex, MutexGuard},
@@ -36,15 +37,17 @@ pub struct TgContext {
     event_tx: Mutex<Option<UnboundedSender<Event>>>,
     me: AtomicI64,
     open_chat_id: AtomicI64,
-    // This is the chat messages that are currently being displayed
-    // in the chat window.
-    open_chat_messages: Mutex<Vec<MessageEntry>>,
+    /// Message cache and view window for the open chat (PR1 data layer).
+    open_chat_messages: Mutex<OpenChatMessageStore>,
     open_chat_user: Mutex<Option<User>>,
 
     last_acknowledged_message_id: AtomicI64,
 
-    /// The message id from which to start loading the chat history.
+    /// The message id from which to start loading the chat history (set by backend when appending).
     from_message_id: AtomicI64,
+
+    /// True while a "load more history" request is in flight; avoids duplicate requests.
+    history_loading: AtomicBool,
 
     /// reply message id
     reply_message_id: AtomicI64,
@@ -83,7 +86,7 @@ impl TgContext {
     pub fn open_chat_id(&self) -> i64 {
         self.open_chat_id.load(Ordering::Relaxed)
     }
-    pub fn open_chat_messages(&self) -> MutexGuard<'_, Vec<MessageEntry>> {
+    pub fn open_chat_messages(&self) -> MutexGuard<'_, OpenChatMessageStore> {
         self.open_chat_messages.lock().unwrap()
     }
     pub fn event_tx(&self) -> MutexGuard<'_, Option<UnboundedSender<Event>>> {
@@ -111,12 +114,44 @@ impl TgContext {
     }
 
     pub fn clear_open_chat_messages(&self) {
-        *self.open_chat_messages() = Vec::new();
+        self.open_chat_messages().clear();
     }
 
     pub fn set_from_message_id(&self, from_message_id: i64) {
         self.from_message_id
             .store(from_message_id, Ordering::Relaxed);
+    }
+
+    // ----- Read-only API for UI (PR1) -----
+
+    /// Ordered message IDs for the open chat (oldest to newest). UI uses this to build the list.
+    pub fn ordered_message_ids(&self) -> Vec<i64> {
+        self.open_chat_messages().ordered_message_ids()
+    }
+
+    /// Get a message by ID (clone). UI read-only.
+    pub fn get_message(&self, id: i64) -> Option<MessageEntry> {
+        self.open_chat_messages().get_message(id)
+    }
+
+    /// Oldest loaded message ID; None if empty.
+    pub fn oldest_message_id(&self) -> Option<i64> {
+        self.open_chat_messages().oldest_message_id()
+    }
+
+    /// Newest loaded message ID; None if empty.
+    pub fn newest_message_id(&self) -> Option<i64> {
+        self.open_chat_messages().newest_message_id()
+    }
+
+    /// True while a "load more history" request is in flight.
+    pub fn is_history_loading(&self) -> bool {
+        self.history_loading.load(Ordering::Acquire)
+    }
+
+    /// Set history loading flag (backend/task only).
+    pub fn set_history_loading(&self, value: bool) {
+        self.history_loading.store(value, Ordering::Release);
     }
 
     pub fn set_me(&self, me: i64) {
@@ -139,8 +174,7 @@ impl TgContext {
     }
 
     pub fn delete_message(&self, message_id: i64) {
-        let mut open_chat_messages = self.open_chat_messages();
-        open_chat_messages.retain(|message| message.id() != message_id);
+        self.open_chat_messages().remove_message(message_id);
     }
 
     pub fn open_chat_user_status(&self) -> String {
@@ -164,9 +198,9 @@ impl TgContext {
 
     pub fn unread_messages(&self) -> Vec<i64> {
         let mut unread_messages: Vec<i64> = Vec::new();
-        for message in self.open_chat_messages().iter() {
-            unread_messages.push(message.id());
-            if message.id() == self.last_read_inbox_message_id() {
+        for id in self.open_chat_messages().ordered_message_ids() {
+            unread_messages.push(id);
+            if id == self.last_read_inbox_message_id() {
                 break;
             }
         }

@@ -104,6 +104,8 @@ pub enum Action {
     SendMessageEdited(i64, String),
     /// GetChatHistory action.
     GetChatHistory,
+    /// Chat history was appended (from background task); triggers one render.
+    ChatHistoryAppended,
     /// DeleteMessages action.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.

@@ -63,10 +63,10 @@ keymap = [
 # When the chat is focused, the chat key bindings will be active.
 [chat]
 keymap = [
-  # Select the next message
-  { keys = ["down"], command = "chat_window_next", description = "Select the next message"},
-  # Select the previous message
-  { keys = ["up"], command = "chat_window_previous", description = "Select the previous message"},
+  # Select the next message (older, toward top of list)
+  { keys = ["up"], command = "chat_window_next", description = "Select the next message (up)"},
+  # Select the previous message (newer, toward bottom of list)
+  { keys = ["down"], command = "chat_window_previous", description = "Select the previous message (down)"},
   # Unselect the current message
   { keys = ["left"], command = "chat_window_unselect", description = "Unselect the current message"},
   # Delete the selected message for all users

@@ -6,7 +6,7 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
-use std::{collections::HashMap, io, sync::Arc, time::Instant};
+use std::{collections::HashMap, io, sync::Arc, time::Duration, time::Instant};
 use tdlib_rs::enums::ChatList;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -123,10 +123,13 @@ async fn handle_tg_backend_events(
                     .send(Action::EditMessage(message_id, message))?;
             }
             Event::ReplyMessage(message_id, message) => {
+                // Show reply bar, focus prompt so user can type, then set reply data
+                app_context
+                    .action_tx()
+                    .send(Action::ShowChatWindowReply)?;
                 app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))?;
-
                 app_context
                     .action_tx()
                     .send(Action::ReplyMessage(message_id, message))?;
@@ -156,12 +159,22 @@ async fn handle_tui_backend_events(
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
 ) -> Result<(), AppError<Action>> {
-    if let Some(event) = tui_backend.next().await {
-        match event {
+    // Short timeout so we can process ChatHistoryAppended (and other actions) when
+    // the background history task completes, without requiring a key press.
+    let poll = tokio::time::timeout(Duration::from_millis(150), tui_backend.next()).await;
+    let Some(event) = (match poll {
+        Ok(Some(ev)) => Some(ev),
+        Ok(None) | Err(_) => None,
+    }) else {
+        return Ok(());
+    };
+    match event {
             Event::Render => app_context.mark_dirty(),
             Event::Resize(width, height) => {
                 app_context.mark_dirty();
-                app_context.action_tx().send(Action::Resize(width, height))?;
+                app_context
+                    .action_tx()
+                    .send(Action::Resize(width, height))?;
             }
             Event::Key(key, modifiers) => {
                 // Always send Key action first so components can check visibility state
@@ -212,11 +225,10 @@ async fn handle_tui_backend_events(
             _ => {}
         }
 
-        // Note that sending the event to the tui it will send the event
-        // directly to the `CoreWindow` component.
-        if let Some(action) = tui.handle_events(Some(event.clone()))? {
-            app_context.action_tx().send(action)?
-        }
+    // Note that sending the event to the tui it will send the event
+    // directly to the `CoreWindow` component.
+    if let Some(action) = tui.handle_events(Some(event.clone()))? {
+        app_context.action_tx().send(action)?
     }
     Ok(())
 }
@@ -276,9 +288,11 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::DecreasePromptSize
             | Action::ShowChatWindowReply
             | Action::HideChatWindowReply
+            | Action::ReplyMessage(_, _)
             | Action::ShowCommandGuide
             | Action::HideCommandGuide
             | Action::UpdateArea(_)
+            | Action::ChatHistoryAppended
     )
 }
 
@@ -340,9 +354,33 @@ pub async fn handle_app_actions(
                     .await;
             }
             Action::GetChatHistory => {
-                tg_backend
-                    .get_chat_history(app_context.tg_context().open_chat_id())
-                    .await;
+                if !app_context.tg_context().is_history_loading() {
+                    app_context.tg_context().set_history_loading(true);
+                    let chat_id = app_context.tg_context().open_chat_id();
+                    const INITIAL_LOAD_TARGET: usize = 100;
+                    let start_len = app_context.tg_context().open_chat_messages().len();
+                    loop {
+                        let from_message_id = app_context.tg_context().from_message_id();
+                        let (entries, _has_more) = tg_backend
+                            .get_chat_history_one_batch(chat_id, from_message_id)
+                            .await;
+                        if entries.is_empty() {
+                            break;
+                        }
+                        let tg = app_context.tg_context();
+                        tg.open_chat_messages().insert_messages(entries.clone());
+                        if let Some(last) = entries.last() {
+                            tg.set_from_message_id(last.id());
+                        }
+                        let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                        let current_len = app_context.tg_context().open_chat_messages().len();
+                        if current_len >= start_len + INITIAL_LOAD_TARGET {
+                            break;
+                        }
+                    }
+                    app_context.tg_context().set_history_loading(false);
+                    let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                }
             }
             Action::DeleteMessages(ref message_ids, revoke) => {
                 tg_backend

@@ -44,6 +44,19 @@ pub struct MessageEntry {
 }
 
 impl MessageEntry {
+    /// Test-only: create a minimal MessageEntry for unit tests (e.g. open_chat_store).
+    #[cfg(test)]
+    pub fn test_entry(id: i64) -> Self {
+        Self {
+            id,
+            sender_id: TdMessageSender::User(0),
+            message_content: vec![Line::from("")],
+            reply_to: None,
+            timestamp: DateTimeEntry { timestamp: 0 },
+            is_edited: false,
+        }
+    }
+
     pub fn id(&self) -> i64 {
         self.id
     }
@@ -110,27 +123,18 @@ impl MessageEntry {
                                 app_context
                                     .tg_context()
                                     .try_name_from_chats_or_users(
-                                        match app_context
+                                        app_context
                                             .tg_context()
-                                            .open_chat_messages()
-                                            .iter()
-                                            .find(|m| m.id() == message.message_id)
-                                        {
-                                            Some(m) => m.sender_id(),
-                                            None => -1,
-                                        },
+                                            .get_message(message.message_id)
+                                            .map(|m| m.sender_id())
+                                            .unwrap_or(-1),
                                     )
                                     .unwrap_or_default(),
                                 message_reply_name,
                             ),
                         ])]);
                         entry.extend(
-                            match app_context
-                                .tg_context()
-                                .open_chat_messages()
-                                .iter()
-                                .find(|m| m.id() == message.message_id)
-                            {
+                            match app_context.tg_context().get_message(message.message_id) {
                                 Some(m) => {
                                     m.get_lines_styled_with_style(message_reply_content, wrap_width)
                                 }

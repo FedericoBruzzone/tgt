@@ -241,13 +241,14 @@ impl ChatListWindow {
                     .send(Action::FocusComponent(Prompt))
                     .unwrap();
 
-                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                    self.app_context.tg_context().set_from_message_id(0);
-                    // Load chat history
-                    event_tx.send(Event::GetChatHistory).unwrap();
+                self.app_context.tg_context().set_from_message_id(0);
+                // Start loading chat history immediately (same handle_app_actions run).
+                // Event::GetChatHistory is also sent for tg_backend; Action ensures we spawn the task now.
+                let _ = self.app_context.action_tx().send(Action::GetChatHistory);
 
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                     // Mark all unread messages as read
-                    event_tx.send(Event::ViewAllMessages).unwrap();
+                    let _ = event_tx.send(Event::ViewAllMessages);
                 }
             }
         }
