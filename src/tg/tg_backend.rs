@@ -16,6 +16,48 @@ use tokio::task::JoinHandle;
 use super::message_entry::MessageEntry;
 use super::td_enums::TdMessageReplyToMessage;
 
+/// Fetches one or more batches of chat history (for background task). Does not hold any app locks.
+pub async fn fetch_chat_history_background(
+    client_id: i32,
+    chat_id: i64,
+    mut from_message_id: i64,
+    max_messages: usize,
+) -> Vec<MessageEntry> {
+    let mut all = Vec::new();
+    let batch_size: i32 = 50;
+
+    while all.len() < max_messages {
+        match functions::get_chat_history(chat_id, from_message_id, 0, batch_size, false, client_id)
+            .await
+        {
+            Ok(Messages::Messages(messages)) => {
+                if messages.messages.is_empty() {
+                    break;
+                }
+                let entries: Vec<MessageEntry> = messages
+                    .messages
+                    .into_iter()
+                    .flatten()
+                    .map(|m| MessageEntry::from(&m))
+                    .collect();
+                if let Some(last) = entries.last() {
+                    from_message_id = last.id();
+                }
+                let n = entries.len();
+                all.extend(entries);
+                if n < batch_size as usize {
+                    break;
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to get chat history in background: {e:?}");
+                break;
+            }
+        }
+    }
+    all
+}
+
 pub struct TgBackend {
     pub handle_updates: JoinHandle<()>,
     pub auth_rx: UnboundedReceiver<AuthorizationState>,
@@ -125,49 +167,69 @@ impl TgBackend {
         }
     }
 
+    /// Fetches one batch of chat history (50 messages). Called from main task so TDLib
+    /// runs on the same thread as the receive loop. Returns (entries, has_more).
+    #[allow(clippy::await_holding_lock)]
+    pub async fn get_chat_history_one_batch(
+        &mut self,
+        chat_id: i64,
+        from_message_id: i64,
+    ) -> (Vec<MessageEntry>, bool) {
+        const BATCH_SIZE: i32 = 50;
+        match functions::get_chat_history(
+            chat_id,
+            from_message_id,
+            0,
+            BATCH_SIZE,
+            false,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(Messages::Messages(messages)) => {
+                if messages.messages.is_empty() {
+                    return (Vec::new(), false);
+                }
+                let entries: Vec<MessageEntry> = messages
+                    .messages
+                    .into_iter()
+                    .flatten()
+                    .map(|m| MessageEntry::from(&m))
+                    .collect();
+                let n = entries.len();
+                let has_more = n >= BATCH_SIZE as usize;
+                (entries, has_more)
+            }
+            Err(e) => {
+                tracing::error!("Failed to get chat history: {e:?}");
+                (Vec::new(), false)
+            }
+        }
+    }
+
     #[allow(clippy::await_holding_lock)]
     pub async fn get_chat_history(&mut self, chat_id: i64) {
-        let start_open_chat_messages_len = self.app_context.tg_context().open_chat_messages().len();
-        let mut mut_open_chat_messages_len =
-            self.app_context.tg_context().open_chat_messages().len();
+        let start_len = self.app_context.tg_context().open_chat_messages().len();
         let win_size = 100;
 
-        while mut_open_chat_messages_len < start_open_chat_messages_len + win_size {
+        while self.app_context.tg_context().open_chat_messages().len() < start_len + win_size {
             let from_message_id = self.app_context.tg_context().from_message_id();
-            match functions::get_chat_history(
-                chat_id,
-                from_message_id,
-                0,
-                50,
-                false,
-                self.client_id,
-            )
-            .await
-            {
-                Ok(Messages::Messages(messages)) => {
-                    if messages.messages.is_empty() {
-                        tracing::info!("No more messages to get");
-                        break;
-                    }
-
-                    let message_flatten = messages.messages.into_iter().flatten();
-                    for message in message_flatten.clone() {
-                        self.app_context
-                            .tg_context()
-                            .open_chat_messages()
-                            .push(MessageEntry::from(&message));
-                        mut_open_chat_messages_len += 1;
-                    }
-                    if let Some(message) = message_flatten.last() {
-                        self.app_context
-                            .tg_context()
-                            .set_from_message_id(message.id);
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to get chat history: {e:?}");
-                    break;
-                }
+            let (entries, has_more) = self
+                .get_chat_history_one_batch(chat_id, from_message_id)
+                .await;
+            if entries.is_empty() {
+                tracing::info!("No more messages to get");
+                break;
+            }
+            if let Some(last) = entries.last() {
+                self.app_context.tg_context().set_from_message_id(last.id());
+            }
+            self.app_context
+                .tg_context()
+                .open_chat_messages()
+                .insert_messages(entries);
+            if !has_more {
+                break;
             }
         }
     }
@@ -849,32 +911,26 @@ impl TgBackend {
                             if tg_context.open_chat_id() == chat_id {
                                 tg_context
                                     .open_chat_messages()
-                                    .insert(0, MessageEntry::from(&message));
+                                    .insert_messages(std::iter::once(MessageEntry::from(&message)));
                             }
                         }
                         Update::MessageEdited(_) => {}
                         Update::MessageContent(message) => {
                             if tg_context.open_chat_id() == message.chat_id {
-                                for m in tg_context.open_chat_messages().iter_mut() {
-                                    if m.id() == message.message_id {
-                                        m.set_message_content(&message.new_content);
-                                        m.set_is_edited(true);
-                                    }
+                                if let Some(entry) = tg_context
+                                    .open_chat_messages()
+                                    .get_message_mut(message.message_id)
+                                {
+                                    entry.set_message_content(&message.new_content);
+                                    entry.set_is_edited(true);
                                 }
                             }
                         }
                         Update::DeleteMessages(update_delete_messages) => {
                             if tg_context.open_chat_id() == update_delete_messages.chat_id {
-                                let mut i = 0;
-                                while i < tg_context.open_chat_messages().len() {
-                                    if update_delete_messages
-                                        .message_ids
-                                        .contains(&tg_context.open_chat_messages()[i].id())
-                                    {
-                                        tg_context.open_chat_messages().remove(i);
-                                    } else {
-                                        i += 1;
-                                    }
+                                let mut store = tg_context.open_chat_messages();
+                                for id in &update_delete_messages.message_ids {
+                                    store.remove_message(*id);
                                 }
                             }
                         }
