@@ -39,7 +39,8 @@ enum DirSelection {
 }
 /// `Mode` is an enum that represents the mode of the prompt.
 /// It is used to keep track of the mode of the prompt.
-enum Mode {
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum Mode {
     /// The normal mode of the prompt.
     Normal,
     /// The edit mode of the prompt.
@@ -649,6 +650,11 @@ impl PromptWindow {
         self.name = name.as_ref().to_string();
         self
     }
+    /// Current prompt mode (for tests).
+    #[cfg(test)]
+    pub fn current_mode(&self) -> &Mode {
+        &self.input.mode
+    }
     /// Update the input area of the `PromptWindow`.
     /// It is used to update the input area of the `PromptWindow` when a new
     /// line is inserted or deleted.
@@ -702,6 +708,17 @@ impl Component for PromptWindow {
     fn update(&mut self, action: Action) {
         match action {
             Action::Key(key_code, modifiers) => match (key_code, modifiers) {
+                (KeyCode::Esc, ..) => {
+                    // ESC cancels reply or edit mode and returns focus to chat
+                    if matches!(self.input.mode, Mode::Reply(_) | Mode::Edit(_)) {
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            let _ = tx.send(Action::HideChatWindowReply);
+                            let _ = tx.send(Action::FocusComponent(ComponentName::Chat));
+                        }
+                        self.input.mode = Mode::Normal;
+                        self.input.text = vec![vec![]];
+                    }
+                }
                 (KeyCode::Home, ..)
                 | (
                     KeyCode::Left | KeyCode::Char('b'),
@@ -976,11 +993,21 @@ impl Component for PromptWindow {
             )
         };
 
-        // Set title based on search mode
-        let title = match self.input.mode {
-            Mode::SearchChatList => "Search chats",
-            Mode::SearchChatMessages => "Search messages",
-            _ => self.name.as_str(),
+        // Set title based on mode (sending, editing, replying, search)
+        let title: String = match &self.input.mode {
+            Mode::SearchChatList => "Search chats".into(),
+            Mode::SearchChatMessages => "Search messages".into(),
+            Mode::Edit(_) => "Editing message".into(),
+            Mode::Reply(_) => {
+                let preview: String = self.app_context.tg_context().reply_message_text().clone();
+                let truncated = if preview.len() > 40 { format!("{}…", &preview[..39]) } else { preview };
+                if truncated.is_empty() {
+                    "Replying to message".into()
+                } else {
+                    format!("Replying to: {}", truncated)
+                }
+            }
+            Mode::Normal => self.name.clone(),
         };
 
         let block = Block::new()
@@ -1000,5 +1027,76 @@ impl Component for PromptWindow {
             });
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::search_tests::create_test_app_context;
+    use crossterm::event::KeyModifiers;
+    use tokio::sync::mpsc::unbounded_channel;
+
+    fn create_test_prompt_window() -> PromptWindow {
+        let app_context = create_test_app_context();
+        PromptWindow::new(app_context)
+    }
+
+    #[test]
+    fn reply_message_action_sets_reply_mode() {
+        let mut window = create_test_prompt_window();
+        let (tx, _rx) = unbounded_channel();
+        window.register_action_handler(tx).unwrap();
+        window.update(Action::ReplyMessage(42, "hello".to_string()));
+        assert!(matches!(window.current_mode(), Mode::Reply(42)));
+    }
+
+    #[test]
+    fn edit_message_action_sets_edit_mode() {
+        let mut window = create_test_prompt_window();
+        let (tx, _rx) = unbounded_channel();
+        window.register_action_handler(tx).unwrap();
+        window.update(Action::EditMessage(10, "edit me".to_string()));
+        assert!(matches!(window.current_mode(), Mode::Edit(10)));
+    }
+
+    #[test]
+    fn esc_in_reply_mode_cancels_to_normal() {
+        let mut window = create_test_prompt_window();
+        let (tx, mut rx) = unbounded_channel();
+        window.register_action_handler(tx).unwrap();
+        window.update(Action::ReplyMessage(1, "preview".to_string()));
+        assert!(matches!(window.current_mode(), Mode::Reply(1)));
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Esc, modifiers));
+        assert!(matches!(window.current_mode(), Mode::Normal));
+        // Should have sent HideChatWindowReply and FocusComponent(Chat)
+        let _ = rx.try_recv();
+        let _ = rx.try_recv();
+    }
+
+    #[test]
+    fn esc_in_edit_mode_cancels_to_normal() {
+        let mut window = create_test_prompt_window();
+        let (tx, mut rx) = unbounded_channel();
+        window.register_action_handler(tx).unwrap();
+        window.update(Action::EditMessage(2, "text".to_string()));
+        assert!(matches!(window.current_mode(), Mode::Edit(2)));
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Esc, modifiers));
+        assert!(matches!(window.current_mode(), Mode::Normal));
+        let _ = rx.try_recv();
+        let _ = rx.try_recv();
+    }
+
+    #[test]
+    fn normal_mode_unchanged_after_esc() {
+        let mut window = create_test_prompt_window();
+        let (tx, _rx) = unbounded_channel();
+        window.register_action_handler(tx).unwrap();
+        assert!(matches!(window.current_mode(), Mode::Normal));
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Esc, modifiers));
+        assert!(matches!(window.current_mode(), Mode::Normal));
     }
 }

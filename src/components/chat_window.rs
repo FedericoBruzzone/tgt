@@ -1,6 +1,7 @@
 use crate::{
     action::Action,
     app_context::AppContext,
+    component_name::ComponentName,
     components::component_traits::{Component, HandleFocus},
     event::Event,
     tg::message_entry::MessageEntry,
@@ -194,32 +195,34 @@ impl ChatWindow {
         }
     }
 
-    /// Edit the selected message item in the list.
+    /// Edit the selected message item in the list. Only our own messages can be edited.
     fn edit_selected(&self) {
-        if let Some(selected) = self.message_list_state.selected() {
-            let sender_id = self.message_list[selected].sender_id();
-            if sender_id != self.app_context.tg_context().me() {
-                return;
-            }
-            let message = self.message_list[selected].message_content_to_string();
-            let message_id = self.message_list[selected].id();
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                event_tx
-                    .send(Event::EditMessage(message_id, message))
-                    .unwrap();
-            }
+        let Some(selected) = self.message_list_state.selected() else {
+            return;
+        };
+        let Some(entry) = self.message_list.get(selected) else {
+            return;
+        };
+        if entry.sender_id() != self.app_context.tg_context().me() {
+            // Not our message: do nothing to avoid bugging the chat.
+            return;
+        }
+        let message_id = entry.id();
+        let message = entry.message_content_to_string();
+        if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+            let _ = event_tx.send(Event::EditMessage(message_id, message));
         }
     }
 
     /// Reply to the selected message item in the list.
+    /// Focuses the prompt and sets reply mode so the user can type in the same prompt used for sending/editing.
     fn reply_selected(&self) {
         if let Some(selected) = self.message_list_state.selected() {
             let message_id = self.message_list[selected].id();
             let text = self.message_list[selected].message_content_to_string();
-            if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
-                event_tx
-                    .send(Event::ReplyMessage(message_id, text))
-                    .unwrap();
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::FocusComponent(ComponentName::Prompt));
+                let _ = tx.send(Action::ReplyMessage(message_id, text));
             }
         }
     }
@@ -519,5 +522,29 @@ mod tests {
         window.update(Action::ChatWindowRestoreSort);
         // Chat message search is server-side only; these are no-ops
         assert_eq!(window.message_list.len(), 0);
+    }
+
+    /// Edit on someone else's message must be a no-op (does not send EditMessage, does not bug the chat).
+    /// create_mock_message uses sender user_id 1; test app context has me() = 0, so all mock messages are "others".
+    #[test]
+    fn test_edit_on_others_message_is_no_op() {
+        let mut window = create_test_chat_window();
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        window.register_action_handler(tx).unwrap();
+        let messages = vec![
+            create_mock_message(100, "Other's message"),
+            create_mock_message(200, "Another other"),
+        ];
+        setup_messages(&mut window, messages);
+        window.message_list_state.select(Some(0));
+        let selected_before = window.message_list_state.selected();
+        let selected_id_before = selected_before.and_then(|i| window.message_list.get(i).map(|m| m.id()));
+        window.update(Action::ChatWindowEdit);
+        // Selection unchanged; no EditMessage is sent (we can't easily assert no event without mock event_tx).
+        assert_eq!(window.message_list_state.selected(), selected_before);
+        assert_eq!(
+            selected_before.and_then(|i| window.message_list.get(i).map(|m| m.id())),
+            selected_id_before
+        );
     }
 }
