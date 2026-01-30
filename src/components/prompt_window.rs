@@ -542,17 +542,20 @@ impl Input {
                     self.set_prompt_size_to_one_focused();
                 }
                 Mode::SearchChatMessages => {
-                    // Send search string to chat window for filtering messages
+                    // Open server search overlay and run search with prompt text
+                    let query = self.text_to_string();
                     self.action_tx
                         .as_ref()
                         .unwrap()
-                        .send(Action::FocusComponent(ComponentName::Chat))
+                        .send(Action::ChatWindowSearch)
                         .unwrap();
-                    self.action_tx
-                        .as_ref()
-                        .unwrap()
-                        .send(Action::ChatWindowSortWithString(self.text_to_string()))
-                        .unwrap();
+                    if !query.is_empty() {
+                        self.action_tx
+                            .as_ref()
+                            .unwrap()
+                            .send(Action::SearchChatMessages(query))
+                            .unwrap();
+                    }
                     self.text = vec![vec![]];
                     self.mode = Mode::Normal;
                     self.set_prompt_size_to_one_focused();

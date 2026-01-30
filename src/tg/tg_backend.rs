@@ -5,8 +5,8 @@ use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib_rs::enums::{
-    self, AuthorizationState, ChatList, InputMessageContent, InputMessageReplyTo, LogStream,
-    Messages, OptionValue, Update, User,
+    self, AuthorizationState, ChatList, FoundChatMessages, InputMessageContent, InputMessageReplyTo,
+    LogStream, Messages, OptionValue, SearchMessagesFilter, Update, User,
 };
 use tdlib_rs::functions;
 use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
@@ -175,12 +175,25 @@ impl TgBackend {
         chat_id: i64,
         from_message_id: i64,
     ) -> (Vec<MessageEntry>, bool) {
-        const BATCH_SIZE: i32 = 50;
+        self.get_chat_history_batch(chat_id, from_message_id, 0, 50)
+            .await
+    }
+
+    /// Fetches one batch of chat history with offset (for jump-to-message: load window around a message).
+    /// offset 0 = from_message_id and older; negative offset = include newer messages per TDLib.
+    #[allow(clippy::await_holding_lock)]
+    pub async fn get_chat_history_batch(
+        &mut self,
+        chat_id: i64,
+        from_message_id: i64,
+        offset: i32,
+        limit: i32,
+    ) -> (Vec<MessageEntry>, bool) {
         match functions::get_chat_history(
             chat_id,
             from_message_id,
-            0,
-            BATCH_SIZE,
+            offset,
+            limit,
             false,
             self.client_id,
         )
@@ -197,12 +210,50 @@ impl TgBackend {
                     .map(|m| MessageEntry::from(&m))
                     .collect();
                 let n = entries.len();
-                let has_more = n >= BATCH_SIZE as usize;
+                let has_more = n >= limit as usize;
                 (entries, has_more)
             }
             Err(e) => {
                 tracing::error!("Failed to get chat history: {e:?}");
                 (Vec::new(), false)
+            }
+        }
+    }
+
+    /// Server-side search in the open chat. Returns message entries for the search overlay.
+    #[allow(clippy::await_holding_lock)]
+    pub async fn search_chat_messages(
+        &self,
+        chat_id: i64,
+        query: String,
+        limit: i32,
+    ) -> Result<Vec<MessageEntry>, tdlib_rs::types::Error> {
+        let filter = Some(SearchMessagesFilter::Empty);
+        match functions::search_chat_messages(
+            chat_id,
+            query,
+            None,
+            0,
+            0,
+            limit,
+            filter,
+            0,
+            0,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(FoundChatMessages::FoundChatMessages(found)) => {
+                let entries: Vec<MessageEntry> = found
+                    .messages
+                    .into_iter()
+                    .map(|m| MessageEntry::from(&m))
+                    .collect();
+                Ok(entries)
+            }
+            Err(e) => {
+                tracing::error!("search_chat_messages failed: {e:?}");
+                Err(e)
             }
         }
     }
@@ -912,6 +963,11 @@ impl TgBackend {
                                 tg_context
                                     .open_chat_messages()
                                     .insert_messages(std::iter::once(MessageEntry::from(&message)));
+                                // Scroll chat to the new message (sent or received)
+                                let tx = tg_context.event_tx().as_ref().cloned();
+                                if let Some(tx) = tx {
+                                    let _ = tx.send(Event::ChatMessageAdded(message.id));
+                                }
                             }
                         }
                         Update::MessageEdited(_) => {}

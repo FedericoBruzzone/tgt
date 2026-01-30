@@ -49,6 +49,9 @@ pub struct TgContext {
     /// True while a "load more history" request is in flight; avoids duplicate requests.
     history_loading: AtomicBool,
 
+    /// After JumpToMessage completes, ChatWindow should select this message_id (-1 = none).
+    jump_target_message_id: AtomicI64,
+
     /// reply message id
     reply_message_id: AtomicI64,
     /// reply message text
@@ -152,6 +155,16 @@ impl TgContext {
     /// Set history loading flag (backend/task only).
     pub fn set_history_loading(&self, value: bool) {
         self.history_loading.store(value, Ordering::Release);
+    }
+
+    /// Jump target message ID (set by run loop after JumpToMessage; ChatWindow selects it). -1 = none.
+    pub fn jump_target_message_id(&self) -> i64 {
+        self.jump_target_message_id.load(Ordering::Relaxed)
+    }
+
+    /// Set jump target (run loop only).
+    pub fn set_jump_target_message_id(&self, message_id: i64) {
+        self.jump_target_message_id.store(message_id, Ordering::Release);
     }
 
     pub fn set_me(&self, me: i64) {

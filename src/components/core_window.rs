@@ -9,6 +9,7 @@ use crate::{
         command_guide::CommandGuide,
         component_traits::{Component, HandleFocus},
         prompt_window::PromptWindow,
+        search_overlay::SearchOverlay,
         theme_selector::ThemeSelector,
     },
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
@@ -54,6 +55,8 @@ pub struct CoreWindow {
     show_command_guide: bool,
     /// Indicates whether the theme selector should be shown.
     show_theme_selector: bool,
+    /// Indicates whether the search overlay (server-side chat search) should be shown.
+    show_search_overlay: bool,
 }
 
 impl CoreWindow {
@@ -102,6 +105,12 @@ impl CoreWindow {
                     .with_name(ComponentName::ThemeSelector.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::SearchOverlay,
+                SearchOverlay::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::SearchOverlay.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -118,6 +127,7 @@ impl CoreWindow {
         let show_reply_message = false;
         let show_command_guide = false;
         let show_theme_selector = false;
+        let show_search_overlay = false;
 
         CoreWindow {
             app_context,
@@ -133,6 +143,7 @@ impl CoreWindow {
             show_reply_message,
             show_command_guide,
             show_theme_selector,
+            show_search_overlay,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -232,6 +243,7 @@ impl Component for CoreWindow {
         match action {
             Action::FocusComponent(component_name) => {
                 self.component_focused = Some(component_name);
+                self.app_context.set_focused_component(self.component_focused);
                 self.components
                     .get_mut(&component_name)
                     .unwrap_or_else(|| panic!("Failed to get component: {component_name}"))
@@ -243,6 +255,7 @@ impl Component for CoreWindow {
             }
             Action::UnfocusComponent => {
                 self.component_focused = None;
+                self.app_context.set_focused_component(None);
                 self.show_reply_message = false;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
@@ -363,6 +376,13 @@ impl Component for CoreWindow {
                 }
             }
             Action::Key(key_code, modifiers) => {
+                // If search overlay is visible, send keys to it
+                if self.show_search_overlay {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                        component.update(Action::Key(key_code, modifiers.clone()));
+                    }
+                    return;
+                }
                 // If theme selector is visible, send keys to it
                 if self.show_theme_selector {
                     if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
@@ -405,26 +425,28 @@ impl Component for CoreWindow {
                 // Don't pass action to focused component again below
             }
             Action::ChatListSearch => {
-                // Always activate search if ChatList is focused, nothing is focused, or Chat is focused
-                // ChatWindow will handle switching from its search mode to ChatList search
+                // If search overlay is open, close it first then focus ChatList
+                if self.show_search_overlay {
+                    self.show_search_overlay = false;
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                        component.update(Action::CloseSearchOverlay);
+                        component.unfocus();
+                    }
+                }
+                // Activate ChatList search when ChatList is focused, nothing focused, or Chat focused
                 let should_activate_search = match self.component_focused {
-                    None => true,                          // No component focused - activate search
-                    Some(ComponentName::ChatList) => true, // ChatList focused - activate search
-                    Some(ComponentName::Chat) => true, // Chat focused - allow switching to ChatList search
-                    Some(ComponentName::Prompt) => false, // Prompt focused - don't activate
-                    _ => false,                        // Other components - don't activate
+                    None => true,
+                    Some(ComponentName::ChatList) => true,
+                    Some(ComponentName::Chat) => true,
+                    Some(ComponentName::SearchOverlay) => true, // switching from overlay to ChatList search
+                    Some(ComponentName::Prompt) => false,
+                    _ => false,
                 };
 
                 if should_activate_search {
-                    // First, if ChatWindow is focused, let it handle the switch (it will stop search if in search mode)
-                    if let Some(ComponentName::Chat) = self.component_focused {
-                        if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
-                            component.update(action.clone());
-                        }
-                    }
-
                     // Focus ChatList and activate search mode
                     self.component_focused = Some(ComponentName::ChatList);
+                    self.app_context.set_focused_component(self.component_focused);
                     self.components
                         .get_mut(&ComponentName::ChatList)
                         .unwrap_or_else(|| {
@@ -442,19 +464,42 @@ impl Component for CoreWindow {
                 }
             }
             Action::ChatWindowSearch => {
-                // Focus Chat and activate search mode
-                self.component_focused = Some(ComponentName::Chat);
+                // Show server-side search overlay and focus it
+                self.show_search_overlay = true;
+                if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    component.update(Action::ShowSearchOverlay);
+                    component.focus();
+                }
+                self.component_focused = Some(ComponentName::SearchOverlay);
+                self.app_context.set_focused_component(self.component_focused);
                 self.components
-                    .get_mut(&ComponentName::Chat)
-                    .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
-                    .focus();
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &ComponentName::SearchOverlay)
+                    .for_each(|(_, component)| component.unfocus());
+            }
+            Action::CloseSearchOverlay => {
+                self.show_search_overlay = false;
+                if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    component.update(Action::CloseSearchOverlay);
+                    component.unfocus();
+                }
+                // Refocus Chat after closing search
+                self.component_focused = Some(ComponentName::Chat);
+                self.app_context.set_focused_component(self.component_focused);
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.focus();
+                }
                 self.components
                     .iter_mut()
                     .filter(|(name, _)| *name != &ComponentName::Chat)
                     .for_each(|(_, component)| component.unfocus());
-                // Activate search mode
-                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
-                    component.update(action.clone());
+            }
+            Action::SearchResults(_) => {
+                // Propagate to SearchOverlay when visible
+                if self.show_search_overlay {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                        component.update(action.clone());
+                    }
                 }
             }
             Action::ChatListSortWithString(_) => {
@@ -594,6 +639,15 @@ impl Component for CoreWindow {
                 .draw(frame, area)?;
         }
 
+        if self.show_search_overlay {
+            self.components
+                .get_mut(&ComponentName::SearchOverlay)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", ComponentName::SearchOverlay)
+                })
+                .draw(frame, area)?;
+        }
+
         Ok(())
     }
 }
@@ -649,13 +703,15 @@ mod tests {
             component.focus();
         }
 
+        // ChatWindowSearch opens the server search overlay
         window.update(Action::ChatWindowSearch);
 
         assert_eq!(
             window.component_focused,
-            Some(ComponentName::Chat),
-            "Chat should be focused after ChatWindowSearch"
+            Some(ComponentName::SearchOverlay),
+            "Search overlay should be focused after ChatWindowSearch"
         );
+        assert!(window.show_search_overlay, "Search overlay should be visible");
     }
 
     #[test]
@@ -664,11 +720,11 @@ mod tests {
         window.component_focused = Some(ComponentName::Chat);
         if let Some(component) = window.components.get_mut(&ComponentName::Chat) {
             component.focus();
-            // Put ChatWindow in search mode
-            component.update(Action::ChatWindowSearch);
         }
+        // Open search overlay (server search)
+        window.update(Action::ChatWindowSearch);
 
-        // Now Alt+R should switch to ChatList search
+        // Now Alt+R (ChatListSearch) should close overlay and focus ChatList
         window.update(Action::ChatListSearch);
 
         assert_eq!(
@@ -676,6 +732,7 @@ mod tests {
             Some(ComponentName::ChatList),
             "Should switch to ChatList search when Alt+R pressed during message search"
         );
+        assert!(!window.show_search_overlay, "Search overlay should be closed");
     }
 
     #[test]
@@ -732,17 +789,18 @@ mod tests {
     }
 
     #[test]
-    fn test_chat_window_search_propagates_to_component() {
+    fn test_chat_window_search_opens_overlay() {
         let mut window = create_test_core_window();
         window.component_focused = Some(ComponentName::Chat);
 
         window.update(Action::ChatWindowSearch);
 
-        // Chat should receive the search action
+        // Search overlay should open and be focused
         assert_eq!(
             window.component_focused,
-            Some(ComponentName::Chat),
-            "Chat should be focused"
+            Some(ComponentName::SearchOverlay),
+            "Search overlay should be focused"
         );
+        assert!(window.show_search_overlay);
     }
 }
