@@ -349,10 +349,7 @@ impl Component for CoreWindow {
 
                 // Apply the next theme
                 if ThemeSwitcher::apply_theme(&self.app_context, next_theme).is_ok() {
-                    // Trigger a redraw after theme change
-                    if let Some(tx) = self.action_tx.as_ref() {
-                        let _ = tx.send(Action::Render);
-                    }
+                    self.app_context.mark_dirty();
                 } else {
                     tracing::error!("Failed to switch theme");
                 }
@@ -360,10 +357,7 @@ impl Component for CoreWindow {
             Action::SwitchThemeTo(theme_name) => {
                 // Apply the specified theme directly using static method
                 if ThemeSwitcher::apply_theme(&self.app_context, &theme_name).is_ok() {
-                    // Trigger a redraw after theme change
-                    if let Some(tx) = self.action_tx.as_ref() {
-                        let _ = tx.send(Action::Render);
-                    }
+                    self.app_context.mark_dirty();
                 } else {
                     tracing::error!("Failed to switch theme to {}", theme_name);
                 }
