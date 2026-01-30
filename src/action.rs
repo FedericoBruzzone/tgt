@@ -102,8 +102,10 @@ pub enum Action {
     /// SendMessageEdited action with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),
-    /// GetChatHistory action.
+    /// GetChatHistory action (load older messages).
     GetChatHistory,
+    /// GetChatHistoryNewer action (load newer messages when scrolling near bottom).
+    GetChatHistoryNewer,
     /// Chat history was appended (from background task); triggers one render.
     ChatHistoryAppended,
     /// DeleteMessages action.
@@ -195,6 +197,20 @@ pub enum Action {
     /// ChatWindowRestoreSort event.
     /// This event is used to restore the default message ordering in the chat window.
     ChatWindowRestoreSort,
+
+    /// Search chat messages via TDLib (server-side). Query is sent to backend; results via SearchResults.
+    SearchChatMessages(String),
+    /// Search results from TDLib (message IDs + entries for display in search overlay).
+    SearchResults(Vec<crate::tg::message_entry::MessageEntry>),
+    /// Jump to a message: load a window around it and select it (for unloaded messages).
+    JumpToMessage(i64),
+    /// Jump completed: ChatWindow should select this message_id.
+    JumpCompleted(i64),
+    /// Close the search overlay (Esc or after jump).
+    CloseSearchOverlay,
+    /// Show the search overlay (open server search UI).
+    ShowSearchOverlay,
+
     /// SwitchTheme action.
     /// This action is used to switch to the next theme in the theme list.
     SwitchTheme,

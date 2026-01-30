@@ -43,6 +43,15 @@ keymap = [
 # When the chat list is focused, the chat list key bindings will be active.
 [chat_list]
 keymap = [
+  # Focus navigation (same as core_window so they work when chat list is focused)
+  { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+2"], command = "focus_chat", description = "Focus the chat"},
+  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
+  { keys = ["alt+3"], command = "focus_prompt", description = "Focus the prompt"},
+  { keys = ["alt+down"], command = "focus_prompt", description = "Focus the prompt"},
+  { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
+  { keys = ["alt+up"], command = "unfocus_component", description = "Unfocus the current component"},
   # Select the next chat
   { keys = ["down"], command = "chat_list_next", description = "Select the next chat"},
   # Select the previous chat
@@ -63,6 +72,15 @@ keymap = [
 # When the chat is focused, the chat key bindings will be active.
 [chat]
 keymap = [
+  # Focus navigation (same as core_window so they work when chat is focused)
+  { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+2"], command = "focus_chat", description = "Focus the chat"},
+  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
+  { keys = ["alt+3"], command = "focus_prompt", description = "Focus the prompt"},
+  { keys = ["alt+down"], command = "focus_prompt", description = "Focus the prompt"},
+  { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
+  { keys = ["alt+up"], command = "unfocus_component", description = "Unfocus the current component"},
   # Select the next message (older, toward top of list)
   { keys = ["up"], command = "chat_window_next", description = "Select the next message (up)"},
   # Select the previous message (newer, toward bottom of list)
@@ -89,6 +107,17 @@ keymap = [
 
 # The prompt key bindings are only usable in the prompt component.
 # When the prompt is focused, the prompt key bindings will be active.
+# Note: Alt+R is not bound here so the prompt can handle it (open message search overlay).
 [prompt]
-keymap = []
+keymap = [
+  # Focus navigation (same as core_window so they work when prompt is focused)
+  { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+2"], command = "focus_chat", description = "Focus the chat"},
+  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
+  { keys = ["alt+3"], command = "focus_prompt", description = "Focus the prompt"},
+  { keys = ["alt+down"], command = "focus_prompt", description = "Focus the prompt"},
+  { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
+  { keys = ["alt+up"], command = "unfocus_component", description = "Unfocus the current component"},
+]
 

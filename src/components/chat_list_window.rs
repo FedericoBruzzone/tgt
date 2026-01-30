@@ -236,6 +236,7 @@ impl ChatListWindow {
                     .set_open_chat_user(chat.user.clone());
                 self.app_context.tg_context().set_open_chat_id(chat.chat_id);
                 self.app_context.tg_context().clear_open_chat_messages();
+                self.app_context.tg_context().set_jump_target_message_id(0);
                 self.app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))
@@ -317,18 +318,12 @@ impl Component for ChatListWindow {
     fn update(&mut self, action: Action) {
         match action {
             Action::ChatListNext => {
-                // Allow navigation even in search mode
-                // But skip if we're handling the key event directly (to avoid double processing)
-                if !self.search_mode {
-                    self.next();
-                }
+                // Allow navigation in and out of search mode (arrow keys move list selection)
+                self.next();
             }
             Action::ChatListPrevious => {
-                // Allow navigation even in search mode
-                // But skip if we're handling the key event directly (to avoid double processing)
-                if !self.search_mode {
-                    self.previous();
-                }
+                // Allow navigation in and out of search mode (arrow keys move list selection)
+                self.previous();
             }
             Action::ChatListUnselect => {
                 if self.search_mode {
@@ -338,8 +333,10 @@ impl Component for ChatListWindow {
                 }
             }
             Action::ChatListOpen => {
-                if !self.search_mode {
-                    self.confirm_selection();
+                // Open selected chat; in search mode also exit search after opening
+                self.confirm_selection();
+                if self.search_mode {
+                    self.stop_search();
                 }
             }
             Action::ChatListSortWithString(s) => self.sort(s),
@@ -356,7 +353,12 @@ impl Component for ChatListWindow {
                         KeyCode::Backspace => {
                             self.handle_search_backspace();
                         }
-                        KeyCode::Enter | KeyCode::Esc => {
+                        KeyCode::Enter => {
+                            // Open selected chat and exit search mode
+                            self.confirm_selection();
+                            self.stop_search();
+                        }
+                        KeyCode::Esc => {
                             self.stop_search();
                         }
                         KeyCode::Down => {

@@ -1,6 +1,7 @@
 use crate::{
     action::Action,
     cli::CliArgs,
+    component_name::ComponentName,
     configs::custom::{
         app_custom::AppConfig, keymap_custom::KeymapConfig, palette_custom::PaletteConfig,
         telegram_custom::TelegramConfig, theme_custom::ThemeConfig,
@@ -92,6 +93,8 @@ pub struct AppContext {
     tg_context: Arc<TgContext>,
     /// The CLI arguments for the application.
     cli_args: Mutex<CliArgs>,
+    /// The currently focused UI component, used for context-aware keymap lookup in the run loop.
+    focused_component: Mutex<Option<ComponentName>>,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -131,6 +134,7 @@ impl AppContext {
             needs_render: AtomicBool::new(false),
             tg_context: Arc::new(tg_context),
             cli_args: Mutex::new(cli_args),
+            focused_component: Mutex::new(None),
         })
     }
     /// Get the application configuration.
@@ -267,6 +271,16 @@ impl AppContext {
     /// The CLI arguments are a shared resource and are protected by a mutex.
     pub fn cli_args(&self) -> MutexGuard<'_, CliArgs> {
         self.cli_args.lock().unwrap()
+    }
+
+    /// Returns the currently focused UI component for context-aware keymap lookup.
+    pub fn focused_component(&self) -> Option<ComponentName> {
+        *self.focused_component.lock().unwrap()
+    }
+
+    /// Sets the currently focused UI component. Called by CoreWindow when focus changes.
+    pub fn set_focused_component(&self, component: Option<ComponentName>) {
+        *self.focused_component.lock().unwrap() = component;
     }
 
     // ===== COMMON ======
