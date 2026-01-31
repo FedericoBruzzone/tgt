@@ -27,6 +27,12 @@ pub struct CommandGuide {
     focused: bool,
     /// Indicates whether the command guide should be shown.
     visible: bool,
+    /// Vertical scroll offset (number of lines scrolled).
+    scroll_offset: u16,
+    /// Last inner area height (from previous draw) for clamping scroll in update.
+    last_inner_height: u16,
+    /// Last content line count (from previous draw) for max scroll.
+    last_content_lines: usize,
 }
 
 impl CommandGuide {
@@ -44,6 +50,9 @@ impl CommandGuide {
             action_tx: None,
             focused: false,
             visible: false,
+            scroll_offset: 0,
+            last_inner_height: 0,
+            last_content_lines: 0,
         }
     }
 
@@ -62,6 +71,7 @@ impl CommandGuide {
     /// Show the command guide.
     pub fn show(&mut self) {
         self.visible = true;
+        self.scroll_offset = 0;
     }
 
     /// Hide the command guide.
@@ -123,38 +133,51 @@ impl CommandGuide {
             )]),
             Line::from(""),
             Line::from(vec![Span::styled(
-                "Press Alt+F1 or Esc to close",
+                "Scroll: ↑/↓ PgUp/PgDn  |  Close: Esc or Alt+F1",
                 self.app_context.style_timestamp(),
             )]),
             Line::from(""),
         ];
 
-        // Core Window Keybindings
+        // None state (global) — keybindings available everywhere
         let core_window_lines = self.get_keybindings_section(
-            "Core Window (Available everywhere)",
+            "None state (global)",
             &keymap_config.core_window,
         );
         for line in core_window_lines {
             lines.push(Line::from(line));
         }
 
-        // Chat List Keybindings
+        // Chat List
         let chat_list_lines = self.get_keybindings_section("Chat List", &keymap_config.chat_list);
         for line in chat_list_lines {
             lines.push(Line::from(line));
         }
 
-        // Chat Keybindings
-        let chat_lines = self.get_keybindings_section("Chat Window", &keymap_config.chat);
+        // Chat — copy (y/Ctrl+C), edit (e), reply (r), delete (d/D)
+        let chat_lines = self.get_keybindings_section("Chat", &keymap_config.chat);
         for line in chat_lines {
             lines.push(Line::from(line));
         }
 
-        // Prompt Keybindings
+        // Prompt
         let prompt_lines = self.get_keybindings_section("Prompt", &keymap_config.prompt);
         for line in prompt_lines {
             lines.push(Line::from(line));
         }
+
+        // Mouse
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![Span::styled(
+            "Mouse",
+            self.app_context.style_title_bar(),
+        )]));
+        lines.push(Line::from(""));
+        lines.push(Line::from("  Scroll: chat list / chat to move selection or messages."));
+        lines.push(Line::from(
+            "  Chat list: first click focuses list, second click opens selected chat.",
+        ));
+        lines.push(Line::from(""));
 
         // Configuration section
         lines.push(Line::from(""));
@@ -237,6 +260,28 @@ impl Component for CommandGuide {
                                 tx.send(Action::HideCommandGuide).unwrap_or(());
                             }
                         }
+                        crossterm::event::KeyCode::Up => {
+                            self.scroll_offset = self.scroll_offset.saturating_sub(1);
+                        }
+                        crossterm::event::KeyCode::Down => {
+                            let max_scroll = self
+                                .last_content_lines
+                                .saturating_sub(self.last_inner_height as usize)
+                                .min(u16::MAX as usize) as u16;
+                            self.scroll_offset = (self.scroll_offset + 1).min(max_scroll);
+                        }
+                        crossterm::event::KeyCode::PageUp => {
+                            let page = self.last_inner_height;
+                            self.scroll_offset = self.scroll_offset.saturating_sub(page);
+                        }
+                        crossterm::event::KeyCode::PageDown => {
+                            let max_scroll = self
+                                .last_content_lines
+                                .saturating_sub(self.last_inner_height as usize)
+                                .min(u16::MAX as usize) as u16;
+                            let page = self.last_inner_height;
+                            self.scroll_offset = (self.scroll_offset + page).min(max_scroll);
+                        }
                         _ => {}
                     }
                 }
@@ -277,10 +322,21 @@ impl Component for CommandGuide {
         let inner_area = block.inner(popup_area);
         frame.render_widget(block, popup_area);
 
-        // Build and render help text
+        // Build help text and update scroll state (build once for line count to avoid borrow conflict)
+        let content_lines = self.build_help_text().lines.len();
+        self.last_content_lines = content_lines;
+        self.last_inner_height = inner_area.height;
+
+        // Clamp scroll offset to valid range
+        let max_scroll = content_lines
+            .saturating_sub(inner_area.height as usize)
+            .min(u16::MAX as usize) as u16;
+        self.scroll_offset = self.scroll_offset.min(max_scroll);
+
         let help_text = self.build_help_text();
         let paragraph = Paragraph::new(help_text)
             .wrap(Wrap { trim: true })
+            .scroll((self.scroll_offset, 0))
             .style(self.app_context.style_chat());
 
         frame.render_widget(paragraph, inner_area);
