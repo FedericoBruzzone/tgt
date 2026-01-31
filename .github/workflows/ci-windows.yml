@@ -2,24 +2,24 @@ name: CI Windows
 
 on:
   push:
-    branches-ignore: [ 'dependabot/**' ]
-    tags-ignore: [ '**' ]
+    branches-ignore: ["dependabot/**"]
+    tags-ignore: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
   pull_request:
-    branches: [ '**' ]
+    branches: ["**"]
     paths:
-      - 'src/**'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'rustfmt.toml'
-      - 'config/**'
-      - '.github/workflows/**'
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -33,12 +33,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [windows-latest, windows-11-arm]
         feature: [local-tdlib, pkg-config, download-tdlib]
 
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
@@ -46,6 +48,7 @@ jobs:
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
+
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         # git checkout cd5e746ec203c8c3c61647e0886a8df8c1e78e41
@@ -55,26 +58,39 @@ jobs:
           git checkout $TDLIB_VERSION
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
-          git checkout 07b30b49e5136a36100a2ce644476e60d7f3ddc1 
-          ./bootstrap-vcpkg.bat
-          ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+          if [[ "$RUNNER_ARCH" == "X64" ]]; then
+            git checkout 07b30b49e5136a36100a2ce644476e60d7f3ddc1
+            ./bootstrap-vcpkg.bat
+            ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+            CMAKE_ARCH="x64"
+          elif [[ "$RUNNER_ARCH" == "ARM64" ]]; then
+            ./bootstrap-vcpkg.bat
+            ./vcpkg.exe install gperf:arm64-windows openssl:arm64-windows zlib:arm64-windows
+            CMAKE_ARCH="ARM64"
+          else
+            echo "Unsupported architecture: $RUNNER_ARCH"
+            exit 1
+          fi
           cd ..
           rm -rf build
           mkdir build
           cd build
-          cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+          cmake -A "$CMAKE_ARCH" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_INSTALL_PREFIX:PATH=../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
           cmake --build . --target install --config Release
         shell: bash
+
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v5
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
+
       - name: Extract TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         run: cp -r ./td/tdlib ./
         shell: bash
+
       - name: Install pkg-config
         if: matrix.feature == 'pkg-config'
         run: |
@@ -89,6 +105,7 @@ jobs:
           cp ./gettext-runtime_0.18.1.1-2_win32/bin/intl.dll ./pkg-config_0.26-1_win32/bin/
           cp ./glib_2.28.8-1_win32/bin/* ./pkg-config_0.26-1_win32/bin/
         shell: bash
+
       - name: Set PKG_CONFIG_PATH and bin
         if: matrix.feature == 'pkg-config'
         run: |
@@ -96,6 +113,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$((Get-Item .).FullName)\tdlib\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "$((Get-Item .).FullName)\tdlib\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         shell: pwsh
+
       - name: Set LOCAL_TDLIB_PATH
         if: matrix.feature == 'local-tdlib'
         run: echo "LOCAL_TDLIB_PATH=$((Get-Item .).FullName)\tdlib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -114,12 +132,16 @@ jobs:
         run: |
           cargo --version
           rustc --version
+
       - name: Run cargo build
         run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
+
       - name: Run cargo test
         run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+
       - name: Run cargo clippy
         run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       # - name: Upload artifact

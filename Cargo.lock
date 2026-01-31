@@ -3908,9 +3908,9 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 
 [[package]]
 name = "tdlib-rs"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f98c960258301bee0758a669fbe12ad8a97c6e764d2f30c5426eea008eebf2d2"
+checksum = "4c309480dcdd6d5dc2f37866d9063fed280780ddfeb51ae3a0adc2b52b0c0bc3"
 dependencies = [
  "dirs",
  "futures-channel",
@@ -3928,18 +3928,18 @@ dependencies = [
 
 [[package]]
 name = "tdlib-rs-gen"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be6a2373951794ddcf612db2cd26fc67d9fb2721a1497e873c06bd87823fae80"
+checksum = "ff69c8cab3e5285d2f79f53263077b2cdb12a841b230406e3b1230a345c78968"
 dependencies = [
  "tdlib-rs-parser",
 ]
 
 [[package]]
 name = "tdlib-rs-parser"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87cbdfae498e57fb48d380fff8eb5c9c98d4497c998f6de0d30d5d6b12f5358b"
+checksum = "20b1c6703d2284b9d4ddb620cd350f726a1c43bb6f7801f4361b55db2421caa8"
 
 [[package]]
 name = "tempfile"
