@@ -17,6 +17,7 @@ use crate::{
     event::Event,
     theme_switcher::{discover_available_themes, ThemeSwitcher},
 };
+use crossterm::event::{MouseButton, MouseEventKind};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -57,6 +58,8 @@ pub struct CoreWindow {
     show_theme_selector: bool,
     /// Indicates whether the search overlay (server-side chat search) should be shown.
     show_search_overlay: bool,
+    /// Last known screen areas for focusable sections (chat list, chat, prompt) for click-to-focus.
+    last_focusable_areas: HashMap<ComponentName, Rect>,
 }
 
 impl CoreWindow {
@@ -128,6 +131,7 @@ impl CoreWindow {
         let show_command_guide = false;
         let show_theme_selector = false;
         let show_search_overlay = false;
+        let last_focusable_areas = HashMap::new();
 
         CoreWindow {
             app_context,
@@ -144,6 +148,7 @@ impl CoreWindow {
             show_command_guide,
             show_theme_selector,
             show_search_overlay,
+            last_focusable_areas,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -223,9 +228,43 @@ impl Component for CoreWindow {
     }
 
     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError<Action>> {
+        let Some(ev) = event else {
+            return Ok(None);
+        };
+        // Forward mouse events to the focused component (scroll wheel, click, etc.)
+        if let Event::Mouse(mouse) = ev {
+            // Left click: focus the section under the cursor (chat list, chat window, prompt)
+            if let MouseEventKind::Down(MouseButton::Left) = mouse.kind {
+                let col = mouse.column;
+                let row = mouse.row;
+                for name in [
+                    ComponentName::ChatList,
+                    ComponentName::Chat,
+                    ComponentName::Prompt,
+                ] {
+                    if let Some(rect) = self.last_focusable_areas.get(&name) {
+                        let in_rect = col >= rect.x
+                            && col < rect.x + rect.width
+                            && row >= rect.y
+                            && row < rect.y + rect.height;
+                        if in_rect && self.component_focused != Some(name) {
+                            return Ok(Some(Action::FocusComponent(name)));
+                        }
+                    }
+                }
+            }
+            if let Some(name) = self.component_focused {
+                if let Some(component) = self.components.get_mut(&name) {
+                    return component
+                        .handle_mouse_events(mouse)
+                        .map_err(AppError::from);
+                }
+            }
+            return Ok(None);
+        }
         let binding = self.app_context.keymap_config();
         let map = binding.get_map_of(self.component_focused);
-        if let Some(action_binding) = map.get(&event.unwrap()) {
+        if let Some(action_binding) = map.get(&ev) {
             match action_binding {
                 ActionBinding::Single { action, .. } => {
                     return Ok(Some(action.clone()));
@@ -589,11 +628,6 @@ impl Component for CoreWindow {
             ])
             .split(area);
 
-        self.components
-            .get_mut(&ComponentName::ChatList)
-            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
-            .draw(frame, core_layout[0])?;
-
         let sub_core_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -608,6 +642,19 @@ impl Component for CoreWindow {
                 Constraint::Length(self.size_prompt),
             ])
             .split(core_layout[1]);
+
+        // Store areas for click-to-focus (chat list, chat window, prompt)
+        self.last_focusable_areas
+            .insert(ComponentName::ChatList, core_layout[0]);
+        self.last_focusable_areas
+            .insert(ComponentName::Chat, sub_core_layout[0]);
+        self.last_focusable_areas
+            .insert(ComponentName::Prompt, sub_core_layout[2]);
+
+        self.components
+            .get_mut(&ComponentName::ChatList)
+            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
+            .draw(frame, core_layout[0])?;
 
         self.components
             .get_mut(&ComponentName::Chat)
