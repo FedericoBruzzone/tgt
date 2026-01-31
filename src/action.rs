@@ -223,6 +223,9 @@ pub enum Action {
     /// HideThemeSelector action.
     /// This action is used to hide the theme selector popup.
     HideThemeSelector,
+
+    /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
+    StatusMessage(String),
 }
 /// Implement the `Action` enum.
 impl Action {

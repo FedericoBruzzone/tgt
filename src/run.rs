@@ -295,6 +295,7 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::ReplyMessage(_, _)
             | Action::ShowCommandGuide
             | Action::HideCommandGuide
+            | Action::StatusMessage(_)
             | Action::UpdateArea(_)
             | Action::GetChatHistoryNewer
             | Action::ChatHistoryAppended

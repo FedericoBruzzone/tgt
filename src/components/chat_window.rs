@@ -35,6 +35,8 @@ pub struct ChatWindow {
     message_list_state: ListState,
     /// Indicates whether the `ChatWindow` is focused or not.
     focused: bool,
+    /// When true, next draw will select the newest message (Alt+C restore order).
+    request_jump_to_latest: bool,
 }
 /// Implementation of the `ChatWindow` struct.
 impl ChatWindow {
@@ -58,6 +60,7 @@ impl ChatWindow {
             message_list,
             message_list_state,
             focused,
+            request_jump_to_latest: false,
         }
     }
     /// Set the name of the `ChatWindow`.
@@ -187,10 +190,25 @@ impl ChatWindow {
 
     /// Copy the selected message item in the list.
     fn copy_selected(&self) {
-        if let Some(selected) = self.message_list_state.selected() {
-            let message = self.message_list[selected].message_content_to_string();
-            if let Ok(mut clipboard) = Clipboard::new() {
-                clipboard.set_text(message).unwrap();
+        let Some(selected) = self.message_list_state.selected() else {
+            return;
+        };
+        let Some(entry) = self.message_list.get(selected) else {
+            return;
+        };
+        let message = entry.message_content_to_string();
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                if clipboard.set_text(&message).is_ok() {
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::StatusMessage("Message yanked".into()));
+                    }
+                } else {
+                    tracing::warn!("Clipboard set_text failed");
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Clipboard unavailable (copy message): {}", e);
             }
         }
     }
@@ -273,8 +291,11 @@ impl Component for ChatWindow {
             Action::JumpCompleted(_message_id) => {
                 // Selection by message_id is applied in draw() when jump_target_message_id is set
             }
-            Action::ChatWindowSortWithString(_) | Action::ChatWindowRestoreSort => {
+            Action::ChatWindowSortWithString(_) => {
                 // No-op: chat message search is server-side only (search overlay)
+            }
+            Action::ChatWindowRestoreSort => {
+                self.request_jump_to_latest = true;
             }
             Action::ChatWindowSearch | Action::ChatListSearch => {
                 // Handled by CoreWindow: opens search overlay or focuses ChatList
@@ -323,8 +344,21 @@ impl Component for ChatWindow {
                 self.message_list_state.select(Some(idx));
             }
         } else {
-            // Restore selection by message ID when possible
-            let selection_restored = selected_message_id.and_then(|id| {
+            // Alt+C restore order: jump to latest message
+            if self.request_jump_to_latest {
+                self.request_jump_to_latest = false;
+                if !self.message_list.is_empty() {
+                    if let Some(newest_id) = self.app_context.tg_context().newest_message_id() {
+                        if let Some(new_idx) =
+                            self.message_list.iter().position(|m| m.id() == newest_id)
+                        {
+                            self.message_list_state.select(Some(new_idx));
+                        }
+                    }
+                }
+            } else {
+                // Restore selection by message ID when possible
+                let selection_restored = selected_message_id.and_then(|id| {
                 self.message_list.iter().position(|m| m.id() == id).map(|idx| {
                     self.message_list_state.select(Some(idx));
                     id
@@ -345,6 +379,7 @@ impl Component for ChatWindow {
                         self.message_list_state.select(Some(new_idx));
                     }
                 }
+            }
             }
         }
 
