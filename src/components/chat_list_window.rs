@@ -4,7 +4,7 @@ use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
-use crossterm::event::{KeyCode, MouseEventKind};
+use crossterm::event::{KeyCode, MouseButton, MouseEventKind};
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::symbols::border::PLAIN;
@@ -73,7 +73,7 @@ impl ChatListEntry {
         self.last_read_outbox_message_id = Some(last_read_outbox_message_id);
     }
 
-    fn get_text_styled(&self, app_context: &AppContext) -> Text<'_> {
+    pub(crate) fn get_text_styled(&self, app_context: &AppContext) -> Text<'_> {
         let mut online_symbol = "";
         let mut verificated_symbol = "";
         if let Some(user) = &self.user {
@@ -113,13 +113,32 @@ impl ChatListEntry {
                 e.timestamp().get_span_styled(app_context)
             }),
         ])]);
-        entry.extend(self.last_message.as_ref().map_or_else(Line::default, |e| {
-            e.get_lines_styled_with_style(
+        // Always add a second line (message preview or "[No message]") so every item is 2 rows for consistent height and click mapping.
+        // Treat missing last_message or empty content (e.g. "joined Telegram" → empty message from backend) as no message.
+        let second_line = match &self.last_message {
+            None => Line::from(Span::styled(
+                "[No message]",
                 app_context.style_chat_list_item_message_content(),
-                preview_lines,
-            )[0]
-            .clone()
-        }));
+            )),
+            Some(e) if e.message_content_to_string().trim().is_empty() => Line::from(Span::styled(
+                "[No message]",
+                app_context.style_chat_list_item_message_content(),
+            )),
+            Some(e) => e
+                .get_lines_styled_with_style(
+                    app_context.style_chat_list_item_message_content(),
+                    preview_lines,
+                )
+                .into_iter()
+                .next()
+                .unwrap_or_else(|| {
+                    Line::from(Span::styled(
+                        "[No message]",
+                        app_context.style_chat_list_item_message_content(),
+                    ))
+                }),
+        };
+        entry.extend(second_line);
 
         entry
     }
@@ -146,6 +165,10 @@ pub struct ChatListWindow {
     search_input: String,
     /// Whether search mode is active.
     search_mode: bool,
+    /// Last list content area (for click-to-select item when focused).
+    last_list_area: Option<Rect>,
+    /// First visible item index after last draw (from ListState offset; used for click-to-item).
+    last_list_offset: Option<usize>,
 }
 /// Implementation of the `ChatListWindow` struct.
 impl ChatListWindow {
@@ -174,6 +197,8 @@ impl ChatListWindow {
             sort_string,
             search_input: String::new(),
             search_mode: false,
+            last_list_area: None,
+            last_list_offset: None,
         }
     }
     /// Set the name of the `ChatListWindow`.
@@ -316,12 +341,45 @@ impl Component for ChatListWindow {
     }
 
     fn handle_mouse_events(&mut self, mouse: crossterm::event::MouseEvent) -> std::io::Result<Option<Action>> {
-        if !self.focused {
-            return Ok(None);
-        }
         match mouse.kind {
-            MouseEventKind::ScrollDown => Ok(Some(Action::ChatListNext)),
-            MouseEventKind::ScrollUp => Ok(Some(Action::ChatListPrevious)),
+            MouseEventKind::ScrollDown if self.focused => Ok(Some(Action::ChatListNext)),
+            MouseEventKind::ScrollUp if self.focused => Ok(Some(Action::ChatListPrevious)),
+            MouseEventKind::Down(MouseButton::Left) => {
+                // When focused: single click on item opens that chat. When not focused: return None
+                // (CoreWindow will focus chat list on first click; second click then opens).
+                if !self.focused {
+                    return Ok(None);
+                }
+                let Some(list_area) = self.last_list_area else {
+                    return Ok(None);
+                };
+                let col = mouse.column;
+                let row = mouse.row;
+                let in_rect = col >= list_area.x
+                    && col < list_area.x + list_area.width
+                    && row >= list_area.y
+                    && row < list_area.y + list_area.height;
+                if !in_rect || self.chat_list.is_empty() {
+                    return Ok(None);
+                }
+                // List content: block has top border (1 row); items start at area.y+1.
+                // Each chat list item is 2 rows (name line + last message line).
+                const ROWS_PER_ITEM: u16 = 2;
+                let content_y = list_area.y + 1; // below top border
+                let content_height = list_area.height.saturating_sub(2); // top and bottom border
+                let row_in_content = row.saturating_sub(content_y);
+                if row_in_content >= content_height {
+                    return Ok(None);
+                }
+                // Use actual first visible item index from last draw (not inferred from selected).
+                let offset = self.last_list_offset.unwrap_or(0);
+                let item_index = offset + (row_in_content as usize / ROWS_PER_ITEM as usize);
+                if item_index < self.chat_list.len() {
+                    self.chat_list_state.select(Some(item_index));
+                    return Ok(Some(Action::ChatListOpen));
+                }
+                Ok(None)
+            }
             _ => Ok(None),
         }
     }
@@ -409,6 +467,7 @@ impl Component for ChatListWindow {
         } else {
             (area, None)
         };
+        self.last_list_area = Some(list_area);
 
         if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
             self.chat_list = items;
@@ -498,6 +557,8 @@ impl Component for ChatListWindow {
         // .repeat_highlight_symbol(true)
 
         frame.render_stateful_widget(list, list_area, &mut self.chat_list_state);
+        // Store first visible item index for click-to-item (List updates state.offset on render).
+        self.last_list_offset = Some(self.chat_list_state.offset());
         Ok(())
     }
 }
@@ -514,6 +575,46 @@ mod tests {
     fn create_test_chat_list_window() -> ChatListWindow {
         let app_context = create_test_app_context();
         ChatListWindow::new(app_context)
+    }
+
+    #[test]
+    fn test_chat_list_entry_without_last_message_has_two_lines() {
+        use crate::components::search_tests::create_test_app_context;
+
+        let app_context = create_test_app_context();
+        let mut entry = ChatListEntry::new();
+        entry.set_chat_name("Zöli".to_string());
+        // Do not set last_message so entry has no last message.
+
+        let text = entry.get_text_styled(&app_context);
+
+        let line_count = text.iter().count();
+        assert_eq!(
+            line_count, 2,
+            "Chat list entry without last message must have exactly 2 lines (name + [No message]) for consistent height and click mapping; got {}",
+            line_count
+        );
+    }
+
+    #[test]
+    fn test_chat_list_entry_with_empty_last_message_has_two_lines() {
+        use crate::components::search_tests::create_test_app_context;
+        use crate::tg::message_entry::MessageEntry;
+
+        let app_context = create_test_app_context();
+        let mut entry = ChatListEntry::new();
+        entry.set_chat_name("Pandúr Katinka".to_string());
+        // last_message present but with empty content (e.g. "joined Telegram" → backend sends empty message).
+        entry.set_last_message(MessageEntry::test_entry(1));
+
+        let text = entry.get_text_styled(&app_context);
+
+        let line_count = text.iter().count();
+        assert_eq!(
+            line_count, 2,
+            "Chat list entry with empty last message (e.g. joined Telegram) must have exactly 2 lines (name + [No message]); got {}",
+            line_count
+        );
     }
 
     fn setup_chats(window: &mut ChatListWindow, chat_names: &[&str]) {
@@ -682,6 +783,63 @@ mod tests {
         assert_eq!(
             window.sort_string, None,
             "Sort string should be cleared on exit"
+        );
+    }
+
+    #[test]
+    fn test_chat_list_left_click_when_not_focused_returns_none() {
+        use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+        use ratatui::layout::Rect;
+
+        let mut window = create_test_chat_list_window();
+        setup_chats(&mut window, &["Alice", "Bob"]);
+        window.focused = false;
+        window.last_list_area = Some(Rect::new(0, 0, 20, 10));
+
+        let mouse = MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 5,
+            row: 2,
+            modifiers: crossterm::event::KeyModifiers::empty(),
+        };
+        let result = window.handle_mouse_events(mouse).unwrap();
+
+        assert_eq!(
+            result,
+            None,
+            "Left click on chat list when not focused should not open a chat (focus first)"
+        );
+    }
+
+    #[test]
+    fn test_chat_list_left_click_on_item_when_focused_selects_and_returns_open() {
+        use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+        use ratatui::layout::Rect;
+
+        let mut window = create_test_chat_list_window();
+        setup_chats(&mut window, &["Alice", "Bob", "Charlie"]);
+        window.focused = true;
+        // List content: first item at row content_y = list_area.y+2 = 2; second at row 3.
+        window.last_list_area = Some(Rect::new(0, 0, 20, 10));
+        window.chat_list_state.select(Some(0));
+
+        let mouse = MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 5,
+            row: 3, // second visible row = index 1 (Bob); first item at row 2
+            modifiers: crossterm::event::KeyModifiers::empty(),
+        };
+        let result = window.handle_mouse_events(mouse).unwrap();
+
+        assert_eq!(
+            result,
+            Some(Action::ChatListOpen),
+            "Left click on item when focused should open that chat (as with Enter)"
+        );
+        assert_eq!(
+            window.chat_list_state.selected(),
+            Some(1),
+            "Clicked row (index 1) should be selected"
         );
     }
 }
