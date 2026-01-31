@@ -187,10 +187,7 @@ impl Component for SearchOverlay {
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Min(4),
-            ])
+            .constraints([Constraint::Length(3), Constraint::Min(4)])
             .split(overlay_rect);
 
         let block = Block::default()
@@ -201,7 +198,11 @@ impl Component for SearchOverlay {
 
         let query_text = format!("{}_", self.query);
         let query_para = Paragraph::new(query_text)
-            .block(Block::default().borders(Borders::ALL).title(" Query (Enter to search) "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Query (Enter to search) "),
+            )
             .style(self.app_context.style_chat());
         frame.render_widget(query_para, chunks[0]);
 
@@ -217,17 +218,18 @@ impl Component for SearchOverlay {
                     preview
                 };
                 ListItem::new(Line::from(vec![
-                    Span::styled(
-                        format!("[{}] ", ts_str),
-                        self.app_context.style_timestamp(),
-                    ),
+                    Span::styled(format!("[{}] ", ts_str), self.app_context.style_timestamp()),
                     Span::raw(preview),
                 ]))
             })
             .collect();
 
         let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title(" Results (Enter to jump) "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Results (Enter to jump) "),
+            )
             .style(self.app_context.style_chat())
             .highlight_style(self.app_context.style_item_selected())
             .repeat_highlight_symbol(true);

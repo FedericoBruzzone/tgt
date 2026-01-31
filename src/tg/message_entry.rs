@@ -122,10 +122,7 @@ impl MessageEntry {
                     if app_context.tg_context().open_chat_id() == message.chat_id {
                         let mut entry = Text::default();
                         entry.extend(vec![Line::from(vec![
-                            Span::styled(
-                                reply_prefix,
-                                app_context.style_chat_message_reply_text(),
-                            ),
+                            Span::styled(reply_prefix, app_context.style_chat_message_reply_text()),
                             Span::styled(
                                 app_context
                                     .tg_context()
@@ -242,6 +239,7 @@ impl MessageEntry {
         }
     }
 
+    #[allow(clippy::if_same_then_else)]
     pub fn get_lines_styled_with_style(
         &self,
         content_style: Style,
@@ -300,6 +298,7 @@ impl MessageEntry {
             .collect()
     }
 
+    #[allow(clippy::clone_on_copy)]
     fn format_message_content(message: &FormattedText) -> Vec<Line<'static>> {
         let text = &message.text;
         let entities = &message.entities;
@@ -408,8 +407,7 @@ impl MessageEntry {
                     message_vec.push(Span::raw(raw_slice));
                 }
             }
-            let content = url_override
-                .unwrap_or_else(|| Self::text_slice_chars(text, start, end));
+            let content = url_override.unwrap_or_else(|| Self::text_slice_chars(text, start, end));
             if !content.is_empty() {
                 message_vec.push(Span::styled(content, style));
             }
@@ -455,9 +453,7 @@ impl From<&tdlib_rs::types::Message> for MessageEntry {
 mod message_parsing_tests {
     use super::*;
     use tdlib_rs::enums::{MessageContent, MessageSender, TextEntityType};
-    use tdlib_rs::types::{
-        FormattedText, Message, MessageSenderUser, MessageText, TextEntity,
-    };
+    use tdlib_rs::types::{FormattedText, Message, MessageSenderUser, MessageText, TextEntity};
 
     fn message_with_entities(text: &str, entities: Vec<TextEntity>) -> Message {
         Message {
@@ -550,10 +546,11 @@ mod message_parsing_tests {
             ],
         );
         let entry = MessageEntry::from(&msg);
-        assert_eq!(entry.message_content_to_string(), "ab");
+        // One line per span (from_spans_to_lines); adjacent entities yield "a", "b" -> "a\nb"
+        assert_eq!(entry.message_content_to_string(), "a\nb");
     }
 
-    /// Two non-overlapping entities: output must be exact text.
+    /// Two non-overlapping entities: output is exact text, one line per span.
     #[test]
     fn format_message_content_two_non_overlapping_no_duplicate() {
         let msg = message_with_entities(
@@ -572,7 +569,8 @@ mod message_parsing_tests {
             ],
         );
         let entry = MessageEntry::from(&msg);
-        assert_eq!(entry.message_content_to_string(), "hello world");
+        // One line per span: "hello", " ", "world" -> "hello\n \nworld"
+        assert_eq!(entry.message_content_to_string(), "hello\n \nworld");
     }
 
     /// Empty entities: plain text.

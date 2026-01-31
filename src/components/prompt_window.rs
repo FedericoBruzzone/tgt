@@ -659,7 +659,7 @@ impl PromptWindow {
     }
     /// Current prompt mode (for tests).
     #[cfg(test)]
-    pub fn current_mode(&self) -> &Mode {
+    pub(crate) fn current_mode(&self) -> &Mode {
         &self.input.mode
     }
     /// Update the input area of the `PromptWindow`.
@@ -1011,7 +1011,11 @@ impl Component for PromptWindow {
             Mode::Edit(_) => "Editing message".into(),
             Mode::Reply(_) => {
                 let preview: String = self.app_context.tg_context().reply_message_text().clone();
-                let truncated = if preview.len() > 40 { format!("{}…", &preview[..39]) } else { preview };
+                let truncated = if preview.len() > 40 {
+                    format!("{}…", &preview[..39])
+                } else {
+                    preview
+                };
                 if truncated.is_empty() {
                     "Replying to message".into()
                 } else {

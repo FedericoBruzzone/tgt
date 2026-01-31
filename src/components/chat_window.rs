@@ -244,7 +244,6 @@ impl ChatWindow {
             }
         }
     }
-
 }
 
 /// Implement the `HandleFocus` trait for the `ChatWindow` struct.
@@ -267,7 +266,10 @@ impl Component for ChatWindow {
         Ok(())
     }
 
-    fn handle_mouse_events(&mut self, mouse: crossterm::event::MouseEvent) -> std::io::Result<Option<Action>> {
+    fn handle_mouse_events(
+        &mut self,
+        mouse: crossterm::event::MouseEvent,
+    ) -> std::io::Result<Option<Action>> {
         if !self.focused {
             return Ok(None);
         }
@@ -359,27 +361,30 @@ impl Component for ChatWindow {
             } else {
                 // Restore selection by message ID when possible
                 let selection_restored = selected_message_id.and_then(|id| {
-                self.message_list.iter().position(|m| m.id() == id).map(|idx| {
-                    self.message_list_state.select(Some(idx));
-                    id
-                })
-            });
-            // When we have no valid selection (e.g. just entered chat), jump to latest by ID.
-            // When list grew and we were at bottom (selected was newest), stay at bottom.
-            let at_bottom = selection_restored
-                .zip(self.app_context.tg_context().newest_message_id())
-                .map_or(false, |(sel_id, newest_id)| sel_id == newest_id);
-            let should_jump_to_latest = selection_restored.is_none()
-                || (at_bottom && prev_len < self.message_list.len());
-            if should_jump_to_latest && !self.message_list.is_empty() {
-                if let Some(newest_id) = self.app_context.tg_context().newest_message_id() {
-                    if let Some(new_idx) =
-                        self.message_list.iter().position(|m| m.id() == newest_id)
-                    {
-                        self.message_list_state.select(Some(new_idx));
+                    self.message_list
+                        .iter()
+                        .position(|m| m.id() == id)
+                        .map(|idx| {
+                            self.message_list_state.select(Some(idx));
+                            id
+                        })
+                });
+                // When we have no valid selection (e.g. just entered chat), jump to latest by ID.
+                // When list grew and we were at bottom (selected was newest), stay at bottom.
+                let at_bottom = selection_restored
+                    .zip(self.app_context.tg_context().newest_message_id())
+                    .is_some_and(|(sel_id, newest_id)| sel_id == newest_id);
+                let should_jump_to_latest = selection_restored.is_none()
+                    || (at_bottom && prev_len < self.message_list.len());
+                if should_jump_to_latest && !self.message_list.is_empty() {
+                    if let Some(newest_id) = self.app_context.tg_context().newest_message_id() {
+                        if let Some(new_idx) =
+                            self.message_list.iter().position(|m| m.id() == newest_id)
+                        {
+                            self.message_list_state.select(Some(new_idx));
+                        }
                     }
                 }
-            }
             }
         }
 
@@ -555,6 +560,7 @@ mod tests {
             create_mock_message(3, "Three"),
         ];
         setup_messages(&mut window, messages);
+        window.focus(); // Key events only handled when focused
         let modifiers = Modifiers::from(KeyModifiers::empty());
         window.update(Action::Key(KeyCode::Down, modifiers.clone()));
         window.update(Action::Key(KeyCode::Up, modifiers.clone()));
@@ -585,7 +591,8 @@ mod tests {
         setup_messages(&mut window, messages);
         window.message_list_state.select(Some(0));
         let selected_before = window.message_list_state.selected();
-        let selected_id_before = selected_before.and_then(|i| window.message_list.get(i).map(|m| m.id()));
+        let selected_id_before =
+            selected_before.and_then(|i| window.message_list.get(i).map(|m| m.id()));
         window.update(Action::ChatWindowEdit);
         // Selection unchanged; no EditMessage is sent (we can't easily assert no event without mock event_tx).
         assert_eq!(window.message_list_state.selected(), selected_before);

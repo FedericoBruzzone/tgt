@@ -340,7 +340,10 @@ impl Component for ChatListWindow {
         Ok(())
     }
 
-    fn handle_mouse_events(&mut self, mouse: crossterm::event::MouseEvent) -> std::io::Result<Option<Action>> {
+    fn handle_mouse_events(
+        &mut self,
+        mouse: crossterm::event::MouseEvent,
+    ) -> std::io::Result<Option<Action>> {
         match mouse.kind {
             MouseEventKind::ScrollDown if self.focused => Ok(Some(Action::ChatListNext)),
             MouseEventKind::ScrollUp if self.focused => Ok(Some(Action::ChatListPrevious)),
@@ -805,8 +808,7 @@ mod tests {
         let result = window.handle_mouse_events(mouse).unwrap();
 
         assert_eq!(
-            result,
-            None,
+            result, None,
             "Left click on chat list when not focused should not open a chat (focus first)"
         );
     }

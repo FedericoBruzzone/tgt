@@ -5,8 +5,8 @@ use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib_rs::enums::{
-    self, AuthorizationState, ChatList, FoundChatMessages, InputMessageContent, InputMessageReplyTo,
-    LogStream, Messages, OptionValue, SearchMessagesFilter, Update, User,
+    self, AuthorizationState, ChatList, FoundChatMessages, InputMessageContent,
+    InputMessageReplyTo, LogStream, Messages, OptionValue, SearchMessagesFilter, Update, User,
 };
 use tdlib_rs::functions;
 use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
