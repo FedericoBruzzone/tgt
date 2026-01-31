@@ -7,7 +7,7 @@ use crate::{
     tg::message_entry::MessageEntry,
 };
 use arboard::Clipboard;
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, MouseEventKind};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     symbols::{
@@ -247,6 +247,17 @@ impl Component for ChatWindow {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.action_tx = Some(tx);
         Ok(())
+    }
+
+    fn handle_mouse_events(&mut self, mouse: crossterm::event::MouseEvent) -> std::io::Result<Option<Action>> {
+        if !self.focused {
+            return Ok(None);
+        }
+        match mouse.kind {
+            MouseEventKind::ScrollDown => Ok(Some(Action::ChatWindowPrevious)),
+            MouseEventKind::ScrollUp => Ok(Some(Action::ChatWindowNext)),
+            _ => Ok(None),
+        }
     }
 
     fn update(&mut self, action: Action) {

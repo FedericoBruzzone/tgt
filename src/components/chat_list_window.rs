@@ -4,7 +4,7 @@ use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
 use crate::tg::message_entry::MessageEntry;
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, MouseEventKind};
 use nucleo_matcher::{Matcher, Utf32Str};
 use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::symbols::border::PLAIN;
@@ -313,6 +313,17 @@ impl Component for ChatListWindow {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.command_tx = Some(tx.clone());
         Ok(())
+    }
+
+    fn handle_mouse_events(&mut self, mouse: crossterm::event::MouseEvent) -> std::io::Result<Option<Action>> {
+        if !self.focused {
+            return Ok(None);
+        }
+        match mouse.kind {
+            MouseEventKind::ScrollDown => Ok(Some(Action::ChatListNext)),
+            MouseEventKind::ScrollUp => Ok(Some(Action::ChatListPrevious)),
+            _ => Ok(None),
+        }
     }
 
     fn update(&mut self, action: Action) {
