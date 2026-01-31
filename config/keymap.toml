@@ -40,18 +40,10 @@ keymap = [
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
-# When the chat list is focused, the chat list key bindings will be active.
+# When the chat list is focused, core_window bindings apply too (e.g. Alt+1/2/3, Esc).
+# Only list bindings specific to the chat list here.
 [chat_list]
 keymap = [
-  # Focus navigation (same as core_window so they work when chat list is focused)
-  { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
-  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
-  { keys = ["alt+2"], command = "focus_chat", description = "Focus the chat"},
-  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
-  { keys = ["alt+3"], command = "focus_prompt", description = "Focus the prompt"},
-  { keys = ["alt+down"], command = "focus_prompt", description = "Focus the prompt"},
-  { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
-  { keys = ["alt+up"], command = "unfocus_component", description = "Unfocus the current component"},
   # Select the next chat
   { keys = ["down"], command = "chat_list_next", description = "Select the next chat"},
   # Select the previous chat
@@ -69,18 +61,9 @@ keymap = [
 ]
 
 # The chat key bindings are only usable in the chat component.
-# When the chat is focused, the chat key bindings will be active.
+# When the chat is focused, core_window bindings apply too. Only list chat-specific bindings here.
 [chat]
 keymap = [
-  # Focus navigation (same as core_window so they work when chat is focused)
-  { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
-  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
-  { keys = ["alt+2"], command = "focus_chat", description = "Focus the chat"},
-  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
-  { keys = ["alt+3"], command = "focus_prompt", description = "Focus the prompt"},
-  { keys = ["alt+down"], command = "focus_prompt", description = "Focus the prompt"},
-  { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
-  { keys = ["alt+up"], command = "unfocus_component", description = "Unfocus the current component"},
   # Select the next message (older, toward top of list)
   { keys = ["up"], command = "chat_window_next", description = "Select the next message (up)"},
   # Select the previous message (newer, toward bottom of list)
@@ -93,7 +76,7 @@ keymap = [
   { keys = ["D"], command = "chat_window_delete_for_me", description = "Delete the selected message for 'me'"},
   # Copy the selected message
   { keys = ["y"], command = "chat_window_copy", description = "Copy the selected message"},
-  # Copy the selected message
+  # Copy the selected message (overrides core_window try_quit when chat focused)
   { keys = ["ctrl+c"], command = "chat_window_copy", description = "Copy the selected message"},
   # Edit the selected message
   { keys = ["e"], command = "chat_window_edit", description = "Edit the selected message"},
@@ -106,18 +89,11 @@ keymap = [
 ]
 
 # The prompt key bindings are only usable in the prompt component.
-# When the prompt is focused, the prompt key bindings will be active.
-# Note: Alt+R is not bound here so the prompt can handle it (open message search overlay).
+# When the prompt is focused, core_window bindings apply too (e.g. Alt+1/2/3, Esc).
+# Only list prompt-specific bindings here.
 [prompt]
 keymap = [
-  # Focus navigation (same as core_window so they work when prompt is focused)
-  { keys = ["alt+1"], command = "focus_chat_list", description = "Focus the chat list"},
-  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
-  { keys = ["alt+2"], command = "focus_chat", description = "Focus the chat"},
-  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
-  { keys = ["alt+3"], command = "focus_prompt", description = "Focus the prompt"},
-  { keys = ["alt+down"], command = "focus_prompt", description = "Focus the prompt"},
-  { keys = ["esc"], command = "unfocus_component", description = "Unfocus the current component"},
-  { keys = ["alt+up"], command = "unfocus_component", description = "Unfocus the current component"},
+  # Open message search overlay (same as Alt+R in chat section)
+  { keys = ["alt+r"], command = "chat_window_search", description = "Open message search overlay"},
 ]
 
