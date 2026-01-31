@@ -320,6 +320,13 @@ impl Input {
         self.correct_prompt_size = 0;
         self.cursor = (0, 0);
     }
+    /// Clear the input text and reset cursor and prompt size so the state is
+    /// consistent (avoids cursor out of bounds when text is cleared).
+    fn clear_and_reset_cursor(&mut self) {
+        self.text = vec![vec![]];
+        self.cursor = (0, 0);
+        self.correct_prompt_size = 0;
+    }
     /// Set the prompt size to one.
     /// It is used to set the prompt size to one when the prompt window is
     /// unfocused.
@@ -678,22 +685,26 @@ impl HandleFocus for PromptWindow {
     /// Set the `focused` flag for the `PromptWindow`.
     fn unfocus(&mut self) {
         self.focused = false;
-        // Clear search when unfocusing
         match self.input.mode {
             Mode::SearchChatList => {
                 if let Some(tx) = self.input.action_tx.as_ref() {
                     let _ = tx.send(Action::ChatListRestoreSort);
                 }
+                self.input.mode = Mode::Normal;
+                self.input.clear_and_reset_cursor();
             }
             Mode::SearchChatMessages => {
                 if let Some(tx) = self.input.action_tx.as_ref() {
                     let _ = tx.send(Action::ChatWindowRestoreSort);
                 }
+                self.input.mode = Mode::Normal;
+                self.input.clear_and_reset_cursor();
             }
-            _ => {}
+            _ => {
+                // Normal / Edit / Reply: preserve draft; only reset mode if needed
+                self.input.mode = Mode::Normal;
+            }
         }
-        self.input.mode = Mode::Normal;
-        self.input.text = vec![vec![]];
     }
 }
 
@@ -716,7 +727,7 @@ impl Component for PromptWindow {
                             let _ = tx.send(Action::FocusComponent(ComponentName::Chat));
                         }
                         self.input.mode = Mode::Normal;
-                        self.input.text = vec![vec![]];
+                        self.input.clear_and_reset_cursor();
                     }
                 }
                 (KeyCode::Home, ..)
