@@ -26,4 +26,7 @@ pub struct AppRaw {
     /// A boolean flag that represents whether the API_HASH should be taken from
     /// the Telegram configuration or from environment variables `API_HASH`.
     pub take_api_hash_from_telegram_config: Option<bool>,
+    /// Use emoji for message status icons (edited, reply, sent, seen). When false (default),
+    /// use ASCII-style indicators: [mod], <--, [ ], [✓], [o o].
+    pub use_emoji_icons: Option<bool>,
 }

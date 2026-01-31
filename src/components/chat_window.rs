@@ -361,7 +361,8 @@ impl Component for ChatWindow {
             .style(self.app_context.style_chat());
         let list_area = chat_layout[1];
         let list_inner = block.inner(list_area);
-        let wrap_width = list_inner.width as i32;
+        // Leave margin so wrapped lines and wide chars don't overflow the right edge
+        let wrap_width = list_inner.width.saturating_sub(2) as i32;
 
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;

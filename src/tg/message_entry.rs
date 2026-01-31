@@ -5,6 +5,7 @@ use ratatui::text::{Line, Span, Text};
 use std::time::{Duration, UNIX_EPOCH};
 use tdlib_rs::enums::{MessageContent, MessageReplyTo, MessageSender};
 use tdlib_rs::types::FormattedText;
+use unicode_width::UnicodeWidthChar;
 
 use super::td_enums::{TdMessageReplyTo, TdMessageSender};
 
@@ -97,6 +98,12 @@ impl MessageEntry {
         content_style: Style,
         wrap_width: i32,
     ) -> Text<'_> {
+        let use_emoji = app_context.app_config().use_emoji_icons;
+        let (reply_prefix, edited_str, sent_str, seen_str) = if use_emoji {
+            ("↩️ Reply to: ", "✏️", "📤", "👀")
+        } else {
+            ("<-- Reply to: ", "[edited]", "[✓]", "[o o]")
+        };
         let (message_reply_name, message_reply_content) = if myself {
             (
                 app_context.style_chat_message_myself_reply_name(),
@@ -116,7 +123,7 @@ impl MessageEntry {
                         let mut entry = Text::default();
                         entry.extend(vec![Line::from(vec![
                             Span::styled(
-                                "↩️ Reply to: ",
+                                reply_prefix,
                                 app_context.style_chat_message_reply_text(),
                             ),
                             Span::styled(
@@ -149,7 +156,7 @@ impl MessageEntry {
                 TdMessageReplyTo::Story(_) => {
                     let mut entry = Text::default();
                     entry.extend(vec![Line::from(vec![
-                        Span::styled("↩️ Reply to: ", app_context.style_chat_message_reply_text()),
+                        Span::styled(reply_prefix, app_context.style_chat_message_reply_text()),
                         Span::styled("Story", message_reply_name),
                     ])]);
                     Some(entry)
@@ -158,6 +165,12 @@ impl MessageEntry {
             None => None,
         };
 
+        let edited_display = if self.is_edited { edited_str } else { "" };
+        let status_display = match (myself, is_unread) {
+            (true, true) => sent_str,
+            (true, false) => seen_str,
+            (false, _) => "",
+        };
         let mut entry = Text::default();
         entry.extend(vec![Line::from(vec![
             Span::styled(
@@ -174,18 +187,9 @@ impl MessageEntry {
                 name_style,
             ),
             Span::raw(" "),
-            Span::raw(if self.is_edited { "✏️" } else { "" }),
+            Span::raw(edited_display),
             Span::raw(" "),
-            Span::raw(match myself {
-                true => {
-                    if is_unread {
-                        "📤"
-                    } else {
-                        "👀"
-                    }
-                }
-                false => "",
-            }),
+            Span::raw(status_display),
             Span::raw(" "),
             self.timestamp.get_span_styled(app_context),
         ])]);
@@ -259,27 +263,30 @@ impl MessageEntry {
                 })
                 .collect::<Vec<Line>>()
         } else {
-            // Wrap the text
+            // Wrap by display width (so emoji/CJK don't overflow)
+            let wrap = wrap_width.max(1) as usize;
             let mut lines = Vec::new();
             let mut current_line = Line::default();
-            let mut current_line_length = 0;
-            // for span in self.message_content.iter().flat_map(|l| l.iter()) {
+            let mut current_line_width = 0usize;
             for span in self.message_content.iter().flat_map(|l| l.iter()) {
                 for c in span.content.chars() {
-                    if c == ' ' && current_line_length >= wrap_width {
-                        lines.push(current_line);
-                        current_line = Line::default();
-                        current_line_length = 0;
+                    let w = c.width().unwrap_or(1);
+                    if c == ' ' && current_line_width >= wrap {
+                        lines.push(std::mem::take(&mut current_line));
+                        current_line_width = 0;
+                    } else if current_line_width + w > wrap && current_line_width > 0 {
+                        lines.push(std::mem::take(&mut current_line));
+                        current_line_width = 0;
                     }
                     current_line.spans.push(Span::styled(
                         c.to_string(),
                         Self::merge_two_style(span.style, content_style),
                     ));
-                    current_line_length += 1;
+                    current_line_width += w;
                 }
+            }
+            if !current_line.spans.is_empty() {
                 lines.push(current_line);
-                current_line = Line::default();
-                current_line_length = 0;
             }
             lines
         }

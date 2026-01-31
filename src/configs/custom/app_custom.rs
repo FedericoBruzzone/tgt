@@ -25,6 +25,9 @@ pub struct AppConfig {
     pub take_api_id_from_telegram_config: bool,
     /// Take the API HASH from the Telegram configuration.
     pub take_api_hash_from_telegram_config: bool,
+    /// Use emoji for message status icons (edited, reply, sent, seen). When false (default),
+    /// use ASCII-style indicators: [mod], <--, [✓], [o o].
+    pub use_emoji_icons: bool,
 }
 /// The application configuration implementation.
 impl AppConfig {
@@ -181,6 +184,9 @@ impl ConfigFile for AppConfig {
                 {
                     self.take_api_hash_from_telegram_config = take_api_hash_from_telegram_config;
                 }
+                if let Some(use_emoji_icons) = other.use_emoji_icons {
+                    self.use_emoji_icons = use_emoji_icons;
+                }
                 self.clone()
             }
         }
@@ -206,6 +212,7 @@ impl From<AppRaw> for AppConfig {
             theme_filename: raw.theme_filename.unwrap(),
             take_api_id_from_telegram_config: raw.take_api_id_from_telegram_config.unwrap(),
             take_api_hash_from_telegram_config: raw.take_api_hash_from_telegram_config.unwrap(),
+            use_emoji_icons: raw.use_emoji_icons.unwrap_or(false),
         }
     }
 }
@@ -224,6 +231,7 @@ impl From<AppConfig> for AppRaw {
             theme_filename: Some(config.theme_filename),
             take_api_id_from_telegram_config: Some(config.take_api_id_from_telegram_config),
             take_api_hash_from_telegram_config: Some(config.take_api_hash_from_telegram_config),
+            use_emoji_icons: Some(config.use_emoji_icons),
         }
     }
 }
@@ -266,6 +274,7 @@ mod tests {
             theme_filename: Some("test".to_string()),
             take_api_id_from_telegram_config: Some(true),
             take_api_hash_from_telegram_config: Some(true),
+            use_emoji_icons: None,
         };
         let app_config = AppConfig::from(app_raw);
         assert!(app_config.mouse_support);
@@ -289,6 +298,7 @@ mod tests {
             theme_filename: Some("test".to_string()),
             take_api_id_from_telegram_config: Some(true),
             take_api_hash_from_telegram_config: Some(true),
+            use_emoji_icons: None,
         });
         let app_raw = AppRaw {
             mouse_support: Some(false),
@@ -300,6 +310,7 @@ mod tests {
             theme_filename: None,
             take_api_id_from_telegram_config: None,
             take_api_hash_from_telegram_config: None,
+            use_emoji_icons: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(!app_config.mouse_support);
@@ -329,6 +340,7 @@ mod tests {
             theme_filename: None,
             take_api_id_from_telegram_config: None,
             take_api_hash_from_telegram_config: None,
+            use_emoji_icons: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(app_config.mouse_support);
