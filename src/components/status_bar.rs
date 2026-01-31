@@ -29,6 +29,8 @@ pub struct StatusBar {
     terminal_area: Rect,
     /// The last key pressed.
     last_key: Event,
+    /// Optional short status message (e.g. "Message yanked"); cleared on next key press.
+    status_message: Option<String>,
 }
 /// Implementation of `StatusBar` struct.
 impl StatusBar {
@@ -45,6 +47,7 @@ impl StatusBar {
         let terminal_area = Rect::default();
         let last_key = Event::Unknown;
         let focused = false;
+        let status_message = None;
 
         StatusBar {
             app_context,
@@ -53,6 +56,7 @@ impl StatusBar {
             terminal_area,
             last_key,
             focused,
+            status_message,
         }
     }
     /// Set the name of the `StatusBar`.
@@ -93,7 +97,13 @@ impl Component for StatusBar {
             Action::UpdateArea(area) => {
                 self.terminal_area = area;
             }
-            Action::Key(key, modifiers) => self.last_key = Event::Key(key, modifiers.into()),
+            Action::Key(key, modifiers) => {
+                self.last_key = Event::Key(key, modifiers.into());
+                self.status_message = None;
+            }
+            Action::StatusMessage(msg) => {
+                self.status_message = Some(msg);
+            }
             _ => {}
         }
     }
@@ -104,7 +114,7 @@ impl Component for StatusBar {
             .tg_context()
             .name_of_open_chat_id()
             .unwrap_or_default();
-        let text = vec![Line::from(vec![
+        let mut spans: Vec<Span<'_>> = vec![
             Span::styled(
                 "Press ",
                 self.app_context.style_status_bar_message_quit_text(),
@@ -119,7 +129,6 @@ impl Component for StatusBar {
                 "to quit",
                 self.app_context.style_status_bar_message_quit_text(),
             ),
-            //
             Span::raw("     "),
             Span::styled(
                 "Help: ",
@@ -129,7 +138,6 @@ impl Component for StatusBar {
                 "alt+F1",
                 self.app_context.style_status_bar_message_quit_key(),
             ),
-            //
             Span::raw("     "),
             Span::styled(
                 "Open chat: ",
@@ -139,7 +147,6 @@ impl Component for StatusBar {
                 selected_chat,
                 self.app_context.style_status_bar_open_chat_name(),
             ),
-            //
             Span::raw("     "),
             Span::styled(
                 "Key pressed: ",
@@ -149,8 +156,16 @@ impl Component for StatusBar {
                 self.last_key.to_string(),
                 self.app_context.style_status_bar_press_key_key(),
             ),
-            //
             Span::raw("     "),
+        ];
+        if let Some(ref msg) = self.status_message {
+            spans.push(Span::styled(
+                msg.as_str(),
+                self.app_context.style_status_bar_message_quit_key(),
+            ));
+            spans.push(Span::raw("     "));
+        }
+        spans.extend([
             Span::styled("Size: ", self.app_context.style_status_bar_size_info_text()),
             Span::styled(
                 self.terminal_area.width.to_string(),
@@ -161,7 +176,8 @@ impl Component for StatusBar {
                 self.terminal_area.height.to_string(),
                 self.app_context.style_status_bar_size_info_numbers(),
             ),
-        ])];
+        ]);
+        let text = vec![Line::from(spans)];
 
         let paragraph = Paragraph::new(text)
             .block(Block::new().title(self.name.as_str()).borders(Borders::ALL))

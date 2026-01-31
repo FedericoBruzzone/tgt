@@ -11,3 +11,6 @@ result
 .direnv
 .envrc
 .DS_Store
+
+# Developer docs (planning / specs, not for repo)
+/devdocs/

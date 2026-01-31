@@ -32,6 +32,9 @@ take_api_id_from_telegram_config = true
 # `take_api_hash_from_telegram_config` enables taking the API_HASH from the Telegram configuration file
 # or from the environment variable `API_HASH`.
 take_api_hash_from_telegram_config = true
+# `use_emoji_icons` uses emoji for message status (edited, reply, sent, seen). When false (default),
+# uses ASCII-style indicators: [mod] edited, <-- reply, [ ] sent, [✓] seen.
+use_emoji_icons = false
 ```
 
 ## Custom configuration

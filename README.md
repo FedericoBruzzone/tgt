@@ -176,7 +176,7 @@ Note that `tgt` is fully customizable.
 For more information about the **configuration**, please look at [here](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration).
 The configuration files are manyfold.
 
-1. [`app.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/app.toml): contains general configurations about the application (see [`app.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/app.toml.md) for explanations about each field).
+1. [`app.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/app.toml): contains general configurations about the application (see [`app.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/app.toml.md) for explanations about each field). Message status icons (edited, reply, sent, seen) can be shown as **ASCII-style** (default) or **emoji**: set `use_emoji_icons = true` in `app.toml` to use emoji (✏️ ↩️ 📤 👀); when `false` (default), the app uses `[mod]` edited, `<-- Reply to` reply, `[✓]` sent, `[o o]` seen.
 2. [`keymap.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/keymap.toml): contains the keybindings used in the application (see [`keymap.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/keymap.toml.md) for explanations about each field).
 3. [`logger.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/logger.toml): contains the logging configurations (see [`logger.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/logger.toml.md) for explanations about each field).
 4. [`telegram.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/telegram.toml): contains the Telegram API and TDLib configurations (see [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) for explanations about each field).
@@ -202,6 +202,10 @@ alt+3 | alt+down:  Focus on the prompt
 alt+h | alt+l:     Resize the chat list
 alt+j | alt+k:     Resize the prompt
 alt+n:             Toggle chat list
+alt+r:             Start chat list search (when nothing is selected)
+alt+c:             Restore the default ordering of the chat list
+alt+f1:            Show command guide with all keybindings
+alt+t:             Show theme selector
 q | ctrl+c:        Quit
 ```
 
@@ -211,6 +215,8 @@ _Chat List_
 up | down:     Move selection
 enter | right: Open the chat
 left:          Unselect chat
+alt+r:         Focus on prompt to start searching
+alt+c:         Restore the default ordering of the chat list
 
 esc:               Return to the "None" state
 alt+1 | alt+left:  Focus on the chat list
@@ -228,6 +234,8 @@ e:         Edit the message
 r:         Reply to the message
 d:         Delete the message for everyone
 D:         Delete the message for me
+alt+r:     Focus on prompt to search messages in the chat window
+alt+c:     Restore the default ordering of messages
 
 esc:               Return to the "None" state
 alt+1 | alt+left:  Focus on the chat list
@@ -251,7 +259,7 @@ ctrl+alt+right | ctrl+e | end:    Move the cursor to the end of the line (also c
 shift+left:                       Move the cursor left and select the text
 shift+right:                      Move the cursor right and select the text
 shift+up:                         Move the cursor up and select the text
-shift+down:                       Move the cursor down and select the text
+shift+down:                        Move the cursor down and select the text
 shift+ctrl+left:                  Select the text before the cursor
 shift+ctrl+right:                 Select the text after the cursor
 
@@ -264,6 +272,13 @@ esc:               Return to the "None" state
 alt+1 | alt+left:  Focus on the chat list
 alt+2 | alt+right: Focus on the chat
 alt+3 | alt+down:  Focus on the prompt
+```
+
+_Mouse_
+
+```bash
+Scroll:   In chat list or chat to move selection or messages
+Chat list: First click focuses the list, second click on an item opens that chat
 ```
 
 ## Contributing

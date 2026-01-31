@@ -9,6 +9,7 @@ use crate::{
         command_guide::CommandGuide,
         component_traits::{Component, HandleFocus},
         prompt_window::PromptWindow,
+        search_overlay::SearchOverlay,
         theme_selector::ThemeSelector,
     },
     components::{MAX_CHAT_LIST_SIZE, MAX_PROMPT_SIZE, MIN_CHAT_LIST_SIZE, MIN_PROMPT_SIZE},
@@ -16,6 +17,7 @@ use crate::{
     event::Event,
     theme_switcher::{discover_available_themes, ThemeSwitcher},
 };
+use crossterm::event::{MouseButton, MouseEventKind};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::{collections::HashMap, io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -54,6 +56,10 @@ pub struct CoreWindow {
     show_command_guide: bool,
     /// Indicates whether the theme selector should be shown.
     show_theme_selector: bool,
+    /// Indicates whether the search overlay (server-side chat search) should be shown.
+    show_search_overlay: bool,
+    /// Last known screen areas for focusable sections (chat list, chat, prompt) for click-to-focus.
+    last_focusable_areas: HashMap<ComponentName, Rect>,
 }
 
 impl CoreWindow {
@@ -102,6 +108,12 @@ impl CoreWindow {
                     .with_name(ComponentName::ThemeSelector.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::SearchOverlay,
+                SearchOverlay::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::SearchOverlay.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -118,6 +130,8 @@ impl CoreWindow {
         let show_reply_message = false;
         let show_command_guide = false;
         let show_theme_selector = false;
+        let show_search_overlay = false;
+        let last_focusable_areas = HashMap::new();
 
         CoreWindow {
             app_context,
@@ -133,6 +147,8 @@ impl CoreWindow {
             show_reply_message,
             show_command_guide,
             show_theme_selector,
+            show_search_overlay,
+            last_focusable_areas,
         }
     }
     /// Set the name of the `CoreWindow`.
@@ -212,9 +228,41 @@ impl Component for CoreWindow {
     }
 
     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>, AppError<Action>> {
+        let Some(ev) = event else {
+            return Ok(None);
+        };
+        // Forward mouse events to the focused component (scroll wheel, click, etc.)
+        if let Event::Mouse(mouse) = ev {
+            // Left click: focus the section under the cursor (chat list, chat window, prompt)
+            if let MouseEventKind::Down(MouseButton::Left) = mouse.kind {
+                let col = mouse.column;
+                let row = mouse.row;
+                for name in [
+                    ComponentName::ChatList,
+                    ComponentName::Chat,
+                    ComponentName::Prompt,
+                ] {
+                    if let Some(rect) = self.last_focusable_areas.get(&name) {
+                        let in_rect = col >= rect.x
+                            && col < rect.x + rect.width
+                            && row >= rect.y
+                            && row < rect.y + rect.height;
+                        if in_rect && self.component_focused != Some(name) {
+                            return Ok(Some(Action::FocusComponent(name)));
+                        }
+                    }
+                }
+            }
+            if let Some(name) = self.component_focused {
+                if let Some(component) = self.components.get_mut(&name) {
+                    return component.handle_mouse_events(mouse).map_err(AppError::from);
+                }
+            }
+            return Ok(None);
+        }
         let binding = self.app_context.keymap_config();
         let map = binding.get_map_of(self.component_focused);
-        if let Some(action_binding) = map.get(&event.unwrap()) {
+        if let Some(action_binding) = map.get(&ev) {
             match action_binding {
                 ActionBinding::Single { action, .. } => {
                     return Ok(Some(action.clone()));
@@ -232,6 +280,8 @@ impl Component for CoreWindow {
         match action {
             Action::FocusComponent(component_name) => {
                 self.component_focused = Some(component_name);
+                self.app_context
+                    .set_focused_component(self.component_focused);
                 self.components
                     .get_mut(&component_name)
                     .unwrap_or_else(|| panic!("Failed to get component: {component_name}"))
@@ -243,6 +293,7 @@ impl Component for CoreWindow {
             }
             Action::UnfocusComponent => {
                 self.component_focused = None;
+                self.app_context.set_focused_component(None);
                 self.show_reply_message = false;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
@@ -273,10 +324,17 @@ impl Component for CoreWindow {
                 }
             }
             Action::ShowChatWindowReply => {
-                self.show_reply_message = true;
+                // Reply uses the prompt only (same as edit). Do not set show_reply_message.
+                // Dispatch to Chat so reply_selected() runs and sends FocusComponent(Prompt) + ReplyMessage.
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.update(action.clone());
+                }
             }
             Action::HideChatWindowReply => {
                 self.show_reply_message = false;
+                self.app_context
+                    .tg_context()
+                    .set_reply_message(-1, String::new());
             }
             Action::ShowCommandGuide => {
                 // Toggle command guide: if already visible, hide it; otherwise show it
@@ -349,10 +407,7 @@ impl Component for CoreWindow {
 
                 // Apply the next theme
                 if ThemeSwitcher::apply_theme(&self.app_context, next_theme).is_ok() {
-                    // Trigger a redraw after theme change
-                    if let Some(tx) = self.action_tx.as_ref() {
-                        let _ = tx.send(Action::Render);
-                    }
+                    self.app_context.mark_dirty();
                 } else {
                     tracing::error!("Failed to switch theme");
                 }
@@ -360,15 +415,20 @@ impl Component for CoreWindow {
             Action::SwitchThemeTo(theme_name) => {
                 // Apply the specified theme directly using static method
                 if ThemeSwitcher::apply_theme(&self.app_context, &theme_name).is_ok() {
-                    // Trigger a redraw after theme change
-                    if let Some(tx) = self.action_tx.as_ref() {
-                        let _ = tx.send(Action::Render);
-                    }
+                    self.app_context.mark_dirty();
                 } else {
                     tracing::error!("Failed to switch theme to {}", theme_name);
                 }
             }
             Action::Key(key_code, modifiers) => {
+                // If search overlay is visible, send keys to it
+                if self.show_search_overlay {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
+                    {
+                        component.update(Action::Key(key_code, modifiers.clone()));
+                    }
+                    return;
+                }
                 // If theme selector is visible, send keys to it
                 if self.show_theme_selector {
                     if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
@@ -411,26 +471,30 @@ impl Component for CoreWindow {
                 // Don't pass action to focused component again below
             }
             Action::ChatListSearch => {
-                // Always activate search if ChatList is focused, nothing is focused, or Chat is focused
-                // ChatWindow will handle switching from its search mode to ChatList search
+                // If search overlay is open, close it first then focus ChatList
+                if self.show_search_overlay {
+                    self.show_search_overlay = false;
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
+                    {
+                        component.update(Action::CloseSearchOverlay);
+                        component.unfocus();
+                    }
+                }
+                // Activate ChatList search when ChatList is focused, nothing focused, or Chat focused
                 let should_activate_search = match self.component_focused {
-                    None => true,                          // No component focused - activate search
-                    Some(ComponentName::ChatList) => true, // ChatList focused - activate search
-                    Some(ComponentName::Chat) => true, // Chat focused - allow switching to ChatList search
-                    Some(ComponentName::Prompt) => false, // Prompt focused - don't activate
-                    _ => false,                        // Other components - don't activate
+                    None => true,
+                    Some(ComponentName::ChatList) => true,
+                    Some(ComponentName::Chat) => true,
+                    Some(ComponentName::SearchOverlay) => true, // switching from overlay to ChatList search
+                    Some(ComponentName::Prompt) => false,
+                    _ => false,
                 };
 
                 if should_activate_search {
-                    // First, if ChatWindow is focused, let it handle the switch (it will stop search if in search mode)
-                    if let Some(ComponentName::Chat) = self.component_focused {
-                        if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
-                            component.update(action.clone());
-                        }
-                    }
-
                     // Focus ChatList and activate search mode
                     self.component_focused = Some(ComponentName::ChatList);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
                     self.components
                         .get_mut(&ComponentName::ChatList)
                         .unwrap_or_else(|| {
@@ -448,19 +512,45 @@ impl Component for CoreWindow {
                 }
             }
             Action::ChatWindowSearch => {
-                // Focus Chat and activate search mode
-                self.component_focused = Some(ComponentName::Chat);
+                // Show server-side search overlay and focus it
+                self.show_search_overlay = true;
+                if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    component.update(Action::ShowSearchOverlay);
+                    component.focus();
+                }
+                self.component_focused = Some(ComponentName::SearchOverlay);
+                self.app_context
+                    .set_focused_component(self.component_focused);
                 self.components
-                    .get_mut(&ComponentName::Chat)
-                    .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::Chat))
-                    .focus();
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &ComponentName::SearchOverlay)
+                    .for_each(|(_, component)| component.unfocus());
+            }
+            Action::CloseSearchOverlay => {
+                self.show_search_overlay = false;
+                if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    component.update(Action::CloseSearchOverlay);
+                    component.unfocus();
+                }
+                // Refocus Chat after closing search
+                self.component_focused = Some(ComponentName::Chat);
+                self.app_context
+                    .set_focused_component(self.component_focused);
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.focus();
+                }
                 self.components
                     .iter_mut()
                     .filter(|(name, _)| *name != &ComponentName::Chat)
                     .for_each(|(_, component)| component.unfocus());
-                // Activate search mode
-                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
-                    component.update(action.clone());
+            }
+            Action::SearchResults(_) => {
+                // Propagate to SearchOverlay when visible
+                if self.show_search_overlay {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
+                    {
+                        component.update(action.clone());
+                    }
                 }
             }
             Action::ChatListSortWithString(_) => {
@@ -543,11 +633,6 @@ impl Component for CoreWindow {
             ])
             .split(area);
 
-        self.components
-            .get_mut(&ComponentName::ChatList)
-            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
-            .draw(frame, core_layout[0])?;
-
         let sub_core_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -562,6 +647,19 @@ impl Component for CoreWindow {
                 Constraint::Length(self.size_prompt),
             ])
             .split(core_layout[1]);
+
+        // Store areas for click-to-focus (chat list, chat window, prompt)
+        self.last_focusable_areas
+            .insert(ComponentName::ChatList, core_layout[0]);
+        self.last_focusable_areas
+            .insert(ComponentName::Chat, sub_core_layout[0]);
+        self.last_focusable_areas
+            .insert(ComponentName::Prompt, sub_core_layout[2]);
+
+        self.components
+            .get_mut(&ComponentName::ChatList)
+            .unwrap_or_else(|| panic!("Failed to get component: {}", ComponentName::ChatList))
+            .draw(frame, core_layout[0])?;
 
         self.components
             .get_mut(&ComponentName::Chat)
@@ -600,6 +698,15 @@ impl Component for CoreWindow {
                 .draw(frame, area)?;
         }
 
+        if self.show_search_overlay {
+            self.components
+                .get_mut(&ComponentName::SearchOverlay)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", ComponentName::SearchOverlay)
+                })
+                .draw(frame, area)?;
+        }
+
         Ok(())
     }
 }
@@ -607,7 +714,7 @@ impl Component for CoreWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{action::Action, components::search_tests::create_test_app_context};
+    use crate::{action::Action, components::search_tests::create_test_app_context, event::Event};
 
     fn create_test_core_window() -> CoreWindow {
         let app_context = create_test_app_context();
@@ -655,12 +762,17 @@ mod tests {
             component.focus();
         }
 
+        // ChatWindowSearch opens the server search overlay
         window.update(Action::ChatWindowSearch);
 
         assert_eq!(
             window.component_focused,
-            Some(ComponentName::Chat),
-            "Chat should be focused after ChatWindowSearch"
+            Some(ComponentName::SearchOverlay),
+            "Search overlay should be focused after ChatWindowSearch"
+        );
+        assert!(
+            window.show_search_overlay,
+            "Search overlay should be visible"
         );
     }
 
@@ -670,17 +782,21 @@ mod tests {
         window.component_focused = Some(ComponentName::Chat);
         if let Some(component) = window.components.get_mut(&ComponentName::Chat) {
             component.focus();
-            // Put ChatWindow in search mode
-            component.update(Action::ChatWindowSearch);
         }
+        // Open search overlay (server search)
+        window.update(Action::ChatWindowSearch);
 
-        // Now Alt+R should switch to ChatList search
+        // Now Alt+R (ChatListSearch) should close overlay and focus ChatList
         window.update(Action::ChatListSearch);
 
         assert_eq!(
             window.component_focused,
             Some(ComponentName::ChatList),
             "Should switch to ChatList search when Alt+R pressed during message search"
+        );
+        assert!(
+            !window.show_search_overlay,
+            "Search overlay should be closed"
         );
     }
 
@@ -738,17 +854,47 @@ mod tests {
     }
 
     #[test]
-    fn test_chat_window_search_propagates_to_component() {
+    fn test_chat_window_search_opens_overlay() {
         let mut window = create_test_core_window();
         window.component_focused = Some(ComponentName::Chat);
 
         window.update(Action::ChatWindowSearch);
 
-        // Chat should receive the search action
+        // Search overlay should open and be focused
         assert_eq!(
             window.component_focused,
-            Some(ComponentName::Chat),
-            "Chat should be focused"
+            Some(ComponentName::SearchOverlay),
+            "Search overlay should be focused"
+        );
+        assert!(window.show_search_overlay);
+    }
+
+    #[test]
+    fn test_mouse_click_in_chat_list_when_not_focused_focuses_chat_list() {
+        use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+        use ratatui::layout::Rect;
+
+        let mut window = create_test_core_window();
+        window.component_focused = Some(ComponentName::Chat);
+
+        // Set ChatList area so click is inside it
+        let chat_list_rect = Rect::new(0, 0, 20, 10);
+        window
+            .last_focusable_areas
+            .insert(ComponentName::ChatList, chat_list_rect);
+
+        let mouse = MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 5,
+            row: 5,
+            modifiers: crossterm::event::KeyModifiers::empty(),
+        };
+        let result = window.handle_events(Some(Event::Mouse(mouse)));
+
+        assert_eq!(
+            result.unwrap(),
+            Some(Action::FocusComponent(ComponentName::ChatList)),
+            "First click in chat list when Chat focused should focus ChatList (not open a chat)"
         );
     }
 }

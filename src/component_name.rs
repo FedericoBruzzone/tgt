@@ -22,6 +22,8 @@ pub enum ComponentName {
     CommandGuide,
     /// The theme selector popup.
     ThemeSelector,
+    /// The search overlay (server-side chat message search).
+    SearchOverlay,
 }
 
 impl Display for ComponentName {
@@ -36,6 +38,7 @@ impl Display for ComponentName {
             ComponentName::ReplyMessage => write!(f, "Reply Message"),
             ComponentName::CommandGuide => write!(f, "Command Guide"),
             ComponentName::ThemeSelector => write!(f, "Theme Selector"),
+            ComponentName::SearchOverlay => write!(f, "Search Overlay"),
         }
     }
 }

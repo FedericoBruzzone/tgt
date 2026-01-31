@@ -6,7 +6,7 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
-use std::{collections::HashMap, io, sync::Arc, time::Instant};
+use std::{collections::HashMap, io, sync::Arc, time::Duration, time::Instant};
 use tdlib_rs::enums::ChatList;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -56,6 +56,7 @@ pub async fn run_app(
 
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
+    app_context.mark_dirty();
 
     // Main loop
     while tg_backend.have_authorization {
@@ -105,6 +106,9 @@ async fn handle_tg_backend_events(
             Event::GetChatHistory => {
                 app_context.action_tx().send(Action::GetChatHistory)?;
             }
+            Event::GetChatHistoryNewer => {
+                app_context.action_tx().send(Action::GetChatHistoryNewer)?;
+            }
             Event::DeleteMessages(message_ids, revoke) => {
                 app_context
                     .action_tx()
@@ -122,16 +126,23 @@ async fn handle_tg_backend_events(
                     .send(Action::EditMessage(message_id, message))?;
             }
             Event::ReplyMessage(message_id, message) => {
+                // Reply flow is now handled by ChatWindow sending FocusComponent(Prompt) + ReplyMessage
+                // directly to action_tx when user presses R. This branch is kept for any other caller.
                 app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))?;
-
                 app_context
                     .action_tx()
                     .send(Action::ReplyMessage(message_id, message))?;
             }
             Event::ViewAllMessages => {
                 app_context.action_tx().send(Action::ViewAllMessages)?;
+            }
+            Event::ChatMessageAdded(message_id) => {
+                app_context
+                    .tg_context()
+                    .set_jump_target_message_id(message_id);
+                app_context.action_tx().send(Action::ChatHistoryAppended)?;
             }
             _ => {}
         }
@@ -155,66 +166,66 @@ async fn handle_tui_backend_events(
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
 ) -> Result<(), AppError<Action>> {
-    if let Some(event) = tui_backend.next().await {
-        match event {
-            Event::Render => app_context.action_tx().send(Action::Render)?,
-            Event::Resize(width, height) => app_context
+    // Short timeout so we can process ChatHistoryAppended (and other actions) when
+    // the background history task completes, without requiring a key press.
+    let poll = tokio::time::timeout(Duration::from_millis(150), tui_backend.next()).await;
+    let Some(event) = (match poll {
+        Ok(Some(ev)) => Some(ev),
+        Ok(None) | Err(_) => None,
+    }) else {
+        return Ok(());
+    };
+    match event {
+        Event::Render => app_context.mark_dirty(),
+        Event::Resize(width, height) => {
+            app_context.mark_dirty();
+            app_context
                 .action_tx()
-                .send(Action::Resize(width, height))?,
-            Event::Key(key, modifiers) => {
-                // Always send Key action first so components can check visibility state
-                app_context
-                    .action_tx()
-                    .send(Action::from_key_event(key, modifiers))?;
-
-                // Handle Esc and F1 specially - let them go through to components for command guide handling
-                // This allows CoreWindow to check if guide is visible and close it if needed
-                if key == KeyCode::Esc
-                    || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT))
-                {
-                    // Esc/F1 (without Alt) is sent as Key action above, now let it go to Tui/CoreWindow
-                    // Don't check keymap for Esc/F1, let components handle it
-                    // CoreWindow will check visibility and close guide if visible
-                    // Alt+F1 is handled by the keymap system
-                } else {
-                    // Handle core_window key bindings for other keys.
-                    if let Some(action_binding) = app_context
-                        .keymap_config()
-                        .core_window
-                        .get(&Event::Key(key, modifiers))
-                    {
-                        match action_binding {
-                            ActionBinding::Single { action, .. } => {
-                                app_context.action_tx().send(action.clone())?;
-                                return Ok(());
-                            }
-                            ActionBinding::Multiple(map_event_action) => {
-                                consume_until_single_action(
-                                    &app_context.action_tx(),
-                                    tui_backend,
-                                    map_event_action.clone(),
-                                )
-                                .await;
-                                // We need to return here to avoid sending the
-                                // event to the tui. At the moment, the components
-                                // are not able to handle multiple events.
-                                return Ok(());
-                            }
+                .send(Action::Resize(width, height))?;
+        }
+        Event::Key(key, modifiers) => {
+            // Esc/F1 (without Alt): skip keymap so components can handle (e.g. close guide)
+            let esc_or_f1 = key == KeyCode::Esc
+                || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT));
+            if !esc_or_f1 {
+                // For other keys: if keymap for the focused component has a binding,
+                // send ONLY the bound action (sending Key too would make the component
+                // handle both and step twice).
+                let focused = app_context.focused_component();
+                let keymap_config = app_context.keymap_config();
+                let keymap = keymap_config.get_map_of(focused);
+                if let Some(action_binding) = keymap.get(&Event::Key(key, modifiers)) {
+                    match action_binding {
+                        ActionBinding::Single { action, .. } => {
+                            app_context.action_tx().send(action.clone())?;
+                            return Ok(());
+                        }
+                        ActionBinding::Multiple(map_event_action) => {
+                            consume_until_single_action(
+                                &app_context.action_tx(),
+                                tui_backend,
+                                map_event_action.clone(),
+                            )
+                            .await;
+                            return Ok(());
                         }
                     }
                 }
             }
-            Event::FocusLost => app_context.action_tx().send(Action::FocusLost)?,
-            Event::FocusGained => app_context.action_tx().send(Action::FocusGained)?,
-            Event::Paste(ref text) => app_context.action_tx().send(Action::Paste(text.clone()))?,
-            _ => {}
+            app_context
+                .action_tx()
+                .send(Action::from_key_event(key, modifiers))?;
         }
+        Event::FocusLost => app_context.action_tx().send(Action::FocusLost)?,
+        Event::FocusGained => app_context.action_tx().send(Action::FocusGained)?,
+        Event::Paste(ref text) => app_context.action_tx().send(Action::Paste(text.clone()))?,
+        _ => {}
+    }
 
-        // Note that sending the event to the tui it will send the event
-        // directly to the `CoreWindow` component.
-        if let Some(action) = tui.handle_events(Some(event.clone()))? {
-            app_context.action_tx().send(action)?
-        }
+    // Note that sending the event to the tui it will send the event
+    // directly to the `CoreWindow` component.
+    if let Some(action) = tui.handle_events(Some(event.clone()))? {
+        app_context.action_tx().send(action)?
     }
     Ok(())
 }
@@ -247,6 +258,49 @@ async fn consume_until_single_action(
         }
     }
 }
+/// Returns true for actions that change UI-visible state and should trigger a render.
+fn action_changes_ui(action: &Action) -> bool {
+    matches!(
+        action,
+        Action::FocusComponent(_)
+            | Action::ChatListNext
+            | Action::ChatListPrevious
+            | Action::ChatListSearch
+            | Action::ChatListOpen
+            | Action::ChatListSortWithString(_)
+            | Action::ChatListRestoreSort
+            | Action::ChatWindowNext
+            | Action::ChatWindowPrevious
+            | Action::ChatWindowSearch
+            | Action::ChatWindowSortWithString(_)
+            | Action::ChatWindowRestoreSort
+            | Action::SearchChatMessages(_)
+            | Action::SearchResults(_)
+            | Action::JumpToMessage(_)
+            | Action::JumpCompleted(_)
+            | Action::CloseSearchOverlay
+            | Action::ShowSearchOverlay
+            | Action::SwitchTheme
+            | Action::SwitchThemeTo(_)
+            | Action::ShowThemeSelector
+            | Action::HideThemeSelector
+            | Action::ToggleChatList
+            | Action::IncreaseChatListSize
+            | Action::DecreaseChatListSize
+            | Action::IncreasePromptSize
+            | Action::DecreasePromptSize
+            | Action::ShowChatWindowReply
+            | Action::HideChatWindowReply
+            | Action::ReplyMessage(_, _)
+            | Action::ShowCommandGuide
+            | Action::HideCommandGuide
+            | Action::StatusMessage(_)
+            | Action::UpdateArea(_)
+            | Action::GetChatHistoryNewer
+            | Action::ChatHistoryAppended
+    )
+}
+
 #[allow(clippy::await_holding_lock)]
 /// Handle incoming actions from the application.
 ///
@@ -265,27 +319,30 @@ pub async fn handle_app_actions(
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
     while let Ok(action) = app_context.action_rx().try_recv() {
-        match action {
+        match &action {
             Action::Render => {
-                tui_backend.terminal.draw(|f| {
-                    tui.draw(f, f.area()).unwrap();
-                })?;
+                // Actual draw happens at end of loop when should_render()
             }
             Action::Resize(width, height) => {
                 tui_backend
                     .terminal
-                    .resize(Rect::new(0, 0, width, height))?;
-                tui_backend.terminal.draw(|f| {
-                    tui.draw(f, f.area()).unwrap();
-                })?;
+                    .resize(Rect::new(0, 0, *width, *height))?;
+                app_context.mark_dirty();
             }
-            Action::FocusLost => tui_backend.suspend()?,
-            Action::FocusGained => tui_backend.resume()?,
+            Action::FocusLost => {
+                tui_backend.suspend()?;
+                app_context.mark_dirty();
+            }
+            Action::FocusGained => {
+                tui_backend.resume()?;
+                app_context.mark_dirty();
+            }
             Action::Quit => {
                 app_context.quit_store(true);
             }
             Action::LoadChats(chat_list, limit) => {
-                tg_backend.load_chats(chat_list.into(), limit).await;
+                app_context.mark_dirty();
+                tg_backend.load_chats((*chat_list).into(), *limit).await;
             }
             Action::SendMessage(ref message, ref reply_to) => {
                 let _ = tg_backend
@@ -298,27 +355,141 @@ pub async fn handle_app_actions(
             }
             Action::SendMessageEdited(message_id, ref message) => {
                 tg_backend
-                    .send_message_edited(message_id, message.to_string())
+                    .send_message_edited(*message_id, message.to_string())
                     .await;
             }
             Action::GetChatHistory => {
-                tg_backend
-                    .get_chat_history(app_context.tg_context().open_chat_id())
+                if !app_context.tg_context().is_history_loading() {
+                    app_context.tg_context().set_history_loading(true);
+                    let chat_id = app_context.tg_context().open_chat_id();
+                    const INITIAL_LOAD_TARGET: usize = 100;
+                    let start_len = app_context.tg_context().open_chat_messages().len();
+                    loop {
+                        let from_message_id = app_context.tg_context().from_message_id();
+                        let (entries, _has_more) = tg_backend
+                            .get_chat_history_one_batch(chat_id, from_message_id)
+                            .await;
+                        if entries.is_empty() {
+                            break;
+                        }
+                        let tg = app_context.tg_context();
+                        tg.open_chat_messages().insert_messages(entries.clone());
+                        if let Some(last) = entries.last() {
+                            tg.set_from_message_id(last.id());
+                        }
+                        let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                        let current_len = app_context.tg_context().open_chat_messages().len();
+                        if current_len >= start_len + INITIAL_LOAD_TARGET {
+                            break;
+                        }
+                    }
+                    app_context.tg_context().set_history_loading(false);
+                    let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                }
+            }
+            Action::GetChatHistoryNewer => {
+                if !app_context.tg_context().is_history_loading() {
+                    let chat_id = app_context.tg_context().open_chat_id();
+                    let newest = app_context
+                        .tg_context()
+                        .open_chat_messages()
+                        .newest_message_id();
+                    if let Some(from_id) = newest {
+                        app_context.tg_context().set_history_loading(true);
+                        // TDLib: offset -N = from_message_id + N newer messages; limit >= -offset
+                        const NEWER_BATCH: i32 = 50;
+                        let (entries, _) = tg_backend
+                            .get_chat_history_batch(
+                                chat_id,
+                                from_id,
+                                -(NEWER_BATCH - 1),
+                                NEWER_BATCH,
+                            )
+                            .await;
+                        if !entries.is_empty() {
+                            app_context
+                                .tg_context()
+                                .open_chat_messages()
+                                .insert_messages(entries);
+                        }
+                        app_context.tg_context().set_history_loading(false);
+                        let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                    }
+                }
+            }
+            Action::SearchChatMessages(ref query) => {
+                let chat_id = app_context.tg_context().open_chat_id();
+                if chat_id == 0 {
+                    continue;
+                }
+                match tg_backend
+                    .search_chat_messages(chat_id, query.clone(), 50)
+                    .await
+                {
+                    Ok(entries) => {
+                        let _ = app_context.action_tx().send(Action::SearchResults(entries));
+                    }
+                    Err(_) => {
+                        let _ = app_context.action_tx().send(Action::SearchResults(vec![]));
+                    }
+                }
+            }
+            Action::JumpToMessage(message_id) => {
+                let chat_id = app_context.tg_context().open_chat_id();
+                if chat_id == 0 {
+                    continue;
+                }
+                app_context.tg_context().clear_open_chat_messages();
+                app_context.tg_context().set_history_loading(true);
+                app_context
+                    .tg_context()
+                    .set_jump_target_message_id(*message_id);
+                // Load a window around the message: (1) target + older, (2) target + newer.
+                // TDLib: offset 0 = from_message_id and older; offset -N = from_message_id + N newer.
+                const OLDER_LIMIT: i32 = 31; // target + 30 older
+                const NEWER_LIMIT: i32 = 16; // target + 15 newer (limit must be >= -offset)
+                let (entries_older, _) = tg_backend
+                    .get_chat_history_batch(chat_id, *message_id, 0, OLDER_LIMIT)
                     .await;
+                let (entries_newer, _) = tg_backend
+                    .get_chat_history_batch(chat_id, *message_id, -15, NEWER_LIMIT)
+                    .await;
+                if !entries_older.is_empty() || !entries_newer.is_empty() {
+                    app_context
+                        .tg_context()
+                        .open_chat_messages()
+                        .insert_messages(entries_older);
+                    app_context
+                        .tg_context()
+                        .open_chat_messages()
+                        .insert_messages(entries_newer);
+                    let oldest = app_context
+                        .tg_context()
+                        .open_chat_messages()
+                        .oldest_message_id();
+                    if let Some(oldest_id) = oldest {
+                        app_context.tg_context().set_from_message_id(oldest_id);
+                    }
+                }
+                app_context.tg_context().set_history_loading(false);
+                let _ = app_context
+                    .action_tx()
+                    .send(Action::JumpCompleted(*message_id));
+                let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
             }
             Action::DeleteMessages(ref message_ids, revoke) => {
                 tg_backend
                     .delete_messages(
                         app_context.tg_context().open_chat_id(),
                         message_ids.to_vec(),
-                        revoke,
+                        *revoke,
                     )
                     .await;
             }
             Action::ReplyMessage(message_id, ref message) => {
                 app_context
                     .tg_context()
-                    .set_reply_message(message_id, message.to_string());
+                    .set_reply_message(*message_id, message.to_string());
             }
             Action::ViewAllMessages => {
                 tg_backend.view_all_messages().await;
@@ -326,7 +497,17 @@ pub async fn handle_app_actions(
             _ => {}
         }
 
+        if action_changes_ui(&action) {
+            app_context.mark_dirty();
+        }
         tui.update(action.clone())
+    }
+
+    if app_context.should_render() {
+        tui_backend.terminal.draw(|f| {
+            tui.draw(f, f.area()).unwrap();
+        })?;
+        app_context.clear_render_flag();
     }
     Ok(())
 }

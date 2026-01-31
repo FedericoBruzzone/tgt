@@ -40,7 +40,8 @@ keymap = [
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
-# When the chat list is focused, the chat list key bindings will be active.
+# When the chat list is focused, core_window bindings apply too (e.g. Alt+1/2/3, Esc).
+# Only list bindings specific to the chat list here.
 [chat_list]
 keymap = [
   # Select the next chat
@@ -60,13 +61,13 @@ keymap = [
 ]
 
 # The chat key bindings are only usable in the chat component.
-# When the chat is focused, the chat key bindings will be active.
+# When the chat is focused, core_window bindings apply too. Only list chat-specific bindings here.
 [chat]
 keymap = [
-  # Select the next message
-  { keys = ["down"], command = "chat_window_next", description = "Select the next message"},
-  # Select the previous message
-  { keys = ["up"], command = "chat_window_previous", description = "Select the previous message"},
+  # Select the next message (older, toward top of list)
+  { keys = ["up"], command = "chat_window_next", description = "Select the next message (up)"},
+  # Select the previous message (newer, toward bottom of list)
+  { keys = ["down"], command = "chat_window_previous", description = "Select the previous message (down)"},
   # Unselect the current message
   { keys = ["left"], command = "chat_window_unselect", description = "Unselect the current message"},
   # Delete the selected message for all users
@@ -75,7 +76,7 @@ keymap = [
   { keys = ["D"], command = "chat_window_delete_for_me", description = "Delete the selected message for 'me'"},
   # Copy the selected message
   { keys = ["y"], command = "chat_window_copy", description = "Copy the selected message"},
-  # Copy the selected message
+  # Copy the selected message (overrides core_window try_quit when chat focused)
   { keys = ["ctrl+c"], command = "chat_window_copy", description = "Copy the selected message"},
   # Edit the selected message
   { keys = ["e"], command = "chat_window_edit", description = "Edit the selected message"},
@@ -88,7 +89,11 @@ keymap = [
 ]
 
 # The prompt key bindings are only usable in the prompt component.
-# When the prompt is focused, the prompt key bindings will be active.
+# When the prompt is focused, core_window bindings apply too (e.g. Alt+1/2/3, Esc).
+# Only list prompt-specific bindings here.
 [prompt]
-keymap = []
+keymap = [
+  # Open message search overlay (same as Alt+R in chat section)
+  { keys = ["alt+r"], command = "chat_window_search", description = "Open message search overlay"},
+]
 

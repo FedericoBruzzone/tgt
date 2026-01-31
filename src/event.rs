@@ -53,8 +53,10 @@ pub enum Event {
     /// Send message edited event with a `i64` and a `String`.
     /// The first parameter is the `message_id` and the second parameter is the `text`.
     SendMessageEdited(i64, String),
-    /// Get chat history event.
+    /// Get chat history event (load older messages).
     GetChatHistory,
+    /// Get chat history newer (load newer messages when scrolling near bottom).
+    GetChatHistoryNewer,
     /// Delete messages event with a `Vec<i64>` and a `bool`.
     /// The first parameter is the `message_ids` and the second parameter is the `revoke`.
     /// If `revoke` is true, the message will be deleted for everyone.
@@ -62,6 +64,10 @@ pub enum Event {
     DeleteMessages(Vec<i64>, bool),
     /// View all messages event.
     ViewAllMessages,
+    /// Search chat messages event (query string); triggers server-side search.
+    SearchChatMessages(String),
+    /// A new message was added to the open chat (sent or received); scroll to it.
+    ChatMessageAdded(i64),
 }
 /// Implement the `Event` enum.
 impl Event {
@@ -187,9 +193,8 @@ impl Display for Event {
             Event::SendMessageEdited(message_id, s) => {
                 write!(f, "SendMessageEdited({message_id}, {s})")
             }
-            Event::GetChatHistory => {
-                write!(f, "GetChatHistory")
-            }
+            Event::GetChatHistory => write!(f, "GetChatHistory"),
+            Event::GetChatHistoryNewer => write!(f, "GetChatHistoryNewer"),
             Event::DeleteMessages(message_ids, revoke) => {
                 write!(f, "DeleteMessages({message_ids:?}, {revoke})")
             }
@@ -200,6 +205,8 @@ impl Display for Event {
                 write!(f, "ReplyMessage({message_id}, {text})")
             }
             Event::ViewAllMessages => write!(f, "ViewAllMessages"),
+            Event::SearchChatMessages(ref q) => write!(f, "SearchChatMessages({q})"),
+            Event::ChatMessageAdded(mid) => write!(f, "ChatMessageAdded({mid})"),
         }
     }
 }

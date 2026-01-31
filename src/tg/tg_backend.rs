@@ -5,8 +5,8 @@ use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
 use tdlib_rs::enums::{
-    self, AuthorizationState, ChatList, InputMessageContent, InputMessageReplyTo, LogStream,
-    Messages, OptionValue, Update, User,
+    self, AuthorizationState, ChatList, FoundChatMessages, InputMessageContent,
+    InputMessageReplyTo, LogStream, Messages, OptionValue, SearchMessagesFilter, Update, User,
 };
 use tdlib_rs::functions;
 use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
@@ -15,6 +15,48 @@ use tokio::task::JoinHandle;
 
 use super::message_entry::MessageEntry;
 use super::td_enums::TdMessageReplyToMessage;
+
+/// Fetches one or more batches of chat history (for background task). Does not hold any app locks.
+pub async fn fetch_chat_history_background(
+    client_id: i32,
+    chat_id: i64,
+    mut from_message_id: i64,
+    max_messages: usize,
+) -> Vec<MessageEntry> {
+    let mut all = Vec::new();
+    let batch_size: i32 = 50;
+
+    while all.len() < max_messages {
+        match functions::get_chat_history(chat_id, from_message_id, 0, batch_size, false, client_id)
+            .await
+        {
+            Ok(Messages::Messages(messages)) => {
+                if messages.messages.is_empty() {
+                    break;
+                }
+                let entries: Vec<MessageEntry> = messages
+                    .messages
+                    .into_iter()
+                    .flatten()
+                    .map(|m| MessageEntry::from(&m))
+                    .collect();
+                if let Some(last) = entries.last() {
+                    from_message_id = last.id();
+                }
+                let n = entries.len();
+                all.extend(entries);
+                if n < batch_size as usize {
+                    break;
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to get chat history in background: {e:?}");
+                break;
+            }
+        }
+    }
+    all
+}
 
 pub struct TgBackend {
     pub handle_updates: JoinHandle<()>,
@@ -125,49 +167,120 @@ impl TgBackend {
         }
     }
 
+    /// Fetches one batch of chat history (50 messages). Called from main task so TDLib
+    /// runs on the same thread as the receive loop. Returns (entries, has_more).
+    #[allow(clippy::await_holding_lock)]
+    pub async fn get_chat_history_one_batch(
+        &mut self,
+        chat_id: i64,
+        from_message_id: i64,
+    ) -> (Vec<MessageEntry>, bool) {
+        self.get_chat_history_batch(chat_id, from_message_id, 0, 50)
+            .await
+    }
+
+    /// Fetches one batch of chat history with offset (for jump-to-message: load window around a message).
+    /// offset 0 = from_message_id and older; negative offset = include newer messages per TDLib.
+    #[allow(clippy::await_holding_lock)]
+    pub async fn get_chat_history_batch(
+        &mut self,
+        chat_id: i64,
+        from_message_id: i64,
+        offset: i32,
+        limit: i32,
+    ) -> (Vec<MessageEntry>, bool) {
+        match functions::get_chat_history(
+            chat_id,
+            from_message_id,
+            offset,
+            limit,
+            false,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(Messages::Messages(messages)) => {
+                if messages.messages.is_empty() {
+                    return (Vec::new(), false);
+                }
+                let entries: Vec<MessageEntry> = messages
+                    .messages
+                    .into_iter()
+                    .flatten()
+                    .map(|m| MessageEntry::from(&m))
+                    .collect();
+                let n = entries.len();
+                let has_more = n >= limit as usize;
+                (entries, has_more)
+            }
+            Err(e) => {
+                tracing::error!("Failed to get chat history: {e:?}");
+                (Vec::new(), false)
+            }
+        }
+    }
+
+    /// Server-side search in the open chat. Returns message entries for the search overlay.
+    #[allow(clippy::await_holding_lock)]
+    pub async fn search_chat_messages(
+        &self,
+        chat_id: i64,
+        query: String,
+        limit: i32,
+    ) -> Result<Vec<MessageEntry>, tdlib_rs::types::Error> {
+        let filter = Some(SearchMessagesFilter::Empty);
+        match functions::search_chat_messages(
+            chat_id,
+            query,
+            None,
+            0,
+            0,
+            limit,
+            filter,
+            0,
+            0,
+            self.client_id,
+        )
+        .await
+        {
+            Ok(FoundChatMessages::FoundChatMessages(found)) => {
+                let entries: Vec<MessageEntry> = found
+                    .messages
+                    .into_iter()
+                    .map(|m| MessageEntry::from(&m))
+                    .collect();
+                Ok(entries)
+            }
+            Err(e) => {
+                tracing::error!("search_chat_messages failed: {e:?}");
+                Err(e)
+            }
+        }
+    }
+
     #[allow(clippy::await_holding_lock)]
     pub async fn get_chat_history(&mut self, chat_id: i64) {
-        let start_open_chat_messages_len = self.app_context.tg_context().open_chat_messages().len();
-        let mut mut_open_chat_messages_len =
-            self.app_context.tg_context().open_chat_messages().len();
+        let start_len = self.app_context.tg_context().open_chat_messages().len();
         let win_size = 100;
 
-        while mut_open_chat_messages_len < start_open_chat_messages_len + win_size {
+        while self.app_context.tg_context().open_chat_messages().len() < start_len + win_size {
             let from_message_id = self.app_context.tg_context().from_message_id();
-            match functions::get_chat_history(
-                chat_id,
-                from_message_id,
-                0,
-                50,
-                false,
-                self.client_id,
-            )
-            .await
-            {
-                Ok(Messages::Messages(messages)) => {
-                    if messages.messages.is_empty() {
-                        tracing::info!("No more messages to get");
-                        break;
-                    }
-
-                    let message_flatten = messages.messages.into_iter().flatten();
-                    for message in message_flatten.clone() {
-                        self.app_context
-                            .tg_context()
-                            .open_chat_messages()
-                            .push(MessageEntry::from(&message));
-                        mut_open_chat_messages_len += 1;
-                    }
-                    if let Some(message) = message_flatten.last() {
-                        self.app_context
-                            .tg_context()
-                            .set_from_message_id(message.id);
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to get chat history: {e:?}");
-                    break;
-                }
+            let (entries, has_more) = self
+                .get_chat_history_one_batch(chat_id, from_message_id)
+                .await;
+            if entries.is_empty() {
+                tracing::info!("No more messages to get");
+                break;
+            }
+            if let Some(last) = entries.last() {
+                self.app_context.tg_context().set_from_message_id(last.id());
+            }
+            self.app_context
+                .tg_context()
+                .open_chat_messages()
+                .insert_messages(entries);
+            if !has_more {
+                break;
             }
         }
     }
@@ -849,32 +962,31 @@ impl TgBackend {
                             if tg_context.open_chat_id() == chat_id {
                                 tg_context
                                     .open_chat_messages()
-                                    .insert(0, MessageEntry::from(&message));
+                                    .insert_messages(std::iter::once(MessageEntry::from(&message)));
+                                // Scroll chat to the new message (sent or received)
+                                let tx = tg_context.event_tx().as_ref().cloned();
+                                if let Some(tx) = tx {
+                                    let _ = tx.send(Event::ChatMessageAdded(message.id));
+                                }
                             }
                         }
                         Update::MessageEdited(_) => {}
                         Update::MessageContent(message) => {
                             if tg_context.open_chat_id() == message.chat_id {
-                                for m in tg_context.open_chat_messages().iter_mut() {
-                                    if m.id() == message.message_id {
-                                        m.set_message_content(&message.new_content);
-                                        m.set_is_edited(true);
-                                    }
+                                if let Some(entry) = tg_context
+                                    .open_chat_messages()
+                                    .get_message_mut(message.message_id)
+                                {
+                                    entry.set_message_content(&message.new_content);
+                                    entry.set_is_edited(true);
                                 }
                             }
                         }
                         Update::DeleteMessages(update_delete_messages) => {
                             if tg_context.open_chat_id() == update_delete_messages.chat_id {
-                                let mut i = 0;
-                                while i < tg_context.open_chat_messages().len() {
-                                    if update_delete_messages
-                                        .message_ids
-                                        .contains(&tg_context.open_chat_messages()[i].id())
-                                    {
-                                        tg_context.open_chat_messages().remove(i);
-                                    } else {
-                                        i += 1;
-                                    }
+                                let mut store = tg_context.open_chat_messages();
+                                for id in &update_delete_messages.message_ids {
+                                    store.remove_message(*id);
                                 }
                             }
                         }

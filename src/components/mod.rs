@@ -12,6 +12,7 @@ pub mod component_traits;
 pub mod core_window;
 pub mod prompt_window;
 pub mod reply_message;
+pub mod search_overlay;
 #[cfg(test)]
 pub mod search_tests;
 pub mod status_bar;
