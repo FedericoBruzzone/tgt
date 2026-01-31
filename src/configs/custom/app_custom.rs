@@ -496,6 +496,7 @@ mod tests {
             theme_filename: "themes/test.toml".to_string(),
             take_api_id_from_telegram_config: false,
             take_api_hash_from_telegram_config: false,
+            use_emoji_icons: false,
         };
 
         let result = app_config.save();

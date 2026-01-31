@@ -164,7 +164,8 @@ impl TgContext {
 
     /// Set jump target (run loop only).
     pub fn set_jump_target_message_id(&self, message_id: i64) {
-        self.jump_target_message_id.store(message_id, Ordering::Release);
+        self.jump_target_message_id
+            .store(message_id, Ordering::Release);
     }
 
     pub fn set_me(&self, me: i64) {

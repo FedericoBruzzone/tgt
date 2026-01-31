@@ -255,9 +255,7 @@ impl Component for CoreWindow {
             }
             if let Some(name) = self.component_focused {
                 if let Some(component) = self.components.get_mut(&name) {
-                    return component
-                        .handle_mouse_events(mouse)
-                        .map_err(AppError::from);
+                    return component.handle_mouse_events(mouse).map_err(AppError::from);
                 }
             }
             return Ok(None);
@@ -282,7 +280,8 @@ impl Component for CoreWindow {
         match action {
             Action::FocusComponent(component_name) => {
                 self.component_focused = Some(component_name);
-                self.app_context.set_focused_component(self.component_focused);
+                self.app_context
+                    .set_focused_component(self.component_focused);
                 self.components
                     .get_mut(&component_name)
                     .unwrap_or_else(|| panic!("Failed to get component: {component_name}"))
@@ -424,7 +423,8 @@ impl Component for CoreWindow {
             Action::Key(key_code, modifiers) => {
                 // If search overlay is visible, send keys to it
                 if self.show_search_overlay {
-                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
+                    {
                         component.update(Action::Key(key_code, modifiers.clone()));
                     }
                     return;
@@ -474,7 +474,8 @@ impl Component for CoreWindow {
                 // If search overlay is open, close it first then focus ChatList
                 if self.show_search_overlay {
                     self.show_search_overlay = false;
-                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
+                    {
                         component.update(Action::CloseSearchOverlay);
                         component.unfocus();
                     }
@@ -492,7 +493,8 @@ impl Component for CoreWindow {
                 if should_activate_search {
                     // Focus ChatList and activate search mode
                     self.component_focused = Some(ComponentName::ChatList);
-                    self.app_context.set_focused_component(self.component_focused);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
                     self.components
                         .get_mut(&ComponentName::ChatList)
                         .unwrap_or_else(|| {
@@ -517,7 +519,8 @@ impl Component for CoreWindow {
                     component.focus();
                 }
                 self.component_focused = Some(ComponentName::SearchOverlay);
-                self.app_context.set_focused_component(self.component_focused);
+                self.app_context
+                    .set_focused_component(self.component_focused);
                 self.components
                     .iter_mut()
                     .filter(|(name, _)| *name != &ComponentName::SearchOverlay)
@@ -531,7 +534,8 @@ impl Component for CoreWindow {
                 }
                 // Refocus Chat after closing search
                 self.component_focused = Some(ComponentName::Chat);
-                self.app_context.set_focused_component(self.component_focused);
+                self.app_context
+                    .set_focused_component(self.component_focused);
                 if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
                     component.focus();
                 }
@@ -543,7 +547,8 @@ impl Component for CoreWindow {
             Action::SearchResults(_) => {
                 // Propagate to SearchOverlay when visible
                 if self.show_search_overlay {
-                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
+                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
+                    {
                         component.update(action.clone());
                     }
                 }
@@ -709,11 +714,7 @@ impl Component for CoreWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        action::Action,
-        components::search_tests::create_test_app_context,
-        event::Event,
-    };
+    use crate::{action::Action, components::search_tests::create_test_app_context, event::Event};
 
     fn create_test_core_window() -> CoreWindow {
         let app_context = create_test_app_context();
@@ -769,7 +770,10 @@ mod tests {
             Some(ComponentName::SearchOverlay),
             "Search overlay should be focused after ChatWindowSearch"
         );
-        assert!(window.show_search_overlay, "Search overlay should be visible");
+        assert!(
+            window.show_search_overlay,
+            "Search overlay should be visible"
+        );
     }
 
     #[test]
@@ -790,7 +794,10 @@ mod tests {
             Some(ComponentName::ChatList),
             "Should switch to ChatList search when Alt+R pressed during message search"
         );
-        assert!(!window.show_search_overlay, "Search overlay should be closed");
+        assert!(
+            !window.show_search_overlay,
+            "Search overlay should be closed"
+        );
     }
 
     #[test]

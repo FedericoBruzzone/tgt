@@ -176,52 +176,51 @@ async fn handle_tui_backend_events(
         return Ok(());
     };
     match event {
-            Event::Render => app_context.mark_dirty(),
-            Event::Resize(width, height) => {
-                app_context.mark_dirty();
-                app_context
-                    .action_tx()
-                    .send(Action::Resize(width, height))?;
-            }
-            Event::Key(key, modifiers) => {
-                // Esc/F1 (without Alt): skip keymap so components can handle (e.g. close guide)
-                let esc_or_f1 = key == KeyCode::Esc
-                    || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT));
-                if !esc_or_f1 {
-                    // For other keys: if keymap for the focused component has a binding,
-                    // send ONLY the bound action (sending Key too would make the component
-                    // handle both and step twice).
-                    let focused = app_context.focused_component();
-                    let keymap_config = app_context.keymap_config();
-                    let keymap = keymap_config.get_map_of(focused);
-                    if let Some(action_binding) = keymap.get(&Event::Key(key, modifiers))
-                    {
-                        match action_binding {
-                            ActionBinding::Single { action, .. } => {
-                                app_context.action_tx().send(action.clone())?;
-                                return Ok(());
-                            }
-                            ActionBinding::Multiple(map_event_action) => {
-                                consume_until_single_action(
-                                    &app_context.action_tx(),
-                                    tui_backend,
-                                    map_event_action.clone(),
-                                )
-                                .await;
-                                return Ok(());
-                            }
+        Event::Render => app_context.mark_dirty(),
+        Event::Resize(width, height) => {
+            app_context.mark_dirty();
+            app_context
+                .action_tx()
+                .send(Action::Resize(width, height))?;
+        }
+        Event::Key(key, modifiers) => {
+            // Esc/F1 (without Alt): skip keymap so components can handle (e.g. close guide)
+            let esc_or_f1 = key == KeyCode::Esc
+                || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT));
+            if !esc_or_f1 {
+                // For other keys: if keymap for the focused component has a binding,
+                // send ONLY the bound action (sending Key too would make the component
+                // handle both and step twice).
+                let focused = app_context.focused_component();
+                let keymap_config = app_context.keymap_config();
+                let keymap = keymap_config.get_map_of(focused);
+                if let Some(action_binding) = keymap.get(&Event::Key(key, modifiers)) {
+                    match action_binding {
+                        ActionBinding::Single { action, .. } => {
+                            app_context.action_tx().send(action.clone())?;
+                            return Ok(());
+                        }
+                        ActionBinding::Multiple(map_event_action) => {
+                            consume_until_single_action(
+                                &app_context.action_tx(),
+                                tui_backend,
+                                map_event_action.clone(),
+                            )
+                            .await;
+                            return Ok(());
                         }
                     }
                 }
-                app_context
-                    .action_tx()
-                    .send(Action::from_key_event(key, modifiers))?;
             }
-            Event::FocusLost => app_context.action_tx().send(Action::FocusLost)?,
-            Event::FocusGained => app_context.action_tx().send(Action::FocusGained)?,
-            Event::Paste(ref text) => app_context.action_tx().send(Action::Paste(text.clone()))?,
-            _ => {}
+            app_context
+                .action_tx()
+                .send(Action::from_key_event(key, modifiers))?;
         }
+        Event::FocusLost => app_context.action_tx().send(Action::FocusLost)?,
+        Event::FocusGained => app_context.action_tx().send(Action::FocusGained)?,
+        Event::Paste(ref text) => app_context.action_tx().send(Action::Paste(text.clone()))?,
+        _ => {}
+    }
 
     // Note that sending the event to the tui it will send the event
     // directly to the `CoreWindow` component.
@@ -428,14 +427,10 @@ pub async fn handle_app_actions(
                     .await
                 {
                     Ok(entries) => {
-                        let _ = app_context
-                            .action_tx()
-                            .send(Action::SearchResults(entries));
+                        let _ = app_context.action_tx().send(Action::SearchResults(entries));
                     }
                     Err(_) => {
-                        let _ = app_context
-                            .action_tx()
-                            .send(Action::SearchResults(vec![]));
+                        let _ = app_context.action_tx().send(Action::SearchResults(vec![]));
                     }
                 }
             }
@@ -446,7 +441,9 @@ pub async fn handle_app_actions(
                 }
                 app_context.tg_context().clear_open_chat_messages();
                 app_context.tg_context().set_history_loading(true);
-                app_context.tg_context().set_jump_target_message_id(*message_id);
+                app_context
+                    .tg_context()
+                    .set_jump_target_message_id(*message_id);
                 // Load a window around the message: (1) target + older, (2) target + newer.
                 // TDLib: offset 0 = from_message_id and older; offset -N = from_message_id + N newer.
                 const OLDER_LIMIT: i32 = 31; // target + 30 older

@@ -140,10 +140,8 @@ impl CommandGuide {
         ];
 
         // None state (global) — keybindings available everywhere
-        let core_window_lines = self.get_keybindings_section(
-            "None state (global)",
-            &keymap_config.core_window,
-        );
+        let core_window_lines =
+            self.get_keybindings_section("None state (global)", &keymap_config.core_window);
         for line in core_window_lines {
             lines.push(Line::from(line));
         }
@@ -173,7 +171,9 @@ impl CommandGuide {
             self.app_context.style_title_bar(),
         )]));
         lines.push(Line::from(""));
-        lines.push(Line::from("  Scroll: chat list / chat to move selection or messages."));
+        lines.push(Line::from(
+            "  Scroll: chat list / chat to move selection or messages.",
+        ));
         lines.push(Line::from(
             "  Chat list: first click focuses list, second click opens selected chat.",
         ));
@@ -264,10 +264,10 @@ impl Component for CommandGuide {
                             self.scroll_offset = self.scroll_offset.saturating_sub(1);
                         }
                         crossterm::event::KeyCode::Down => {
-                            let max_scroll = self
-                                .last_content_lines
-                                .saturating_sub(self.last_inner_height as usize)
-                                .min(u16::MAX as usize) as u16;
+                            let max_scroll =
+                                self.last_content_lines
+                                    .saturating_sub(self.last_inner_height as usize)
+                                    .min(u16::MAX as usize) as u16;
                             self.scroll_offset = (self.scroll_offset + 1).min(max_scroll);
                         }
                         crossterm::event::KeyCode::PageUp => {
@@ -275,10 +275,10 @@ impl Component for CommandGuide {
                             self.scroll_offset = self.scroll_offset.saturating_sub(page);
                         }
                         crossterm::event::KeyCode::PageDown => {
-                            let max_scroll = self
-                                .last_content_lines
-                                .saturating_sub(self.last_inner_height as usize)
-                                .min(u16::MAX as usize) as u16;
+                            let max_scroll =
+                                self.last_content_lines
+                                    .saturating_sub(self.last_inner_height as usize)
+                                    .min(u16::MAX as usize) as u16;
                             let page = self.last_inner_height;
                             self.scroll_offset = (self.scroll_offset + page).min(max_scroll);
                         }
