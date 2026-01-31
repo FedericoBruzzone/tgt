@@ -709,7 +709,11 @@ impl Component for CoreWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{action::Action, components::search_tests::create_test_app_context};
+    use crate::{
+        action::Action,
+        components::search_tests::create_test_app_context,
+        event::Event,
+    };
 
     fn create_test_core_window() -> CoreWindow {
         let app_context = create_test_app_context();
@@ -856,5 +860,34 @@ mod tests {
             "Search overlay should be focused"
         );
         assert!(window.show_search_overlay);
+    }
+
+    #[test]
+    fn test_mouse_click_in_chat_list_when_not_focused_focuses_chat_list() {
+        use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+        use ratatui::layout::Rect;
+
+        let mut window = create_test_core_window();
+        window.component_focused = Some(ComponentName::Chat);
+
+        // Set ChatList area so click is inside it
+        let chat_list_rect = Rect::new(0, 0, 20, 10);
+        window
+            .last_focusable_areas
+            .insert(ComponentName::ChatList, chat_list_rect);
+
+        let mouse = MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 5,
+            row: 5,
+            modifiers: crossterm::event::KeyModifiers::empty(),
+        };
+        let result = window.handle_events(Some(Event::Mouse(mouse)));
+
+        assert_eq!(
+            result.unwrap(),
+            Some(Action::FocusComponent(ComponentName::ChatList)),
+            "First click in chat list when Chat focused should focus ChatList (not open a chat)"
+        );
     }
 }
