@@ -46,7 +46,7 @@ enum KeymapKind {
 #[derive(Clone, Debug)]
 /// The keymap configuration.
 pub struct KeymapConfig {
-    /// The default keymap configuration.
+    /// The default keymap configuration (general bindings usable in any component).
     /// They can be used in any component.
     pub core_window: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the chats list component.
@@ -55,6 +55,12 @@ pub struct KeymapConfig {
     pub chat: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the prompt component.
     pub prompt: HashMap<Event, ActionBinding>,
+    /// core_window + chat_list; component overrides general. Used when chat list is focused.
+    merged_chat_list: HashMap<Event, ActionBinding>,
+    /// core_window + chat; component overrides general. Used when chat is focused.
+    merged_chat: HashMap<Event, ActionBinding>,
+    /// core_window + prompt; component overrides general. Used when prompt is focused.
+    merged_prompt: HashMap<Event, ActionBinding>,
 }
 /// The keymap configuration implementation.
 impl KeymapConfig {
@@ -299,23 +305,27 @@ impl KeymapConfig {
         }
     }
 
-    /// Get the keymap configuration of a component.
-    /// It is used to get the keymap configuration of a component.
-    ///
-    /// # Arguments
-    /// * `component_name` - The name of the component.
-    ///
-    /// # Returns
-    /// The keymap configuration of the component.
+    /// Build merged keymaps: general (core_window) + component-specific, with component overriding.
+    fn rebuild_merged(&mut self) {
+        self.merged_chat_list = self.core_window.clone();
+        self.merged_chat_list.extend(self.chat_list.clone());
+        self.merged_chat = self.core_window.clone();
+        self.merged_chat.extend(self.chat.clone());
+        self.merged_prompt = self.core_window.clone();
+        self.merged_prompt.extend(self.prompt.clone());
+    }
+
+    /// Get the effective keymap for a component: general (core_window) bindings plus
+    /// component-specific bindings, with component bindings taking precedence.
     pub fn get_map_of(
         &self,
         component_name: Option<ComponentName>,
     ) -> &HashMap<Event, ActionBinding> {
         match component_name {
             Some(componnt) => match componnt {
-                ComponentName::ChatList => &self.chat_list,
-                ComponentName::Chat => &self.chat,
-                ComponentName::Prompt => &self.prompt,
+                ComponentName::ChatList => &self.merged_chat_list,
+                ComponentName::Chat => &self.merged_chat,
+                ComponentName::Prompt => &self.merged_prompt,
                 _ => &self.core_window,
             },
             None => &self.core_window,
@@ -389,6 +399,7 @@ impl ConfigFile for KeymapConfig {
                     &self.chat,
                     &self.prompt,
                 );
+                self.rebuild_merged();
                 self.clone()
             }
         }
@@ -411,12 +422,17 @@ impl From<KeymapRaw> for KeymapConfig {
         let chat = Self::keymaps_vec_to_map(raw.chat.unwrap().keymap, KeymapKind::Chat);
         let prompt = Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap, KeymapKind::Prompt);
         Self::check_duplicates(&core_window, &chat_list, &chat, &prompt);
-        Self {
+        let mut config = Self {
             core_window,
             chat_list,
             chat,
             prompt,
-        }
+            merged_chat_list: HashMap::new(),
+            merged_chat: HashMap::new(),
+            merged_prompt: HashMap::new(),
+        };
+        config.rebuild_merged();
+        config
     }
 }
 
