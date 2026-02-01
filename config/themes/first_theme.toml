@@ -19,6 +19,7 @@ on_error = "#FFCDD2"
 [common]
 border_component_focused = { fg = "secondary", bg = "background", bold = false, underline = false, italic = false }
 item_selected = { fg = "", bg = "surface", bold = true, underline = false, italic = false }
+item_reply_target = { fg = "", bg = "secondary", bold = false, underline = false, italic = false }
 timestamp = { fg = "ternary_light", bg = "background", bold = false, underline = false, italic = false }
 
 [chat_list]

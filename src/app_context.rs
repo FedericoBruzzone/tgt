@@ -291,6 +291,7 @@ impl AppContext {
     );
 
     theme_style_generate!(style_item_selected, common, item_selected);
+    theme_style_generate!(style_item_reply_target, common, item_reply_target);
     theme_style_generate!(style_timestamp, common, timestamp);
 
     // ===== CHAT LIST =====

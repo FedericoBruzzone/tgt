@@ -415,6 +415,7 @@ impl Component for ChatWindow {
         // Leave margin so wrapped lines and wide chars don't overflow the right edge
         let wrap_width = list_inner.width.saturating_sub(2) as i32;
 
+        let reply_message_id = self.app_context.tg_context().reply_message_id();
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;
         let mut items: Vec<ListItem<'_>> = self
@@ -447,18 +448,24 @@ impl Component for ChatWindow {
                             Alignment::Left,
                         )
                     };
-                ListItem::new(
-                    message_entry
-                        .get_text_styled(
-                            myself,
-                            &self.app_context,
-                            is_unread_outbox,
-                            name_style,
-                            content_style,
-                            wrap_width,
-                        )
-                        .alignment(alignment),
-                )
+                let content = message_entry
+                    .get_text_styled(
+                        myself,
+                        &self.app_context,
+                        is_unread_outbox,
+                        name_style,
+                        content_style,
+                        wrap_width,
+                    )
+                    .alignment(alignment);
+                let is_reply_target =
+                    reply_message_id != 0 && message_entry.id() == reply_message_id;
+                if is_reply_target {
+                    ListItem::new(content)
+                        .style(self.app_context.style_item_reply_target())
+                } else {
+                    ListItem::new(content)
+                }
             })
             .collect();
         if self.app_context.tg_context().is_history_loading() {
@@ -468,10 +475,22 @@ impl Component for ChatWindow {
             ))));
         }
 
+        // Use reply-target highlight when the selected message is the one we're replying to
+        let highlight_style = if reply_message_id != 0
+            && self
+                .message_list_state
+                .selected()
+                .and_then(|i| self.message_list.get(i).map(|m| m.id()))
+                == Some(reply_message_id)
+        {
+            self.app_context.style_item_reply_target()
+        } else {
+            self.app_context.style_item_selected()
+        };
         let list = List::new(items)
             .block(block)
             .style(self.app_context.style_chat())
-            .highlight_style(self.app_context.style_item_selected())
+            .highlight_style(highlight_style)
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 
