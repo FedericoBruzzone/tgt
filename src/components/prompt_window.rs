@@ -718,7 +718,21 @@ impl Component for PromptWindow {
 
     fn update(&mut self, action: Action) {
         match action {
+            Action::PromptCopy => {
+                self.input.copy_selected();
+                self.input.unselect_all();
+            }
             Action::Key(key_code, modifiers) => match (key_code, modifiers) {
+                (KeyCode::Left, Modifiers { alt: true, .. }) => {
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::FocusComponent(ComponentName::ChatList));
+                    }
+                }
+                (KeyCode::Right, Modifiers { alt: true, .. }) => {
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::FocusComponent(ComponentName::Chat));
+                    }
+                }
                 (KeyCode::Esc, ..) => {
                     // ESC cancels reply or edit mode and returns focus to chat
                     if matches!(self.input.mode, Mode::Reply(_) | Mode::Edit(_)) {
