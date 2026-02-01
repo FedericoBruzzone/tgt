@@ -19,6 +19,7 @@ highlight_two = "#9d7cd8"
 [common]
 border_component_focused = { fg = "highlight_one", bg = "background", bold = false, underline = false, italic = false }
 item_selected = { fg = "", bg = "background_two", bold = true, underline = false, italic = false }
+item_reply_target = { fg = "", bg = "highlight_two", bold = false, underline = false, italic = false }
 timestamp = { fg = "primary_dark", bg = "background", bold = false, underline = false, italic = false }
 
 [chat_list]
