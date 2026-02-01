@@ -93,6 +93,11 @@ keymap = [
 # Only list prompt-specific bindings here.
 [prompt]
 keymap = [
+  # Copy the selected text (overrides core_window try_quit when prompt focused)
+  { keys = ["ctrl+c"], command = "prompt_copy", description = "Copy the selected text"},
+  # Focus chat list / chat (so Alt+arrows work even if keymap lookup fails, e.g. terminal escape)
+  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
   # Open message search overlay (same as Alt+R in chat section)
   { keys = ["alt+r"], command = "chat_window_search", description = "Open message search overlay"},
 ]

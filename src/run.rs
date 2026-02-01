@@ -188,10 +188,9 @@ async fn handle_tui_backend_events(
             // Esc/F1 (without Alt): skip keymap so components can handle (e.g. close guide)
             let esc_or_f1 = key == KeyCode::Esc
                 || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT));
-            // When prompt is focused, 'q' and ctrl+c must type (not quit); skip keymap for them
+            // When prompt is focused, 'q' must type (not quit); skip keymap for it (ctrl+c is prompt_copy in keymap)
             let prompt_typing_key = app_context.focused_component() == Some(ComponentName::Prompt)
-                && (key == KeyCode::Char('q')
-                    || (key == KeyCode::Char('c') && modifiers.contains(KeyModifiers::CONTROL)));
+                && key == KeyCode::Char('q');
             if !esc_or_f1 && !prompt_typing_key {
                 // For other keys: if keymap for the focused component has a binding,
                 // send ONLY the bound action (sending Key too would make the component
