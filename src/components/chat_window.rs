@@ -475,11 +475,22 @@ impl Component for ChatWindow {
             ))));
         }
 
+        // Render from bottom to top so content sits at the bottom (above the prompt) when
+        // there are fewer messages than fit in the area. Reverse items so the list's
+        // "first" item is newest; with BottomToTop that draws at the bottom, keeping
+        // visual order: oldest at top, newest at bottom.
+        items.reverse();
+        let item_count = items.len();
+
+        // Selection is stored as index into message_list (oldest=0). In reversed list,
+        // newest=0, oldest=len-1. Convert to list index for the widget, then back after render.
+        let orig_selected = self.message_list_state.selected();
+        let list_selected = orig_selected.map(|i| item_count.saturating_sub(1).saturating_sub(i));
+        self.message_list_state.select(list_selected);
+
         // Use reply-target highlight when the selected message is the one we're replying to
         let highlight_style = if reply_message_id != 0
-            && self
-                .message_list_state
-                .selected()
+            && orig_selected
                 .and_then(|i| self.message_list.get(i).map(|m| m.id()))
                 == Some(reply_message_id)
         {
@@ -492,7 +503,7 @@ impl Component for ChatWindow {
             .style(self.app_context.style_chat())
             .highlight_style(highlight_style)
             .repeat_highlight_symbol(true)
-            .direction(ListDirection::TopToBottom);
+            .direction(ListDirection::BottomToTop);
 
         let border_header = Set {
             top_left: line::NORMAL.horizontal_down,
@@ -524,6 +535,11 @@ impl Component for ChatWindow {
 
         frame.render_widget(header, chat_layout[0]);
         frame.render_stateful_widget(list, chat_layout[1], &mut self.message_list_state);
+
+        // Restore selection to message_list index (oldest=0) for next/previous and other logic.
+        let list_sel = self.message_list_state.selected();
+        self.message_list_state
+            .select(list_sel.map(|i| item_count.saturating_sub(1).saturating_sub(i)));
 
         Ok(())
     }
