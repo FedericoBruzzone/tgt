@@ -58,6 +58,10 @@ pub async fn run_app(
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
     app_context.mark_dirty();
+    // Notify ChatList to populate visible_chats from initial load (it only rebuilds on LoadChats/ChatHistoryAppended/Resize).
+    let _ = app_context
+        .action_tx()
+        .send(Action::LoadChats(ChatList::Main.into(), 30));
 
     // Main loop
     while tg_backend.have_authorization {
@@ -369,11 +373,18 @@ pub async fn handle_app_actions(
                     const INITIAL_LOAD_TARGET: usize = 100;
                     let start_len = app_context.tg_context().open_chat_messages().len();
                     loop {
+                        // Only insert for the chat that is still open (guard against stale load).
+                        if app_context.tg_context().open_chat_id() != chat_id {
+                            break;
+                        }
                         let from_message_id = app_context.tg_context().from_message_id();
                         let (entries, _has_more) = tg_backend
                             .get_chat_history_one_batch(chat_id, from_message_id)
                             .await;
                         if entries.is_empty() {
+                            break;
+                        }
+                        if app_context.tg_context().open_chat_id() != chat_id {
                             break;
                         }
                         let tg = app_context.tg_context();
@@ -410,7 +421,9 @@ pub async fn handle_app_actions(
                                 NEWER_BATCH,
                             )
                             .await;
-                        if !entries.is_empty() {
+                        if app_context.tg_context().open_chat_id() == chat_id
+                            && !entries.is_empty()
+                        {
                             app_context
                                 .tg_context()
                                 .open_chat_messages()
@@ -443,13 +456,27 @@ pub async fn handle_app_actions(
                 if chat_id == 0 {
                     continue;
                 }
-                app_context.tg_context().clear_open_chat_messages();
+                // If message already loaded, just select it; don't clear (avoids wiping chat).
+                if app_context
+                    .tg_context()
+                    .open_chat_messages()
+                    .get_message(*message_id)
+                    .is_some()
+                {
+                    app_context
+                        .tg_context()
+                        .set_jump_target_message_id(*message_id);
+                    let _ = app_context
+                        .action_tx()
+                        .send(Action::JumpCompleted(*message_id));
+                    let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                    continue;
+                }
+                // Fetch first; only clear when we have messages to insert (avoids "empty response" overwrite).
                 app_context.tg_context().set_history_loading(true);
                 app_context
                     .tg_context()
                     .set_jump_target_message_id(*message_id);
-                // Load a window around the message: (1) target + older, (2) target + newer.
-                // TDLib: offset 0 = from_message_id and older; offset -N = from_message_id + N newer.
                 const OLDER_LIMIT: i32 = 31; // target + 30 older
                 const NEWER_LIMIT: i32 = 16; // target + 15 newer (limit must be >= -offset)
                 let (entries_older, _) = tg_backend
@@ -459,6 +486,7 @@ pub async fn handle_app_actions(
                     .get_chat_history_batch(chat_id, *message_id, -15, NEWER_LIMIT)
                     .await;
                 if !entries_older.is_empty() || !entries_newer.is_empty() {
+                    //app_context.tg_context().clear_open_chat_messages();
                     app_context
                         .tg_context()
                         .open_chat_messages()

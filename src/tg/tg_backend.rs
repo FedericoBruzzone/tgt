@@ -637,6 +637,7 @@ impl TgBackend {
         let auth_tx = self.auth_tx.clone();
         let can_quit = self.can_quit.clone();
         let tg_context = self.app_context.tg_context();
+        let action_tx = self.app_context.action_tx().clone();
 
         self.handle_updates = tokio::spawn(async move {
             tracing::info!("Starting handling updates from TDLib");
@@ -955,10 +956,9 @@ impl TgBackend {
                             );
                         }
                         Update::NewMessage(update_new_message) => {
-                            // New message update only the opened chat in order to have
-                            // in real time the message displayed
+                            // Only touch open_chat_messages when update is for the open chat (avoid late/ghost updates).
                             let message = update_new_message.message;
-                            let chat_id = message.chat_id;
+                            let chat_id: i64 = message.chat_id;
                             if tg_context.open_chat_id() == chat_id {
                                 tg_context
                                     .open_chat_messages()
@@ -972,6 +972,7 @@ impl TgBackend {
                         }
                         Update::MessageEdited(_) => {}
                         Update::MessageContent(message) => {
+                            // Only touch open_chat_messages when update is for the open chat.
                             if tg_context.open_chat_id() == message.chat_id {
                                 if let Some(entry) = tg_context
                                     .open_chat_messages()
@@ -983,9 +984,42 @@ impl TgBackend {
                             }
                         }
                         Update::DeleteMessages(update_delete_messages) => {
+                            // Only touch open_chat_messages when update is for the open chat.
                             if tg_context.open_chat_id() == update_delete_messages.chat_id {
+                                // When from_cache is true, TDLib evicted messages from its local cache
+                                // (e.g. GC/sync after ~60s). They were NOT deleted on the server.
+                                // Do not remove from our UI; optionally re-fetch so user sees them again.
+                                if update_delete_messages.from_cache {
+                                    tracing::info!(
+                                        chat_id = update_delete_messages.chat_id,
+                                        count = update_delete_messages.message_ids.len(),
+                                        "TDLib DeleteMessages from_cache=true: ignoring (cache eviction, not server delete); re-fetching history"
+                                    );
+                                    let _ = action_tx.send(Action::GetChatHistory);
+                                    continue;
+                                }
+                                let ids = &update_delete_messages.message_ids;
+                                let count = ids.len();
+                                let sample_first: Vec<i64> =
+                                    ids.iter().take(5).copied().collect();
+                                let sample_last: Vec<i64> =
+                                    ids.iter().rev().take(5).copied().collect();
+                                let (min_id, max_id) = ids
+                                    .iter()
+                                    .fold((i64::MAX, i64::MIN), |(min, max), &id| {
+                                        (min.min(id), max.max(id))
+                                    });
+                                tracing::info!(
+                                    chat_id = update_delete_messages.chat_id,
+                                    count,
+                                    sample_first = ?sample_first,
+                                    sample_last = ?sample_last,
+                                    min_id,
+                                    max_id,
+                                    "TDLib DeleteMessages: removed messages from open chat (server delete)"
+                                );
                                 let mut store = tg_context.open_chat_messages();
-                                for id in &update_delete_messages.message_ids {
+                                for id in ids {
                                     store.remove_message(*id);
                                 }
                             }

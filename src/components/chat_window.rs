@@ -37,6 +37,8 @@ pub struct ChatWindow {
     focused: bool,
     /// When true, next draw will select the newest message (Alt+C restore order).
     request_jump_to_latest: bool,
+    /// Last snapshot len we logged as "suspicious" (0 or 1) to avoid flooding the log.
+    last_logged_suspicious_len: Option<usize>,
 }
 /// Implementation of the `ChatWindow` struct.
 impl ChatWindow {
@@ -61,6 +63,7 @@ impl ChatWindow {
             message_list_state,
             focused,
             request_jump_to_latest: false,
+            last_logged_suspicious_len: None,
         }
     }
     /// Set the name of the `ChatWindow`.
@@ -75,14 +78,24 @@ impl ChatWindow {
         self
     }
 
-    /// Build message_list from data layer (read-only API).
+    /// Build message_list from data layer (read-only API). Uses a single-lock snapshot to avoid
+    /// TOCTOU: another thread clearing the store between ordered_message_ids() and get_message().
     fn refresh_message_list_from_store(&mut self) {
-        let tg = self.app_context.tg_context();
-        self.message_list = tg
-            .ordered_message_ids()
-            .into_iter()
-            .filter_map(|id| tg.get_message(id))
-            .collect();
+        self.message_list = self.app_context.tg_context().ordered_messages_snapshot();
+        let open_id = self.app_context.tg_context().open_chat_id();
+        let len = self.message_list.len();
+        if open_id != 0 && len <= 1 {
+            if self.last_logged_suspicious_len != Some(len) {
+                tracing::info!(
+                    open_chat_id = open_id,
+                    message_count = len,
+                    "chat window: snapshot has 0 or 1 messages while chat is open"
+                );
+                self.last_logged_suspicious_len = Some(len);
+            }
+        } else {
+            self.last_logged_suspicious_len = None;
+        }
     }
 
     /// Select the next message item in the list.

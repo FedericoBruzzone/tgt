@@ -5,6 +5,7 @@ use crate::{
     app_error::AppError, components::chat_list_window::ChatListEntry, event::Event,
     tg::ordered_chat::OrderedChat,
 };
+use std::backtrace::Backtrace;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::{
     collections::{BTreeSet, HashMap},
@@ -117,6 +118,12 @@ impl TgContext {
     }
 
     pub fn clear_open_chat_messages(&self) {
+        let open_id = self.open_chat_id.load(Ordering::Relaxed);
+        tracing::info!(
+            open_chat_id = open_id,
+            "clear_open_chat_messages called (stack trace for silent-reset debugging)\n{:?}",
+            Backtrace::capture()
+        );
         self.open_chat_messages().clear();
     }
 
@@ -130,6 +137,12 @@ impl TgContext {
     /// Ordered message IDs for the open chat (oldest to newest). UI uses this to build the list.
     pub fn ordered_message_ids(&self) -> Vec<i64> {
         self.open_chat_messages().ordered_message_ids()
+    }
+
+    /// Single-lock snapshot of all messages for the open chat (oldest to newest). Use in UI draw
+    /// to avoid TOCTOU: ordered_message_ids() then get_message(id) can see a cleared store between calls.
+    pub fn ordered_messages_snapshot(&self) -> Vec<MessageEntry> {
+        self.open_chat_messages().ordered_messages()
     }
 
     /// Get a message by ID (clone). UI read-only.
@@ -188,6 +201,7 @@ impl TgContext {
     }
 
     pub fn delete_message(&self, message_id: i64) {
+        tracing::info!(message_id, "delete_message (local, user-initiated)");
         self.open_chat_messages().remove_message(message_id);
     }
 
