@@ -74,6 +74,11 @@ impl OpenChatMessageStore {
         self.cache.keys().copied().collect()
     }
 
+    /// Ordered messages (oldest to newest). Single lock for a consistent snapshot; use in UI draw.
+    pub fn ordered_messages(&self) -> Vec<MessageEntry> {
+        self.cache.values().cloned().collect()
+    }
+
     /// Get a message by ID (clone). UI read-only.
     pub fn get_message(&self, id: i64) -> Option<MessageEntry> {
         self.cache.get(&id).cloned()

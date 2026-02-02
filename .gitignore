@@ -2,6 +2,7 @@
 /.data
 /.log
 /.logs
+tgt.log
 # /.vscode
 /.vscode/settings.json
 result

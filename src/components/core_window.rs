@@ -613,6 +613,19 @@ impl Component for CoreWindow {
                     }
                 }
             }
+            Action::LoadChats(..) | Action::ChatHistoryAppended | Action::Resize(..) => {
+                // Always forward to ChatList so it can rebuild_visible_chats (populates visible_chats).
+                if let Some(component) = self.components.get_mut(&ComponentName::ChatList) {
+                    component.update(action.clone());
+                }
+                if let Some(focused) = self.component_focused {
+                    if focused != ComponentName::ChatList {
+                        if let Some(component) = self.components.get_mut(&focused) {
+                            component.update(action);
+                        }
+                    }
+                }
+            }
             _ => {
                 if let Some(focused) = self.component_focused {
                     self.components

@@ -1,5 +1,6 @@
 use crate::action::Action;
 use crate::app_context::AppContext;
+use crate::component_name::ComponentName;
 use crate::component_name::ComponentName::Prompt;
 use crate::components::component_traits::{Component, HandleFocus};
 use crate::event::Event;
@@ -153,8 +154,8 @@ pub struct ChatListWindow {
     name: String,
     /// An unbounded sender that send action for processing.
     command_tx: Option<UnboundedSender<Action>>,
-    /// A list of chat items to be displayed in the `ChatListWindow`.
-    chat_list: Vec<ChatListEntry>,
+    /// Visible chat list (filtered/sorted). Updated in update(); draw() only renders this.
+    visible_chats: Vec<ChatListEntry>,
     /// The state of the list.
     chat_list_state: ListState,
     /// Indicates whether the `ChatListWindow` is focused or not.
@@ -182,7 +183,7 @@ impl ChatListWindow {
     pub fn new(app_context: Arc<AppContext>) -> Self {
         let name = "".to_string();
         let command_tx = None;
-        let chat_list = vec![];
+        let visible_chats = vec![];
         let chat_list_state = ListState::default();
         let focused = false;
         let sort_string = None;
@@ -191,7 +192,7 @@ impl ChatListWindow {
             app_context,
             name,
             command_tx,
-            chat_list,
+            visible_chats,
             chat_list_state,
             focused,
             sort_string,
@@ -216,7 +217,7 @@ impl ChatListWindow {
     fn next(&mut self) {
         let i = match self.chat_list_state.selected() {
             Some(i) => {
-                if i == self.chat_list.len() / 2 {
+                if i == self.visible_chats.len() / 2 {
                     if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                         event_tx
                             .send(Event::LoadChats(ChatList::Main.into(), 20))
@@ -224,7 +225,7 @@ impl ChatListWindow {
                     }
                 }
 
-                if i >= self.chat_list.len() - 1 {
+                if i >= self.visible_chats.len() - 1 {
                     i
                 } else {
                     i + 1
@@ -255,7 +256,32 @@ impl ChatListWindow {
     /// Confirm the selection of the chat item in the list.
     fn confirm_selection(&mut self) {
         if let Some(i) = self.chat_list_state.selected() {
-            if let Some(chat) = self.chat_list.get(i) {
+            if let Some(chat) = self.visible_chats.get(i) {
+                // Explicit i64 comparison (TDLib uses int64); avoid any type/guard mismatch.
+                let open_id: i64 = self.app_context.tg_context().open_chat_id();
+                let selected_chat_id: i64 = chat.chat_id;
+                tracing::info!(
+                    open_id,
+                    selected_chat_id,
+                    selected_index = i,
+                    "confirm_selection: comparing open vs selected chat"
+                );
+                if open_id == selected_chat_id {
+                    // Same chat already open: don't clear/reload (avoids wiping messages on re-confirm).
+                    self.app_context
+                        .action_tx()
+                        .send(Action::FocusComponent(Prompt))
+                        .unwrap();
+                    if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                        let _ = event_tx.send(Event::ViewAllMessages);
+                    }
+                    return;
+                }
+                // Only clear and open a different chat when ChatList has focus (avoids clearing
+                // if ChatListOpen was forwarded while user had Chat or Prompt focused).
+                if self.app_context.focused_component() != Some(ComponentName::ChatList) {
+                    return;
+                }
                 self.app_context
                     .tg_context()
                     .set_open_chat_user(chat.user.clone());
@@ -290,6 +316,74 @@ impl ChatListWindow {
         self.sort_string = None;
     }
 
+    /// Sync list selection to the currently open chat (by chat_id). Uses visible_chats so logic and UI match.
+    /// If open_chat_id is not in visible_chats (e.g. during TDLib update flurry), clear selection
+    /// so we don't confirm a wrong chat at a stale index.
+    fn sync_selection_to_open_chat(&mut self) {
+        let open_id: i64 = self.app_context.tg_context().open_chat_id();
+        match self.visible_chats.iter().position(|c| c.chat_id == open_id) {
+            Some(idx) => self.chat_list_state.select(Some(idx)),
+            None => {
+                tracing::info!(
+                    open_id,
+                    visible_len = self.visible_chats.len(),
+                    "sync_selection_to_open_chat: open_chat_id not in visible_chats, clearing selection"
+                );
+                self.chat_list_state.select(None);
+            }
+        }
+    }
+
+    /// Rebuild visible_chats from get_chats_index() with current filter/sort; then sync selection.
+    /// Call from update() so draw() and confirm_selection() see the same list (no race with draw() re-sort).
+    fn rebuild_visible_chats(&mut self) {
+        let mut items = match self.app_context.tg_context().get_chats_index() {
+            Ok(Some(list)) => list,
+            _ => return,
+        };
+        if let Some(s) = self.sort_string.as_ref() {
+            if !s.is_empty() {
+                let mut config = nucleo_matcher::Config::DEFAULT;
+                config.prefer_prefix = true;
+                let mut matcher = Matcher::new(config.clone());
+                let search_chars: Vec<char> = s.chars().collect();
+                items.retain(|chat| {
+                    let chat_name_chars: Vec<char> = chat.chat_name.chars().collect();
+                    matcher
+                        .fuzzy_indices(
+                            Utf32Str::Unicode(&chat_name_chars),
+                            Utf32Str::Unicode(&search_chars),
+                            &mut Vec::new(),
+                        )
+                        .is_some()
+                });
+                let mut matcher = Matcher::new(config);
+                items.sort_by(|a, b| {
+                    let a: Vec<char> = a.chat_name.chars().collect();
+                    let b: Vec<char> = b.chat_name.chars().collect();
+                    let a_score = matcher
+                        .fuzzy_indices(
+                            Utf32Str::Unicode(&a),
+                            Utf32Str::Unicode(&search_chars),
+                            &mut Vec::new(),
+                        )
+                        .unwrap_or(0);
+                    let b_score = matcher
+                        .fuzzy_indices(
+                            Utf32Str::Unicode(&b),
+                            Utf32Str::Unicode(&search_chars),
+                            &mut Vec::new(),
+                        )
+                        .unwrap_or(0);
+                    a_score.cmp(&b_score)
+                });
+                items.reverse();
+            }
+        }
+        self.visible_chats = items;
+        self.sync_selection_to_open_chat();
+    }
+
     /// Enter search mode.
     fn start_search(&mut self) {
         self.search_mode = true;
@@ -307,6 +401,7 @@ impl ChatListWindow {
     fn handle_search_char(&mut self, c: char) {
         self.search_input.push(c);
         self.sort(self.search_input.clone());
+        self.rebuild_visible_chats();
     }
 
     /// Handle backspace in search mode.
@@ -317,6 +412,7 @@ impl ChatListWindow {
         } else {
             self.sort(self.search_input.clone());
         }
+        self.rebuild_visible_chats();
     }
 }
 
@@ -362,7 +458,7 @@ impl Component for ChatListWindow {
                     && col < list_area.x + list_area.width
                     && row >= list_area.y
                     && row < list_area.y + list_area.height;
-                if !in_rect || self.chat_list.is_empty() {
+                if !in_rect || self.visible_chats.is_empty() {
                     return Ok(None);
                 }
                 // List content: block has top border (1 row); items start at area.y+1.
@@ -377,7 +473,7 @@ impl Component for ChatListWindow {
                 // Use actual first visible item index from last draw (not inferred from selected).
                 let offset = self.last_list_offset.unwrap_or(0);
                 let item_index = offset + (row_in_content as usize / ROWS_PER_ITEM as usize);
-                if item_index < self.chat_list.len() {
+                if item_index < self.visible_chats.len() {
                     self.chat_list_state.select(Some(item_index));
                     return Ok(Some(Action::ChatListOpen));
                 }
@@ -411,9 +507,21 @@ impl Component for ChatListWindow {
                     self.stop_search();
                 }
             }
-            Action::ChatListSortWithString(s) => self.sort(s),
-            Action::ChatListRestoreSort => self.default_sort(),
+            Action::ChatListSortWithString(s) => {
+                self.sort(s);
+                self.rebuild_visible_chats();
+            }
+            Action::ChatListRestoreSort => {
+                self.default_sort();
+                self.rebuild_visible_chats();
+            }
             Action::ChatListSearch => self.start_search(),
+            Action::LoadChats(..) | Action::ChatHistoryAppended | Action::Resize(..) => {
+                self.rebuild_visible_chats();
+            }
+            Action::FocusComponent(ComponentName::ChatList) => {
+                self.rebuild_visible_chats();
+            }
             Action::Key(key_code, modifiers) => {
                 if self.search_mode {
                     match key_code {
@@ -472,53 +580,13 @@ impl Component for ChatListWindow {
         };
         self.last_list_area = Some(list_area);
 
-        if let Ok(Some(items)) = self.app_context.tg_context().get_chats_index() {
-            self.chat_list = items;
-
-            // Filter and sort before drawing
-            if let Some(s) = self.sort_string.as_ref() {
-                if !s.is_empty() {
-                    let mut config = nucleo_matcher::Config::DEFAULT;
-                    config.prefer_prefix = true;
-                    let mut matcher = Matcher::new(config.clone());
-                    let search_chars: Vec<char> = s.chars().collect();
-                    // Filter chats that match the search query
-                    self.chat_list.retain(|chat| {
-                        let chat_name_chars: Vec<char> = chat.chat_name.chars().collect();
-                        matcher
-                            .fuzzy_indices(
-                                Utf32Str::Unicode(&chat_name_chars),
-                                Utf32Str::Unicode(&search_chars),
-                                &mut Vec::new(),
-                            )
-                            .is_some()
-                    });
-                    // Sort remaining chats by relevance score
-                    let mut matcher = Matcher::new(config);
-                    self.chat_list.sort_by(|a, b| {
-                        let a: Vec<char> = a.chat_name.chars().collect();
-                        let b: Vec<char> = b.chat_name.chars().collect();
-                        let a_score = matcher
-                            .fuzzy_indices(
-                                Utf32Str::Unicode(&a),
-                                Utf32Str::Unicode(&search_chars),
-                                &mut Vec::new(),
-                            )
-                            .unwrap_or(0);
-                        let b_score = matcher
-                            .fuzzy_indices(
-                                Utf32Str::Unicode(&b),
-                                Utf32Str::Unicode(&search_chars),
-                                &mut Vec::new(),
-                            )
-                            .unwrap_or(0);
-                        a_score.cmp(&b_score)
-                    });
-                    self.chat_list.reverse();
-                }
-            }
+        // Lazy init: populate visible_chats on first draw when data is available (initial LoadChats
+        // may run before TDLib has delivered chat list updates).
+        if self.visible_chats.is_empty() {
+            self.rebuild_visible_chats();
         }
 
+        // Draw only from visible_chats (filter/sort done in update() via rebuild_visible_chats).
         // Draw search bar if in search mode
         if let Some(search_rect) = search_area {
             let search_block = Block::default()
@@ -542,7 +610,7 @@ impl Component for ChatListWindow {
         }
 
         let items = self
-            .chat_list
+            .visible_chats
             .iter()
             .map(|item| item.get_text_styled(&self.app_context));
         let block = Block::default()
@@ -625,8 +693,8 @@ mod tests {
         for (i, name) in chat_names.iter().enumerate() {
             chats.push(create_mock_chat(i as i64 + 1, name));
         }
-        // Directly set the chat_list (using internal access for testing)
-        window.chat_list = chats;
+        // Directly set the visible_chats (using internal access for testing)
+        window.visible_chats = chats;
     }
 
     #[test]
@@ -672,8 +740,8 @@ mod tests {
         window.update(Action::Key(KeyCode::Char('a'), modifiers));
         window.update(Action::ChatListSortWithString("a".to_string()));
 
-        // Simulate draw to trigger filtering
-        window.chat_list = vec![
+        // Simulate filtering result (visible_chats is updated in update() via rebuild_visible_chats)
+        window.visible_chats = vec![
             create_mock_chat(1, "Alice"),
             create_mock_chat(3, "Charlie"),
             create_mock_chat(4, "David"),
