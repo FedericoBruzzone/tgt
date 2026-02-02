@@ -421,8 +421,7 @@ pub async fn handle_app_actions(
                                 NEWER_BATCH,
                             )
                             .await;
-                        if app_context.tg_context().open_chat_id() == chat_id
-                            && !entries.is_empty()
+                        if app_context.tg_context().open_chat_id() == chat_id && !entries.is_empty()
                         {
                             app_context
                                 .tg_context()
