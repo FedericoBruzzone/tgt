@@ -10,11 +10,12 @@ use arboard::Clipboard;
 use crossterm::event::{KeyCode, MouseEventKind};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::Style,
     symbols::{
         border::{self, Set},
         line,
     },
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, List, ListDirection, ListItem, ListState, Paragraph},
 };
 use std::sync::Arc;
@@ -257,6 +258,32 @@ impl ChatWindow {
             }
         }
     }
+
+    /// Wraps each line with a border span on one side only (reply-target border-only highlight).
+    /// Messages from others: `│` at the start of each line. Messages from me: `│` at the end.
+    /// This keeps borders aligned and avoids broken vertical bars under each other.
+    fn wrap_text_with_reply_border(
+        content: Text,
+        border_style: Style,
+        alignment: Alignment,
+        myself: bool,
+    ) -> Text {
+        let wrapped_lines: Vec<Line> = content
+            .into_iter()
+            .map(|line| {
+                if myself {
+                    let mut spans: Vec<Span> = line.into_iter().collect();
+                    spans.push(Span::styled(" │", border_style));
+                    Line::from(spans)
+                } else {
+                    let mut spans = vec![Span::styled("│ ", border_style)];
+                    spans.extend(line);
+                    Line::from(spans)
+                }
+            })
+            .collect();
+        Text::from(wrapped_lines).alignment(alignment)
+    }
 }
 
 /// Implement the `HandleFocus` trait for the `ChatWindow` struct.
@@ -474,8 +501,12 @@ impl Component for ChatWindow {
                 let is_reply_target =
                     reply_message_id != 0 && message_entry.id() == reply_message_id;
                 if is_reply_target {
-                    ListItem::new(content)
-                        .style(self.app_context.style_item_reply_target())
+                    let border_style = self.app_context.style_item_reply_target();
+                    let content_with_border =
+                        Self::wrap_text_with_reply_border(content, border_style, alignment, myself);
+                    // Do not apply border_style to the whole ListItem: only the │ spans
+                    // use it, so the message keeps its original formatting (name, reply-to, content).
+                    ListItem::new(content_with_border)
                 } else {
                     ListItem::new(content)
                 }
@@ -501,16 +532,9 @@ impl Component for ChatWindow {
         let list_selected = orig_selected.map(|i| item_count.saturating_sub(1).saturating_sub(i));
         self.message_list_state.select(list_selected);
 
-        // Use reply-target highlight when the selected message is the one we're replying to
-        let highlight_style = if reply_message_id != 0
-            && orig_selected
-                .and_then(|i| self.message_list.get(i).map(|m| m.id()))
-                == Some(reply_message_id)
-        {
-            self.app_context.style_item_reply_target()
-        } else {
-            self.app_context.style_item_selected()
-        };
+        // Use normal selection highlight so message text keeps its original formatting.
+        // Reply-target is already indicated by the │ border spans only.
+        let highlight_style = self.app_context.style_item_selected();
         let list = List::new(items)
             .block(block)
             .style(self.app_context.style_chat())

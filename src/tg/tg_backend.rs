@@ -1000,13 +1000,11 @@ impl TgBackend {
                                 }
                                 let ids = &update_delete_messages.message_ids;
                                 let count = ids.len();
-                                let sample_first: Vec<i64> =
-                                    ids.iter().take(5).copied().collect();
+                                let sample_first: Vec<i64> = ids.iter().take(5).copied().collect();
                                 let sample_last: Vec<i64> =
                                     ids.iter().rev().take(5).copied().collect();
-                                let (min_id, max_id) = ids
-                                    .iter()
-                                    .fold((i64::MAX, i64::MIN), |(min, max), &id| {
+                                let (min_id, max_id) =
+                                    ids.iter().fold((i64::MAX, i64::MIN), |(min, max), &id| {
                                         (min.min(id), max.max(id))
                                     });
                                 tracing::info!(

@@ -746,7 +746,7 @@ impl Component for PromptWindow {
                 }
                 (KeyCode::Home, ..)
                 | (
-                    KeyCode::Left | KeyCode::Char('b'),
+                    KeyCode::Char('b'),
                     Modifiers {
                         shift: true,
                         super_: true,
@@ -754,7 +754,7 @@ impl Component for PromptWindow {
                     },
                 )
                 | (
-                    KeyCode::Left | KeyCode::Char('b'),
+                    KeyCode::Char('b'),
                     Modifiers {
                         control: true,
                         alt: true,
@@ -768,7 +768,7 @@ impl Component for PromptWindow {
 
                 (KeyCode::End, ..)
                 | (
-                    KeyCode::Right | KeyCode::Char('f'),
+                    KeyCode::Char('f'),
                     Modifiers {
                         shift: true,
                         super_: true,
@@ -776,7 +776,7 @@ impl Component for PromptWindow {
                     },
                 )
                 | (
-                    KeyCode::Right | KeyCode::Char('f'),
+                    KeyCode::Char('f'),
                     Modifiers {
                         control: true,
                         alt: true,
