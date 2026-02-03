@@ -26,6 +26,19 @@ pub enum ComponentName {
     SearchOverlay,
 }
 
+impl ComponentName {
+    /// Returns true if this component is a popup (overlay) component.
+    /// Popup components are modal overlays that should hide other popups when shown.
+    pub fn is_popup(&self) -> bool {
+        matches!(
+            self,
+            ComponentName::CommandGuide
+                | ComponentName::ThemeSelector
+                | ComponentName::SearchOverlay
+        )
+    }
+}
+
 impl Display for ComponentName {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
