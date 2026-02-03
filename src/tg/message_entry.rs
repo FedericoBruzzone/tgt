@@ -293,25 +293,40 @@ impl MessageEntry {
                 .collect::<Vec<Line>>()
         } else {
             // Wrap by display width (so emoji/CJK don't overflow)
+            // Preserve blank lines (e.g., around code blocks)
             let wrap = wrap_width.max(1) as usize;
             let mut lines = Vec::new();
             let mut current_line = Line::default();
             let mut current_line_width = 0usize;
-            for span in self.message_content.iter().flat_map(|l| l.iter()) {
-                for c in span.content.chars() {
-                    let w = c.width().unwrap_or(1);
-                    if c == ' ' && current_line_width >= wrap {
-                        lines.push(std::mem::take(&mut current_line));
-                        current_line_width = 0;
-                    } else if current_line_width + w > wrap && current_line_width > 0 {
+            
+            for line in &self.message_content {
+                // Preserve blank lines
+                if line.spans.is_empty() || line.spans.iter().all(|s| s.content.trim().is_empty()) {
+                    if !current_line.spans.is_empty() {
                         lines.push(std::mem::take(&mut current_line));
                         current_line_width = 0;
                     }
-                    current_line.spans.push(Span::styled(
-                        c.to_string(),
-                        Self::merge_two_style(span.style, content_style),
-                    ));
-                    current_line_width += w;
+                    lines.push(Line::from(""));
+                    continue;
+                }
+                
+                // Wrap non-blank lines
+                for span in line.iter() {
+                    for c in span.content.chars() {
+                        let w = c.width().unwrap_or(1);
+                        if c == ' ' && current_line_width >= wrap {
+                            lines.push(std::mem::take(&mut current_line));
+                            current_line_width = 0;
+                        } else if current_line_width + w > wrap && current_line_width > 0 {
+                            lines.push(std::mem::take(&mut current_line));
+                            current_line_width = 0;
+                        }
+                        current_line.spans.push(Span::styled(
+                            c.to_string(),
+                            Self::merge_two_style(span.style, content_style),
+                        ));
+                        current_line_width += w;
+                    }
                 }
             }
             if !current_line.spans.is_empty() {
@@ -431,6 +446,25 @@ impl MessageEntry {
         let char_count = text.chars().count();
         let mut message_vec = Vec::new();
         let mut prev_end = 0usize;
+        
+        // Track code blocks (Pre/PreCode only, not inline Code) to add blank lines
+        let code_blocks: Vec<(usize, usize)> = entities
+            .iter()
+            .filter_map(|e| {
+                if matches!(
+                    e.r#type,
+                    tdlib_rs::enums::TextEntityType::Pre
+                        | tdlib_rs::enums::TextEntityType::PreCode(_)
+                ) {
+                    let start = e.offset as usize;
+                    let end = start.saturating_add(e.length as usize);
+                    Some((start, end))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        
         for (start, end, style, url_override) in disjoint {
             if start > prev_end {
                 let raw_slice = Self::text_slice_chars(text, prev_end, start);
@@ -438,7 +472,21 @@ impl MessageEntry {
                     message_vec.push(Span::raw(raw_slice));
                 }
             }
-            let content = url_override.unwrap_or_else(|| Self::text_slice_chars(text, start, end));
+            
+            let mut content = url_override.unwrap_or_else(|| Self::text_slice_chars(text, start, end));
+            
+            // Add blank lines around multi-line code blocks (Pre/PreCode)
+            if code_blocks.iter().any(|(cb_start, cb_end)| *cb_start == start && *cb_end == end) {
+                // Add newline before if not at start
+                if !message_vec.is_empty() {
+                    content = format!("\n{}", content);
+                }
+                // Add newline after if not at end
+                if end < char_count {
+                    content = format!("{}\n", content);
+                }
+            }
+            
             if !content.is_empty() {
                 message_vec.push(Span::styled(content, style));
             }
