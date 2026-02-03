@@ -9,7 +9,7 @@ use crate::{
     tg::tg_context::TgContext,
 };
 use ratatui::style::Style;
-use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard};
+use std::sync::{atomic::{AtomicBool, AtomicU8}, Arc, Mutex, MutexGuard};
 use std::{io, sync::atomic::Ordering};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
@@ -94,7 +94,8 @@ pub struct AppContext {
     /// The CLI arguments for the application.
     cli_args: Mutex<CliArgs>,
     /// The currently focused UI component, used for context-aware keymap lookup in the run loop.
-    focused_component: Mutex<Option<ComponentName>>,
+    /// Uses AtomicU8 for lock-free reads/writes. Encoded as: 0 = None, 1-11 = ComponentName variants.
+    focused_component: AtomicU8,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -134,7 +135,7 @@ impl AppContext {
             needs_render: AtomicBool::new(false),
             tg_context: Arc::new(tg_context),
             cli_args: Mutex::new(cli_args),
-            focused_component: Mutex::new(None),
+            focused_component: AtomicU8::new(0), // 0 = None
         })
     }
     /// Get the application configuration.
@@ -273,14 +274,57 @@ impl AppContext {
         self.cli_args.lock().unwrap()
     }
 
+    /// Encodes `Option<ComponentName>` to a `u8` for atomic storage.
+    /// Encoding: 0 = None, 1-11 = ComponentName variants.
+    #[inline]
+    fn encode_component(component: Option<ComponentName>) -> u8 {
+        match component {
+            None => 0,
+            Some(ComponentName::CoreWindow) => 1,
+            Some(ComponentName::ChatList) => 2,
+            Some(ComponentName::Chat) => 3,
+            Some(ComponentName::Prompt) => 4,
+            Some(ComponentName::ReplyMessage) => 5,
+            Some(ComponentName::TitleBar) => 6,
+            Some(ComponentName::StatusBar) => 7,
+            Some(ComponentName::CommandGuide) => 8,
+            Some(ComponentName::ThemeSelector) => 9,
+            Some(ComponentName::SearchOverlay) => 10,
+        }
+    }
+
+    /// Decodes a `u8` to `Option<ComponentName>` from atomic storage.
+    /// Encoding: 0 = None, 1-11 = ComponentName variants.
+    #[inline]
+    fn decode_component(encoded: u8) -> Option<ComponentName> {
+        match encoded {
+            0 => None,
+            1 => Some(ComponentName::CoreWindow),
+            2 => Some(ComponentName::ChatList),
+            3 => Some(ComponentName::Chat),
+            4 => Some(ComponentName::Prompt),
+            5 => Some(ComponentName::ReplyMessage),
+            6 => Some(ComponentName::TitleBar),
+            7 => Some(ComponentName::StatusBar),
+            8 => Some(ComponentName::CommandGuide),
+            9 => Some(ComponentName::ThemeSelector),
+            10 => Some(ComponentName::SearchOverlay),
+            _ => None, // Invalid encoding, treat as None
+        }
+    }
+
     /// Returns the currently focused UI component for context-aware keymap lookup.
+    /// Lock-free read using atomic operations.
+    #[inline]
     pub fn focused_component(&self) -> Option<ComponentName> {
-        *self.focused_component.lock().unwrap()
+        Self::decode_component(self.focused_component.load(Ordering::Acquire))
     }
 
     /// Sets the currently focused UI component. Called by CoreWindow when focus changes.
+    /// Lock-free write using atomic operations.
+    #[inline]
     pub fn set_focused_component(&self, component: Option<ComponentName>) {
-        *self.focused_component.lock().unwrap() = component;
+        self.focused_component.store(Self::encode_component(component), Ordering::Release);
     }
 
     // ===== COMMON ======
