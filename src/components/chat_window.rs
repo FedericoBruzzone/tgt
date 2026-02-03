@@ -82,7 +82,7 @@ impl ChatWindow {
         self.message_list = self.app_context.tg_context().ordered_messages_snapshot();
     }
 
-    /// Select the next message item in the list.
+    /// Select the next message item in the list (down = towards newer messages).
     fn next(&mut self) {
         let len = self.message_list.len();
         // Load more history when near top of loaded range (and not already loading)
@@ -110,9 +110,9 @@ impl ChatWindow {
             return;
         }
 
-        // Calculate next index: decrement current selection (towards older messages).
         // Bounds check: saturating_sub prevents going below 0 when already at oldest message (index 0).
         // If no selection, start at index 0 (oldest message).
+        // Without these checks, scrolling past the ends could cause panics or invalid indices.
         let i = self
             .message_list_state
             .selected()
@@ -121,7 +121,7 @@ impl ChatWindow {
         self.message_list_state.select(Some(i));
     }
 
-    /// Select the previous message item in the list (down = towards newer messages).
+    /// Select the previous message item in the list (up = towards older messages).
     fn previous(&mut self) {
         let len = self.message_list.len();
         // Load newer messages when near bottom (so user can scroll forward in time)
@@ -149,9 +149,9 @@ impl ChatWindow {
             return;
         }
 
-        // Calculate previous index: increment current selection (towards newer messages).
         // Bounds check: min(max_idx) prevents going above len-1 when already at newest message (index len-1).
         // If no selection, start at index 0 (oldest message).
+        // Without these checks, scrolling past the ends could cause panics or invalid indices.
         let max_idx = len.saturating_sub(1);
         let i = self
             .message_list_state

@@ -5,7 +5,6 @@ use crate::{
     configs::custom::keymap_custom::ActionBinding, event::Event, tg::tg_backend::TgBackend,
     tui::Tui, tui_backend::TuiBackend,
 };
-use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Rect;
 use std::{collections::HashMap, io, sync::Arc, time::Duration, time::Instant};
 use tdlib_rs::enums::ChatList;
@@ -189,20 +188,32 @@ async fn handle_tui_backend_events(
                 .send(Action::Resize(width, height))?;
         }
         Event::Key(key, modifiers) => {
-            // Esc/F1 (without Alt): skip keymap so components can handle (e.g. close guide)
-            let esc_or_f1 = key == KeyCode::Esc
-                || (key == KeyCode::F(1) && !modifiers.contains(KeyModifiers::ALT));
-            // When prompt is focused, 'q' must type (not quit); skip keymap for it (ctrl+c is prompt_copy in keymap)
-            let prompt_typing_key = app_context.focused_component() == Some(ComponentName::Prompt)
-                && key == KeyCode::Char('q');
-            if !esc_or_f1 && !prompt_typing_key {
-                // For other keys: if keymap for the focused component has a binding,
-                // send ONLY the bound action (sending Key too would make the component
-                // handle both and step twice).
-                let focused = app_context.focused_component();
-                let keymap_config = app_context.keymap_config();
+            let focused = app_context.focused_component();
+            let keymap_config = app_context.keymap_config();
+            let key_event = Event::Key(key, modifiers);
+            
+            // Check if key is explicitly bound in the component-specific keymap (not merged).
+            // If not explicitly bound in component keymap, skip keymap lookup to allow typing.
+            // This allows users to type keys that are only bound in core_window by not
+            // binding them in the component-specific keymap.
+            let component_keymap = match focused {
+                Some(ComponentName::ChatList) => &keymap_config.chat_list,
+                Some(ComponentName::Chat) => &keymap_config.chat,
+                Some(ComponentName::Prompt) => &keymap_config.prompt,
+                Some(ComponentName::CommandGuide) => &keymap_config.command_guide,
+                Some(ComponentName::ThemeSelector) => &keymap_config.theme_selector,
+                Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
+                _ => &keymap_config.core_window,
+            };
+            
+            // Only check merged keymap if key is explicitly bound in component-specific keymap
+            // or if no component is focused (use core_window)
+            let should_check_keymap = focused.is_none() || component_keymap.contains_key(&key_event);
+            
+            if should_check_keymap {
+                // Check if key is bound in the merged keymap for the focused component
                 let keymap = keymap_config.get_map_of(focused);
-                if let Some(action_binding) = keymap.get(&Event::Key(key, modifiers)) {
+                if let Some(action_binding) = keymap.get(&key_event) {
                     match action_binding {
                         ActionBinding::Single { action, .. } => {
                             app_context.action_tx().send(action.clone())?;
@@ -220,6 +231,8 @@ async fn handle_tui_backend_events(
                     }
                 }
             }
+            // Key not bound in keymap (or not explicitly bound in component keymap): pass through to components
+            // This allows components to handle keys directly (e.g. typing characters in prompt)
             app_context
                 .action_tx()
                 .send(Action::from_key_event(key, modifiers))?;

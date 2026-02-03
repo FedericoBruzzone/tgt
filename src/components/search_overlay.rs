@@ -129,6 +129,18 @@ impl Component for SearchOverlay {
         match action {
             Action::ShowSearchOverlay => self.show(),
             Action::CloseSearchOverlay => self.hide(),
+            Action::SearchOverlaySubmit => {
+                // Enter when no results: submit search query
+                if self.results.is_empty() {
+                    self.submit_search();
+                } else {
+                    // Enter when results exist: confirm selection and jump
+                    self.confirm_selection();
+                }
+            }
+            Action::SearchOverlayConfirm => {
+                self.confirm_selection();
+            }
             Action::SearchResults(entries) => {
                 self.results = entries;
                 self.list_state.select(if self.results.is_empty() {
@@ -142,18 +154,6 @@ impl Component for SearchOverlay {
                     return;
                 }
                 match key_code {
-                    KeyCode::Esc => {
-                        if let Some(tx) = self.action_tx.as_ref() {
-                            let _ = tx.send(Action::CloseSearchOverlay);
-                        }
-                    }
-                    KeyCode::Enter => {
-                        if self.results.is_empty() {
-                            self.submit_search();
-                        } else {
-                            self.confirm_selection();
-                        }
-                    }
                     KeyCode::Up => self.select_previous(),
                     KeyCode::Down => self.select_next(),
                     KeyCode::Backspace => {
