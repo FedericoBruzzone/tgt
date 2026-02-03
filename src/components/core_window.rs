@@ -531,10 +531,20 @@ impl Component for CoreWindow {
                 if let Some(component) = self.components.get_mut(&ComponentName::PhotoViewer) {
                     component.update(action.clone());
                 }
-                // Unfocus when hiding
+                // Unfocus PhotoViewer and refocus Chat
                 if self.component_focused == Some(ComponentName::PhotoViewer) {
-                    self.component_focused = None;
-                    self.app_context.set_focused_component(None);
+                    self.component_focused = Some(ComponentName::Chat);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
+                    // Focus Chat and unfocus other components
+                    self.components
+                        .get_mut(&ComponentName::Chat)
+                        .unwrap()
+                        .focus();
+                    self.components
+                        .iter_mut()
+                        .filter(|(name, _)| *name != &ComponentName::Chat)
+                        .for_each(|(_, component)| component.unfocus());
                 }
             }
             Action::SwitchTheme => {
