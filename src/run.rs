@@ -146,7 +146,7 @@ async fn handle_tg_backend_events(
             Event::ChatMessageAdded(message_id) => {
                 app_context
                     .tg_context()
-                    .set_jump_target_message_id(message_id);
+                    .set_jump_target_message_id_i64(message_id);
                 app_context.action_tx().send(Action::ChatHistoryAppended)?;
             }
             _ => {}
@@ -356,7 +356,7 @@ pub async fn handle_app_actions(
                 let _ = tg_backend
                     .send_message(
                         message.to_string(),
-                        app_context.tg_context().open_chat_id(),
+                        app_context.tg_context().open_chat_id().as_i64(),
                         reply_to.clone(),
                     )
                     .await;
@@ -369,12 +369,12 @@ pub async fn handle_app_actions(
             Action::GetChatHistory => {
                 if !app_context.tg_context().is_history_loading() {
                     app_context.tg_context().set_history_loading(true);
-                    let chat_id = app_context.tg_context().open_chat_id();
+                    let chat_id = app_context.tg_context().open_chat_id().as_i64();
                     const INITIAL_LOAD_TARGET: usize = 100;
                     let start_len = app_context.tg_context().open_chat_messages().len();
                     loop {
                         // Only insert for the chat that is still open (guard against stale load).
-                        if app_context.tg_context().open_chat_id() != chat_id {
+                        if app_context.tg_context().open_chat_id().as_i64() != chat_id {
                             break;
                         }
                         let from_message_id = app_context.tg_context().from_message_id();
@@ -384,7 +384,7 @@ pub async fn handle_app_actions(
                         if entries.is_empty() {
                             break;
                         }
-                        if app_context.tg_context().open_chat_id() != chat_id {
+                        if app_context.tg_context().open_chat_id().as_i64() != chat_id {
                             break;
                         }
                         let tg = app_context.tg_context();
@@ -404,7 +404,7 @@ pub async fn handle_app_actions(
             }
             Action::GetChatHistoryNewer => {
                 if !app_context.tg_context().is_history_loading() {
-                    let chat_id = app_context.tg_context().open_chat_id();
+                    let chat_id = app_context.tg_context().open_chat_id().as_i64();
                     let newest = app_context
                         .tg_context()
                         .open_chat_messages()
@@ -421,7 +421,7 @@ pub async fn handle_app_actions(
                                 NEWER_BATCH,
                             )
                             .await;
-                        if app_context.tg_context().open_chat_id() == chat_id && !entries.is_empty()
+                        if app_context.tg_context().open_chat_id().as_i64() == chat_id && !entries.is_empty()
                         {
                             app_context
                                 .tg_context()
@@ -434,7 +434,7 @@ pub async fn handle_app_actions(
                 }
             }
             Action::SearchChatMessages(ref query) => {
-                let chat_id = app_context.tg_context().open_chat_id();
+                let chat_id = app_context.tg_context().open_chat_id().as_i64();
                 if chat_id == 0 {
                     continue;
                 }
@@ -451,7 +451,7 @@ pub async fn handle_app_actions(
                 }
             }
             Action::JumpToMessage(message_id) => {
-                let chat_id = app_context.tg_context().open_chat_id();
+                let chat_id = app_context.tg_context().open_chat_id().as_i64();
                 if chat_id == 0 {
                     continue;
                 }
@@ -464,7 +464,7 @@ pub async fn handle_app_actions(
                 {
                     app_context
                         .tg_context()
-                        .set_jump_target_message_id(*message_id);
+                        .set_jump_target_message_id_i64(*message_id);
                     let _ = app_context
                         .action_tx()
                         .send(Action::JumpCompleted(*message_id));
@@ -475,7 +475,7 @@ pub async fn handle_app_actions(
                 app_context.tg_context().set_history_loading(true);
                 app_context
                     .tg_context()
-                    .set_jump_target_message_id(*message_id);
+                    .set_jump_target_message_id_i64(*message_id);
                 const OLDER_LIMIT: i32 = 31; // target + 30 older
                 const NEWER_LIMIT: i32 = 16; // target + 15 newer (limit must be >= -offset)
                 let (entries_older, _) = tg_backend
@@ -511,7 +511,7 @@ pub async fn handle_app_actions(
             Action::DeleteMessages(ref message_ids, revoke) => {
                 tg_backend
                     .delete_messages(
-                        app_context.tg_context().open_chat_id(),
+                        app_context.tg_context().open_chat_id().as_i64(),
                         message_ids.to_vec(),
                         *revoke,
                     )
@@ -520,7 +520,7 @@ pub async fn handle_app_actions(
             Action::ReplyMessage(message_id, ref message) => {
                 app_context
                     .tg_context()
-                    .set_reply_message(*message_id, message.to_string());
+                    .set_reply_message_i64(*message_id, message.to_string());
             }
             Action::ViewAllMessages => {
                 tg_backend.view_all_messages().await;

@@ -258,7 +258,7 @@ impl ChatListWindow {
         if let Some(i) = self.chat_list_state.selected() {
             if let Some(chat) = self.visible_chats.get(i) {
                 // Explicit i64 comparison (TDLib uses int64); avoid any type/guard mismatch.
-                let open_id: i64 = self.app_context.tg_context().open_chat_id();
+                let open_id: i64 = self.app_context.tg_context().open_chat_id().as_i64();
                 let selected_chat_id: i64 = chat.chat_id;
                 tracing::info!(
                     open_id,
@@ -285,9 +285,9 @@ impl ChatListWindow {
                 self.app_context
                     .tg_context()
                     .set_open_chat_user(chat.user.clone());
-                self.app_context.tg_context().set_open_chat_id(chat.chat_id);
+                self.app_context.tg_context().set_open_chat_id_i64(chat.chat_id);
                 self.app_context.tg_context().clear_open_chat_messages();
-                self.app_context.tg_context().set_jump_target_message_id(0);
+                self.app_context.tg_context().set_jump_target_message_id_i64(0);
                 self.app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))
@@ -320,7 +320,7 @@ impl ChatListWindow {
     /// If open_chat_id is not in visible_chats (e.g. during TDLib update flurry), clear selection
     /// so we don't confirm a wrong chat at a stale index.
     fn sync_selection_to_open_chat(&mut self) {
-        let open_id: i64 = self.app_context.tg_context().open_chat_id();
+        let open_id: i64 = self.app_context.tg_context().open_chat_id().as_i64();
         match self.visible_chats.iter().position(|c| c.chat_id == open_id) {
             Some(idx) => self.chat_list_state.select(Some(idx)),
             None => {

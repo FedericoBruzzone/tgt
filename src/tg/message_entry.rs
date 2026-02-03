@@ -119,7 +119,7 @@ impl MessageEntry {
         let reply_text = match &self.reply_to {
             Some(reply_to) => match reply_to {
                 TdMessageReplyTo::Message(message) => {
-                    if app_context.tg_context().open_chat_id() == message.chat_id {
+                    if app_context.tg_context().open_chat_id().as_i64() == message.chat_id {
                         let mut entry = Text::default();
                         entry.extend(vec![Line::from(vec![
                             Span::styled(reply_prefix, app_context.style_chat_message_reply_text()),
