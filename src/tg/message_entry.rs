@@ -205,6 +205,31 @@ impl MessageEntry {
             MessageContent::MessageAnimation(_) => vec![Line::from("🎞️ Animation")],
             MessageContent::MessageVoiceNote(_) => vec![Line::from("🎤 Voice Note")],
             MessageContent::MessageDocument(_) => vec![Line::from("📄 Document")],
+            MessageContent::MessageCall(call) => {
+                let call_type = if call.is_video { "📹 Video Call" } else { "📞 Call" };
+                let duration_text = if call.duration > 0 {
+                    format!(" ({}s)", call.duration)
+                } else {
+                    String::new()
+                };
+                vec![Line::from(format!("{}{}", call_type, duration_text))]
+            }
+            MessageContent::MessageVideoChatStarted(_) => vec![Line::from("📹 Video chat started")],
+            MessageContent::MessageVideoChatEnded(ended) => {
+                let duration_text = if ended.duration > 0 {
+                    format!(" ({}s)", ended.duration)
+                } else {
+                    String::new()
+                };
+                vec![Line::from(format!("📹 Video chat ended{}", duration_text))]
+            }
+            MessageContent::MessageVideoChatScheduled(scheduled) => {
+                vec![Line::from(format!("📹 Video chat scheduled for {}", 
+                    DateTimeEntry::convert_time(scheduled.start_date)))]
+            }
+            MessageContent::MessageInviteVideoChatParticipants(_) => {
+                vec![Line::from("📹 Invited to video chat")]
+            }
             _ => vec![Line::from("")],
         }
     }
@@ -579,5 +604,127 @@ mod message_parsing_tests {
         let msg = message_with_entities("plain", vec![]);
         let entry = MessageEntry::from(&msg);
         assert_eq!(entry.message_content_to_string(), "plain");
+    }
+
+    /// Call messages should display with duration.
+    #[test]
+    fn format_message_content_call_with_duration() {
+        use tdlib_rs::types::{MessageCall, MessageCallDiscardReason};
+        
+        let msg = Message {
+            id: 1,
+            sender_id: MessageSender::User(MessageSenderUser { user_id: 1 }),
+            chat_id: 1,
+            author_signature: String::new(),
+            via_bot_user_id: 0,
+            reply_to: None,
+            date: 0,
+            edit_date: 0,
+            message_thread_id: 0,
+            content: MessageContent::MessageCall(MessageCall {
+                is_video: false,
+                discard_reason: MessageCallDiscardReason::Declined,
+                duration: 123,
+            }),
+            sending_state: None,
+            scheduling_state: None,
+            is_outgoing: false,
+            is_pinned: false,
+            is_from_offline: false,
+            can_be_edited: false,
+            can_be_forwarded: false,
+            can_be_deleted_only_for_self: false,
+            can_be_deleted_for_all_users: false,
+            can_get_added_reactions: false,
+            can_get_statistics: false,
+            can_get_message_thread: false,
+            can_get_viewers: false,
+            can_get_media_timestamp_links: false,
+            can_report_reactions: false,
+            is_channel_post: false,
+            is_topic_message: false,
+            contains_unread_mention: false,
+            interaction_info: None,
+            unread_reactions: vec![],
+            self_destruct_type: None,
+            auto_delete_in: 0.0,
+            media_album_id: 0,
+            restriction_reason: String::new(),
+            can_be_replied_in_another_chat: false,
+            can_be_saved: false,
+            can_get_read_date: false,
+            has_timestamped_media: false,
+            forward_info: None,
+            import_info: None,
+            saved_messages_topic_id: 0,
+            sender_business_bot_user_id: 0,
+            sender_boost_count: 0,
+            reply_markup: None,
+            self_destruct_in: 0.0,
+        };
+        
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "📞 Call (123s)");
+    }
+
+    /// Video call messages should display correctly.
+    #[test]
+    fn format_message_content_video_call() {
+        use tdlib_rs::types::{MessageCall, MessageCallDiscardReason};
+        
+        let msg = Message {
+            id: 1,
+            sender_id: MessageSender::User(MessageSenderUser { user_id: 1 }),
+            chat_id: 1,
+            author_signature: String::new(),
+            via_bot_user_id: 0,
+            reply_to: None,
+            date: 0,
+            edit_date: 0,
+            message_thread_id: 0,
+            content: MessageContent::MessageCall(MessageCall {
+                is_video: true,
+                discard_reason: MessageCallDiscardReason::HungUp,
+                duration: 0,
+            }),
+            sending_state: None,
+            scheduling_state: None,
+            is_outgoing: false,
+            is_pinned: false,
+            is_from_offline: false,
+            can_be_edited: false,
+            can_be_forwarded: false,
+            can_be_deleted_only_for_self: false,
+            can_be_deleted_for_all_users: false,
+            can_get_added_reactions: false,
+            can_get_statistics: false,
+            can_get_message_thread: false,
+            can_get_viewers: false,
+            can_get_media_timestamp_links: false,
+            can_report_reactions: false,
+            is_channel_post: false,
+            is_topic_message: false,
+            contains_unread_mention: false,
+            interaction_info: None,
+            unread_reactions: vec![],
+            self_destruct_type: None,
+            auto_delete_in: 0.0,
+            media_album_id: 0,
+            restriction_reason: String::new(),
+            can_be_replied_in_another_chat: false,
+            can_be_saved: false,
+            can_get_read_date: false,
+            has_timestamped_media: false,
+            forward_info: None,
+            import_info: None,
+            saved_messages_topic_id: 0,
+            sender_business_bot_user_id: 0,
+            sender_boost_count: 0,
+            reply_markup: None,
+            self_destruct_in: 0.0,
+        };
+        
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "📹 Video Call");
     }
 }
