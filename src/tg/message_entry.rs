@@ -298,7 +298,7 @@ impl MessageEntry {
             let mut lines = Vec::new();
             let mut current_line = Line::default();
             let mut current_line_width = 0usize;
-            
+
             for line in &self.message_content {
                 // Preserve blank lines
                 if line.spans.is_empty() || line.spans.iter().all(|s| s.content.trim().is_empty()) {
@@ -309,7 +309,7 @@ impl MessageEntry {
                     lines.push(Line::from(""));
                     continue;
                 }
-                
+
                 // Wrap non-blank lines
                 for span in line.iter() {
                     for c in span.content.chars() {
@@ -446,7 +446,7 @@ impl MessageEntry {
         let char_count = text.chars().count();
         let mut message_vec = Vec::new();
         let mut prev_end = 0usize;
-        
+
         // Track code blocks (Pre/PreCode only, not inline Code) to add blank lines
         let code_blocks: Vec<(usize, usize)> = entities
             .iter()
@@ -464,7 +464,7 @@ impl MessageEntry {
                 }
             })
             .collect();
-        
+
         for (start, end, style, url_override) in disjoint {
             if start > prev_end {
                 let raw_slice = Self::text_slice_chars(text, prev_end, start);
@@ -472,11 +472,15 @@ impl MessageEntry {
                     message_vec.push(Span::raw(raw_slice));
                 }
             }
-            
-            let mut content = url_override.unwrap_or_else(|| Self::text_slice_chars(text, start, end));
-            
+
+            let mut content =
+                url_override.unwrap_or_else(|| Self::text_slice_chars(text, start, end));
+
             // Add blank lines around multi-line code blocks (Pre/PreCode)
-            if code_blocks.iter().any(|(cb_start, cb_end)| *cb_start == start && *cb_end == end) {
+            if code_blocks
+                .iter()
+                .any(|(cb_start, cb_end)| *cb_start == start && *cb_end == end)
+            {
                 // Add newline before if not at start
                 if !message_vec.is_empty() {
                     content = format!("\n{}", content);
@@ -486,7 +490,7 @@ impl MessageEntry {
                     content = format!("{}\n", content);
                 }
             }
-            
+
             if !content.is_empty() {
                 message_vec.push(Span::styled(content, style));
             }
