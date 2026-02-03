@@ -482,7 +482,10 @@ mod tests {
         let mut guide = CommandGuide::new(app_context);
 
         guide.show();
-        assert!(guide.is_visible(), "Guide should be visible before HideCommandGuide");
+        assert!(
+            guide.is_visible(),
+            "Guide should be visible before HideCommandGuide"
+        );
 
         guide.update(Action::HideCommandGuide);
         assert!(
@@ -497,7 +500,10 @@ mod tests {
         let mut guide = CommandGuide::new(app_context);
 
         guide.show();
-        assert!(guide.is_visible(), "Guide should be visible before HideCommandGuide");
+        assert!(
+            guide.is_visible(),
+            "Guide should be visible before HideCommandGuide"
+        );
 
         guide.update(Action::HideCommandGuide);
         assert!(

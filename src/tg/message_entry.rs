@@ -206,7 +206,11 @@ impl MessageEntry {
             MessageContent::MessageVoiceNote(_) => vec![Line::from("🎤 Voice Note")],
             MessageContent::MessageDocument(_) => vec![Line::from("📄 Document")],
             MessageContent::MessageCall(call) => {
-                let call_type = if call.is_video { "📹 Video Call" } else { "📞 Call" };
+                let call_type = if call.is_video {
+                    "📹 Video Call"
+                } else {
+                    "📞 Call"
+                };
                 let duration_text = if call.duration > 0 {
                     format!(" ({}s)", call.duration)
                 } else {
@@ -224,8 +228,10 @@ impl MessageEntry {
                 vec![Line::from(format!("📹 Video chat ended{}", duration_text))]
             }
             MessageContent::MessageVideoChatScheduled(scheduled) => {
-                vec![Line::from(format!("📹 Video chat scheduled for {}", 
-                    DateTimeEntry::convert_time(scheduled.start_date)))]
+                vec![Line::from(format!(
+                    "📹 Video chat scheduled for {}",
+                    DateTimeEntry::convert_time(scheduled.start_date)
+                ))]
             }
             MessageContent::MessageInviteVideoChatParticipants(_) => {
                 vec![Line::from("📹 Invited to video chat")]
@@ -609,8 +615,9 @@ mod message_parsing_tests {
     /// Call messages should display with duration.
     #[test]
     fn format_message_content_call_with_duration() {
-        use tdlib_rs::types::{MessageCall, MessageCallDiscardReason};
-        
+        use tdlib_rs::enums::CallDiscardReason;
+        use tdlib_rs::types::MessageCall;
+
         let msg = Message {
             id: 1,
             sender_id: MessageSender::User(MessageSenderUser { user_id: 1 }),
@@ -623,7 +630,7 @@ mod message_parsing_tests {
             message_thread_id: 0,
             content: MessageContent::MessageCall(MessageCall {
                 is_video: false,
-                discard_reason: MessageCallDiscardReason::Declined,
+                discard_reason: CallDiscardReason::Declined,
                 duration: 123,
             }),
             sending_state: None,
@@ -662,7 +669,7 @@ mod message_parsing_tests {
             reply_markup: None,
             self_destruct_in: 0.0,
         };
-        
+
         let entry = MessageEntry::from(&msg);
         assert_eq!(entry.message_content_to_string(), "📞 Call (123s)");
     }
@@ -670,8 +677,9 @@ mod message_parsing_tests {
     /// Video call messages should display correctly.
     #[test]
     fn format_message_content_video_call() {
-        use tdlib_rs::types::{MessageCall, MessageCallDiscardReason};
-        
+        use tdlib_rs::enums::CallDiscardReason;
+        use tdlib_rs::types::MessageCall;
+
         let msg = Message {
             id: 1,
             sender_id: MessageSender::User(MessageSenderUser { user_id: 1 }),
@@ -684,7 +692,7 @@ mod message_parsing_tests {
             message_thread_id: 0,
             content: MessageContent::MessageCall(MessageCall {
                 is_video: true,
-                discard_reason: MessageCallDiscardReason::HungUp,
+                discard_reason: CallDiscardReason::HungUp,
                 duration: 0,
             }),
             sending_state: None,
@@ -723,7 +731,7 @@ mod message_parsing_tests {
             reply_markup: None,
             self_destruct_in: 0.0,
         };
-        
+
         let entry = MessageEntry::from(&msg);
         assert_eq!(entry.message_content_to_string(), "📹 Video Call");
     }

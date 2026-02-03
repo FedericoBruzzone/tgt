@@ -340,9 +340,11 @@ impl KeymapConfig {
         self.merged_command_guide = self.core_window.clone();
         self.merged_command_guide.extend(self.command_guide.clone());
         self.merged_theme_selector = self.core_window.clone();
-        self.merged_theme_selector.extend(self.theme_selector.clone());
+        self.merged_theme_selector
+            .extend(self.theme_selector.clone());
         self.merged_search_overlay = self.core_window.clone();
-        self.merged_search_overlay.extend(self.search_overlay.clone());
+        self.merged_search_overlay
+            .extend(self.search_overlay.clone());
     }
 
     /// Get the effective keymap for a component: general (core_window) bindings plus
@@ -427,7 +429,9 @@ impl ConfigFile for KeymapConfig {
                     }
                 }
                 if let Some(command_guide) = other.command_guide {
-                    for (k, v) in Self::keymaps_vec_to_map(command_guide.keymap, KeymapKind::CommandGuide) {
+                    for (k, v) in
+                        Self::keymaps_vec_to_map(command_guide.keymap, KeymapKind::CommandGuide)
+                    {
                         if self.command_guide.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the command_guide section, you are overriding it",
@@ -437,7 +441,9 @@ impl ConfigFile for KeymapConfig {
                     }
                 }
                 if let Some(theme_selector) = other.theme_selector {
-                    for (k, v) in Self::keymaps_vec_to_map(theme_selector.keymap, KeymapKind::ThemeSelector) {
+                    for (k, v) in
+                        Self::keymaps_vec_to_map(theme_selector.keymap, KeymapKind::ThemeSelector)
+                    {
                         if self.theme_selector.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the theme_selector section, you are overriding it",
@@ -447,7 +453,9 @@ impl ConfigFile for KeymapConfig {
                     }
                 }
                 if let Some(search_overlay) = other.search_overlay {
-                    for (k, v) in Self::keymaps_vec_to_map(search_overlay.keymap, KeymapKind::SearchOverlay) {
+                    for (k, v) in
+                        Self::keymaps_vec_to_map(search_overlay.keymap, KeymapKind::SearchOverlay)
+                    {
                         if self.search_overlay.insert(k.clone(), v).is_some() {
                             tracing::warn!(
                                     "Keymap entry {:?} is already present in the search_overlay section, you are overriding it",
@@ -488,18 +496,32 @@ impl From<KeymapRaw> for KeymapConfig {
         let chat = Self::keymaps_vec_to_map(raw.chat.unwrap().keymap, KeymapKind::Chat);
         let prompt = Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap, KeymapKind::Prompt);
         let command_guide = Self::keymaps_vec_to_map(
-            raw.command_guide.unwrap_or(KeymapMode { keymap: vec![] }).keymap,
+            raw.command_guide
+                .unwrap_or(KeymapMode { keymap: vec![] })
+                .keymap,
             KeymapKind::CommandGuide,
         );
         let theme_selector = Self::keymaps_vec_to_map(
-            raw.theme_selector.unwrap_or(KeymapMode { keymap: vec![] }).keymap,
+            raw.theme_selector
+                .unwrap_or(KeymapMode { keymap: vec![] })
+                .keymap,
             KeymapKind::ThemeSelector,
         );
         let search_overlay = Self::keymaps_vec_to_map(
-            raw.search_overlay.unwrap_or(KeymapMode { keymap: vec![] }).keymap,
+            raw.search_overlay
+                .unwrap_or(KeymapMode { keymap: vec![] })
+                .keymap,
             KeymapKind::SearchOverlay,
         );
-        Self::check_duplicates(&core_window, &chat_list, &chat, &prompt, &command_guide, &theme_selector, &search_overlay);
+        Self::check_duplicates(
+            &core_window,
+            &chat_list,
+            &chat,
+            &prompt,
+            &command_guide,
+            &theme_selector,
+            &search_overlay,
+        );
         let mut config = Self {
             core_window,
             chat_list,

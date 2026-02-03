@@ -191,7 +191,7 @@ mod tests {
     fn atomic_chat_id() {
         let atomic = AtomicChatId::new(ChatId::NONE);
         assert_eq!(atomic.load(Ordering::Relaxed), ChatId::NONE);
-        
+
         atomic.store(ChatId::new(789), Ordering::Relaxed);
         assert_eq!(atomic.load(Ordering::Relaxed).as_i64(), 789);
     }
@@ -200,7 +200,7 @@ mod tests {
     fn atomic_message_id() {
         let atomic = AtomicMessageId::new(MessageId::NONE);
         assert_eq!(atomic.load(Ordering::Relaxed), MessageId::NONE);
-        
+
         atomic.store(MessageId::new(999), Ordering::Relaxed);
         assert_eq!(atomic.load(Ordering::Relaxed).as_i64(), 999);
     }

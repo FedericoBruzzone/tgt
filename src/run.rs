@@ -191,7 +191,7 @@ async fn handle_tui_backend_events(
             let focused = app_context.focused_component();
             let keymap_config = app_context.keymap_config();
             let key_event = Event::Key(key, modifiers);
-            
+
             // Check if key is explicitly bound in the component-specific keymap (not merged).
             // If not explicitly bound in component keymap, skip keymap lookup to allow typing.
             // This allows users to type keys that are only bound in core_window by not
@@ -205,11 +205,12 @@ async fn handle_tui_backend_events(
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
                 _ => &keymap_config.core_window,
             };
-            
+
             // Only check merged keymap if key is explicitly bound in component-specific keymap
             // or if no component is focused (use core_window)
-            let should_check_keymap = focused.is_none() || component_keymap.contains_key(&key_event);
-            
+            let should_check_keymap =
+                focused.is_none() || component_keymap.contains_key(&key_event);
+
             if should_check_keymap {
                 // Check if key is bound in the merged keymap for the focused component
                 let keymap = keymap_config.get_map_of(focused);
@@ -434,7 +435,8 @@ pub async fn handle_app_actions(
                                 NEWER_BATCH,
                             )
                             .await;
-                        if app_context.tg_context().open_chat_id().as_i64() == chat_id && !entries.is_empty()
+                        if app_context.tg_context().open_chat_id().as_i64() == chat_id
+                            && !entries.is_empty()
                         {
                             app_context
                                 .tg_context()
