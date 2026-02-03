@@ -697,10 +697,16 @@ impl TgBackend {
                                 &mut chat,
                                 positions,
                             );
+                            // Trigger chat list rebuild to show new chat
+                            let _ = action_tx.send(Action::ChatHistoryAppended);
                         }
                         Update::ChatTitle(update_chat) => {
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
-                                Some(chat) => chat.title = update_chat.title,
+                                Some(chat) => {
+                                    chat.title = update_chat.title;
+                                    // Trigger chat list rebuild to update chat name
+                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                }
                                 None => update_dequeue.push_back(update),
                             }
                         }
@@ -727,6 +733,8 @@ impl TgBackend {
                                         chat,
                                         update_chat.positions,
                                     );
+                                    // Trigger chat list rebuild to update last message and position
+                                    let _ = action_tx.send(Action::ChatHistoryAppended);
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -762,6 +770,8 @@ impl TgBackend {
                                             chat,
                                             new_position,
                                         );
+                                        // Trigger chat list rebuild to update chat order
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
                                     }
                                     None => update_dequeue.push_back(update),
                                 }
