@@ -268,9 +268,9 @@ impl TgBackend {
         match functions::download_file(
             file_id,
             priority,
-            0,     // offset
-            0,     // limit (0 = download entire file)
-            true,  // synchronous
+            0,    // offset
+            0,    // limit (0 = download entire file)
+            true, // synchronous
             self.client_id,
         )
         .await

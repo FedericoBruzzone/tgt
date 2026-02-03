@@ -15,6 +15,7 @@ use std::{io, path::Path, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Loading state for the photo viewer
+#[allow(clippy::large_enum_variant)]
 enum PhotoState {
     /// No photo selected
     None,
@@ -22,7 +23,6 @@ enum PhotoState {
     Loading { message_id: i64 },
     /// Photo is loaded and ready to display
     Loaded {
-        message_id: i64,
         image_state: StatefulProtocol,
         original_image: image::DynamicImage,
     },
@@ -62,7 +62,7 @@ impl PhotoViewer {
             // Fallback to halfblocks if query fails
             Picker::halfblocks()
         });
-        
+
         PhotoViewer {
             app_context,
             name: "".to_string(),
@@ -90,10 +90,14 @@ impl PhotoViewer {
     pub fn show(&mut self, message_id: i64) {
         self.visible = true;
         self.photo_state = PhotoState::Loading { message_id };
-        
+
         // Get the message and check if it's a photo
         if let Some(message) = self.app_context.tg_context().get_message(message_id) {
-            if let MessageContentType::Photo { file_id: _, file_path } = message.content_type() {
+            if let MessageContentType::Photo {
+                file_id: _,
+                file_path,
+            } = message.content_type()
+            {
                 // Check if file is already downloaded
                 if !file_path.is_empty() && Path::new(file_path).exists() {
                     // File already exists, load it immediately
@@ -125,12 +129,11 @@ impl PhotoViewer {
     }
 
     /// Load a photo from a file path
-    fn load_photo_from_path(&mut self, message_id: i64, path: &str) {
+    fn load_photo_from_path(&mut self, _message_id: i64, path: &str) {
         match image::open(path) {
             Ok(img) => {
                 let image_state = self.picker.new_resize_protocol(img.clone());
                 self.photo_state = PhotoState::Loaded {
-                    message_id,
                     image_state,
                     original_image: img,
                 };
@@ -190,8 +193,7 @@ impl Component for PhotoViewer {
             Action::Key(key_code, _modifiers) => {
                 if self.visible {
                     match key_code {
-                        crossterm::event::KeyCode::Esc
-                        | crossterm::event::KeyCode::Char('q') => {
+                        crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::Char('q') => {
                             self.hide();
                             if let Some(tx) = self.action_tx.as_ref() {
                                 tx.send(Action::HidePhotoViewer).unwrap_or(());
@@ -240,8 +242,8 @@ impl Component for PhotoViewer {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(3),      // Main content area
-                Constraint::Length(1),   // Instructions
+                Constraint::Min(3),    // Main content area
+                Constraint::Length(1), // Instructions
             ])
             .split(inner_area);
 
@@ -270,41 +272,48 @@ impl Component for PhotoViewer {
                     .alignment(Alignment::Center);
                 frame.render_widget(paragraph, content_area);
             }
-            PhotoState::Loaded { image_state, original_image, .. } => {
+            PhotoState::Loaded {
+                image_state,
+                original_image,
+                ..
+            } => {
                 // Get font size from picker to properly calculate dimensions
                 let font_size = self.picker.font_size();
                 let font_width = font_size.0 as f32;
                 let font_height = font_size.1 as f32;
-                let (img_width, img_height) = (original_image.width() as f32, original_image.height() as f32);
-                
+                let (img_width, img_height) = (
+                    original_image.width() as f32,
+                    original_image.height() as f32,
+                );
+
                 // Calculate available pixel dimensions
                 let available_width_px = content_area.width as f32 * font_width;
                 let available_height_px = content_area.height as f32 * font_height;
-                
+
                 // Calculate scale to fit image in available space while maintaining aspect ratio
                 let scale_x = available_width_px / img_width;
                 let scale_y = available_height_px / img_height;
                 let scale = scale_x.min(scale_y);
-                
+
                 // Calculate actual display dimensions in pixels
                 let display_width_px = img_width * scale;
                 let display_height_px = img_height * scale;
-                
+
                 // Convert back to character cells
                 let display_width_cells = (display_width_px / font_width).ceil() as u16;
                 let display_height_cells = (display_height_px / font_height).ceil() as u16;
-                
+
                 // Center the image rect within content_area
                 let x_offset = (content_area.width.saturating_sub(display_width_cells)) / 2;
                 let y_offset = (content_area.height.saturating_sub(display_height_cells)) / 2;
-                
+
                 let image_rect = Rect::new(
                     content_area.x + x_offset,
                     content_area.y + y_offset,
                     display_width_cells,
                     display_height_cells,
                 );
-                
+
                 // Render the image using StatefulImage widget with Fit resize mode
                 let image_widget = StatefulImage::new().resize(Resize::Fit(None));
                 frame.render_stateful_widget(image_widget, image_rect, image_state);
