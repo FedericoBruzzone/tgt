@@ -1,3 +1,4 @@
+pub mod ids;
 pub mod message_entry;
 pub mod open_chat_store;
 pub mod ordered_chat;

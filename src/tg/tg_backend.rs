@@ -146,7 +146,7 @@ impl TgBackend {
 
     pub async fn view_all_messages(&self) {
         if let Err(e) = functions::view_messages(
-            self.app_context.tg_context().open_chat_id(),
+            self.app_context.tg_context().open_chat_id().as_i64(),
             self.app_context.tg_context().unread_messages(),
             None,
             true,
@@ -294,7 +294,7 @@ impl TgBackend {
     ) -> Result<tdlib_rs::types::Message, tdlib_rs::types::Error> {
         self.app_context
             .tg_context()
-            .set_reply_message(-1, "".to_string());
+            .set_reply_message_i64(-1, "".to_string());
 
         self.app_context
             .action_tx()
@@ -330,7 +330,7 @@ impl TgBackend {
             clear_draft: true,
         });
         match functions::edit_message_text(
-            self.app_context.tg_context().open_chat_id(),
+            self.app_context.tg_context().open_chat_id().as_i64(),
             message_id,
             text,
             self.client_id,
@@ -959,7 +959,7 @@ impl TgBackend {
                             // Only touch open_chat_messages when update is for the open chat (avoid late/ghost updates).
                             let message = update_new_message.message;
                             let chat_id: i64 = message.chat_id;
-                            if tg_context.open_chat_id() == chat_id {
+                            if tg_context.open_chat_id().as_i64() == chat_id {
                                 tg_context
                                     .open_chat_messages()
                                     .insert_messages(std::iter::once(MessageEntry::from(&message)));
@@ -973,7 +973,7 @@ impl TgBackend {
                         Update::MessageEdited(_) => {}
                         Update::MessageContent(message) => {
                             // Only touch open_chat_messages when update is for the open chat.
-                            if tg_context.open_chat_id() == message.chat_id {
+                            if tg_context.open_chat_id().as_i64() == message.chat_id {
                                 if let Some(entry) = tg_context
                                     .open_chat_messages()
                                     .get_message_mut(message.message_id)
@@ -985,7 +985,7 @@ impl TgBackend {
                         }
                         Update::DeleteMessages(update_delete_messages) => {
                             // Only touch open_chat_messages when update is for the open chat.
-                            if tg_context.open_chat_id() == update_delete_messages.chat_id {
+                            if tg_context.open_chat_id().as_i64() == update_delete_messages.chat_id {
                                 // When from_cache is true, TDLib evicted messages from its local cache
                                 // (e.g. GC/sync after ~60s). They were NOT deleted on the server.
                                 // Do not remove from our UI; optionally re-fetch so user sees them again.

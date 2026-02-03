@@ -334,7 +334,7 @@ impl Component for CoreWindow {
                 self.show_reply_message = false;
                 self.app_context
                     .tg_context()
-                    .set_reply_message(-1, String::new());
+                    .set_reply_message_i64(-1, String::new());
             }
             Action::ShowCommandGuide => {
                 // Toggle command guide: if already visible, hide it; otherwise show it

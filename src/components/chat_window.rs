@@ -83,7 +83,7 @@ impl ChatWindow {
     /// TOCTOU: another thread clearing the store between ordered_message_ids() and get_message().
     fn refresh_message_list_from_store(&mut self) {
         self.message_list = self.app_context.tg_context().ordered_messages_snapshot();
-        let open_id = self.app_context.tg_context().open_chat_id();
+        let open_id = self.app_context.tg_context().open_chat_id().as_i64();
         let len = self.message_list.len();
         if open_id != 0 && len <= 1 {
             if self.last_logged_suspicious_len != Some(len) {
@@ -379,9 +379,9 @@ impl Component for ChatWindow {
         self.refresh_message_list_from_store();
 
         // After jump-to-message: select the target and clear the flag
-        let jump_target = self.app_context.tg_context().jump_target_message_id();
+        let jump_target = self.app_context.tg_context().jump_target_message_id().as_i64();
         if jump_target != 0 {
-            self.app_context.tg_context().set_jump_target_message_id(0);
+            self.app_context.tg_context().set_jump_target_message_id_i64(0);
             if let Some(idx) = self.message_list.iter().position(|m| m.id() == jump_target) {
                 self.message_list_state.select(Some(idx));
             }
@@ -455,7 +455,7 @@ impl Component for ChatWindow {
         // Leave margin so wrapped lines and wide chars don't overflow the right edge
         let wrap_width = list_inner.width.saturating_sub(2) as i32;
 
-        let reply_message_id = self.app_context.tg_context().reply_message_id();
+        let reply_message_id = self.app_context.tg_context().reply_message_id().as_i64();
         let mut is_unread_outbox = true;
         let mut is_unread_inbox = true;
         let mut items: Vec<ListItem<'_>> = self

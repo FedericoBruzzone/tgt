@@ -1,3 +1,4 @@
+use super::ids::{AtomicChatId, AtomicMessageId, ChatId, MessageId};
 use super::message_entry::MessageEntry;
 use super::open_chat_store::OpenChatMessageStore;
 use crate::tg::message_entry::DateTimeEntry;
@@ -20,7 +21,7 @@ use tdlib_rs::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TgContext {
     users: Mutex<HashMap<i64, User>>,
     basic_groups: Mutex<HashMap<i64, BasicGroup>>,
@@ -37,8 +38,8 @@ pub struct TgContext {
 
     event_tx: Mutex<Option<UnboundedSender<Event>>>,
     me: AtomicI64,
-    open_chat_id: AtomicI64,
-    /// Message cache and view window for the open chat (PR1 data layer).
+    open_chat_id: AtomicChatId,
+    /// Message cache and view window for the open chat.
     open_chat_messages: Mutex<OpenChatMessageStore>,
     open_chat_user: Mutex<Option<User>>,
 
@@ -50,11 +51,11 @@ pub struct TgContext {
     /// True while a "load more history" request is in flight; avoids duplicate requests.
     history_loading: AtomicBool,
 
-    /// After JumpToMessage completes, ChatWindow should select this message_id (-1 = none).
-    jump_target_message_id: AtomicI64,
+    /// After JumpToMessage completes, ChatWindow should select this message_id (MessageId::NONE = none).
+    jump_target_message_id: AtomicMessageId,
 
-    /// reply message id
-    reply_message_id: AtomicI64,
+    /// reply message id (MessageId::NONE = no reply)
+    reply_message_id: AtomicMessageId,
     /// reply message text
     reply_message_text: Mutex<String>,
 }
@@ -87,8 +88,14 @@ impl TgContext {
     pub fn supergroups_full_info(&self) -> MutexGuard<'_, HashMap<i64, SupergroupFullInfo>> {
         self.supergroups_full_info.lock().unwrap()
     }
-    pub fn open_chat_id(&self) -> i64 {
+    /// Get the open chat ID (ChatId::NONE if no chat is open).
+    pub fn open_chat_id(&self) -> ChatId {
         self.open_chat_id.load(Ordering::Relaxed)
+    }
+
+    /// Get the open chat ID as i64 (0 if no chat is open). For backward compatibility.
+    pub fn open_chat_id_i64(&self) -> i64 {
+        self.open_chat_id().as_i64()
     }
     pub fn open_chat_messages(&self) -> MutexGuard<'_, OpenChatMessageStore> {
         self.open_chat_messages.lock().unwrap()
@@ -113,14 +120,20 @@ impl TgContext {
         *self.open_chat_user() = user;
     }
 
-    pub fn set_open_chat_id(&self, chat_id: i64) {
+    /// Set the open chat ID (use ChatId::NONE to clear).
+    pub fn set_open_chat_id(&self, chat_id: ChatId) {
         self.open_chat_id.store(chat_id, Ordering::Relaxed);
+    }
+
+    /// Set the open chat ID from i64 (0 = no chat). For backward compatibility.
+    pub fn set_open_chat_id_i64(&self, chat_id: i64) {
+        self.set_open_chat_id(ChatId::new(chat_id));
     }
 
     pub fn clear_open_chat_messages(&self) {
         let open_id = self.open_chat_id.load(Ordering::Relaxed);
         tracing::info!(
-            open_chat_id = open_id,
+            open_chat_id = open_id.as_i64(),
             "clear_open_chat_messages called (stack trace for silent-reset debugging)\n{:?}",
             Backtrace::capture()
         );
@@ -132,7 +145,7 @@ impl TgContext {
             .store(from_message_id, Ordering::Relaxed);
     }
 
-    // ----- Read-only API for UI (PR1) -----
+    // ----- Read-only API for UI -----
 
     /// Ordered message IDs for the open chat (oldest to newest). UI uses this to build the list.
     pub fn ordered_message_ids(&self) -> Vec<i64> {
@@ -170,15 +183,26 @@ impl TgContext {
         self.history_loading.store(value, Ordering::Release);
     }
 
-    /// Jump target message ID (set by run loop after JumpToMessage; ChatWindow selects it). -1 = none.
-    pub fn jump_target_message_id(&self) -> i64 {
+    /// Jump target message ID (set by run loop after JumpToMessage; ChatWindow selects it).
+    /// Returns MessageId::NONE if no jump target is set.
+    pub fn jump_target_message_id(&self) -> MessageId {
         self.jump_target_message_id.load(Ordering::Relaxed)
     }
 
-    /// Set jump target (run loop only).
-    pub fn set_jump_target_message_id(&self, message_id: i64) {
+    /// Jump target message ID as i64 (-1 if none). For backward compatibility.
+    pub fn jump_target_message_id_i64(&self) -> i64 {
+        self.jump_target_message_id().as_i64()
+    }
+
+    /// Set jump target (run loop only). Use MessageId::NONE to clear.
+    pub fn set_jump_target_message_id(&self, message_id: MessageId) {
         self.jump_target_message_id
             .store(message_id, Ordering::Release);
+    }
+
+    /// Set jump target from i64 (-1 = none). For backward compatibility.
+    pub fn set_jump_target_message_id_i64(&self, message_id: i64) {
+        self.set_jump_target_message_id(MessageId::new(message_id));
     }
 
     pub fn set_me(&self, me: i64) {
@@ -195,9 +219,15 @@ impl TgContext {
     }
 
     // This is used to know if a message is being replied to.
-    pub fn set_reply_message(&self, message_id: i64, text: String) {
+    /// Set reply message (use MessageId::NONE to clear).
+    pub fn set_reply_message(&self, message_id: MessageId, text: String) {
         self.reply_message_id.store(message_id, Ordering::Relaxed);
         *self.reply_message_text.lock().unwrap() = text;
+    }
+
+    /// Set reply message from i64 (-1 = no reply). For backward compatibility.
+    pub fn set_reply_message_i64(&self, message_id: i64, text: String) {
+        self.set_reply_message(MessageId::new(message_id), text);
     }
 
     pub fn delete_message(&self, message_id: i64) {
@@ -236,7 +266,7 @@ impl TgContext {
     }
 
     pub fn last_read_inbox_message_id(&self) -> i64 {
-        let opened_chat = self.chats().get(&self.open_chat_id()).cloned();
+        let opened_chat = self.chats().get(&self.open_chat_id().as_i64()).cloned();
         if let Some(opened_chat) = opened_chat {
             return opened_chat.last_read_inbox_message_id;
         }
@@ -244,7 +274,7 @@ impl TgContext {
     }
 
     pub fn last_read_outbox_message_id(&self) -> i64 {
-        let opened_chat = self.chats().get(&self.open_chat_id()).cloned();
+        let opened_chat = self.chats().get(&self.open_chat_id().as_i64()).cloned();
         if let Some(opened_chat) = opened_chat {
             return opened_chat.last_read_outbox_message_id;
         }
@@ -277,8 +307,14 @@ impl TgContext {
         None
     }
 
-    pub fn reply_message_id(&self) -> i64 {
+    /// Get reply message ID (MessageId::NONE if no reply).
+    pub fn reply_message_id(&self) -> MessageId {
         self.reply_message_id.load(Ordering::Relaxed)
+    }
+
+    /// Get reply message ID as i64 (-1 if no reply). For backward compatibility.
+    pub fn reply_message_id_i64(&self) -> i64 {
+        self.reply_message_id().as_i64()
     }
 
     pub fn reply_message_text(&self) -> MutexGuard<'_, String> {
@@ -286,7 +322,7 @@ impl TgContext {
     }
 
     pub fn name_of_open_chat_id(&self) -> Option<String> {
-        if let Some(chat) = self.chats().get(&self.open_chat_id()) {
+        if let Some(chat) = self.chats().get(&self.open_chat_id().as_i64()) {
             return Some(chat.title.clone());
         }
         None
@@ -336,5 +372,32 @@ impl TgContext {
         }
 
         Ok(Some(chat_list))
+    }
+}
+
+impl Default for TgContext {
+    fn default() -> Self {
+        Self {
+            users: Mutex::default(),
+            basic_groups: Mutex::default(),
+            supergroups: Mutex::default(),
+            secret_chats: Mutex::default(),
+            chats: Mutex::default(),
+            chats_index: Mutex::default(),
+            users_full_info: Mutex::default(),
+            basic_groups_full_info: Mutex::default(),
+            supergroups_full_info: Mutex::default(),
+            event_tx: Mutex::default(),
+            me: AtomicI64::new(0),
+            open_chat_id: AtomicChatId::new(ChatId::NONE),
+            open_chat_messages: Mutex::default(),
+            open_chat_user: Mutex::default(),
+            last_acknowledged_message_id: AtomicI64::new(0),
+            from_message_id: AtomicI64::new(0),
+            history_loading: AtomicBool::new(false),
+            jump_target_message_id: AtomicMessageId::new(MessageId::NONE),
+            reply_message_id: AtomicMessageId::new(MessageId::NONE),
+            reply_message_text: Mutex::default(),
+        }
     }
 }
