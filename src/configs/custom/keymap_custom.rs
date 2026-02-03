@@ -6,7 +6,7 @@ use crate::{
         self,
         config_file::ConfigFile,
         config_type::ConfigType,
-        raw::keymap_raw::{KeymapEntry, KeymapRaw},
+        raw::keymap_raw::{KeymapEntry, KeymapMode, KeymapRaw},
     },
     event::Event,
 };
@@ -41,6 +41,9 @@ enum KeymapKind {
     ChatList,
     Chat,
     Prompt,
+    CommandGuide,
+    ThemeSelector,
+    SearchOverlay,
 }
 
 #[derive(Clone, Debug)]
@@ -55,12 +58,24 @@ pub struct KeymapConfig {
     pub chat: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the prompt component.
     pub prompt: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the command guide popup component.
+    pub command_guide: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the theme selector popup component.
+    pub theme_selector: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the search overlay popup component.
+    pub search_overlay: HashMap<Event, ActionBinding>,
     /// core_window + chat_list; component overrides general. Used when chat list is focused.
     merged_chat_list: HashMap<Event, ActionBinding>,
     /// core_window + chat; component overrides general. Used when chat is focused.
     merged_chat: HashMap<Event, ActionBinding>,
     /// core_window + prompt; component overrides general. Used when prompt is focused.
     merged_prompt: HashMap<Event, ActionBinding>,
+    /// core_window + command_guide; component overrides general. Used when command guide is focused.
+    merged_command_guide: HashMap<Event, ActionBinding>,
+    /// core_window + theme_selector; component overrides general. Used when theme selector is focused.
+    merged_theme_selector: HashMap<Event, ActionBinding>,
+    /// core_window + search_overlay; component overrides general. Used when search overlay is focused.
+    merged_search_overlay: HashMap<Event, ActionBinding>,
 }
 /// The keymap configuration implementation.
 impl KeymapConfig {
@@ -282,17 +297,26 @@ impl KeymapConfig {
     /// * `chat_list` - The chat list keymap.
     /// * `chat` - The chat keymap.
     /// * `prompt` - The prompt keymap.
+    /// * `command_guide` - The command guide keymap.
+    /// * `theme_selector` - The theme selector keymap.
+    /// * `search_overlay` - The search overlay keymap.
     fn check_duplicates(
         default: &HashMap<Event, ActionBinding>,
         chat_list: &HashMap<Event, ActionBinding>,
         chat: &HashMap<Event, ActionBinding>,
         prompt: &HashMap<Event, ActionBinding>,
+        command_guide: &HashMap<Event, ActionBinding>,
+        theme_selector: &HashMap<Event, ActionBinding>,
+        search_overlay: &HashMap<Event, ActionBinding>,
     ) {
         let mut all: Vec<&Event> = vec![];
         all.extend(default.keys());
         all.extend(chat_list.keys());
         all.extend(chat.keys());
         all.extend(prompt.keys());
+        all.extend(command_guide.keys());
+        all.extend(theme_selector.keys());
+        all.extend(search_overlay.keys());
 
         let mut duplicates = HashSet::new();
         for k in all {
@@ -313,6 +337,12 @@ impl KeymapConfig {
         self.merged_chat.extend(self.chat.clone());
         self.merged_prompt = self.core_window.clone();
         self.merged_prompt.extend(self.prompt.clone());
+        self.merged_command_guide = self.core_window.clone();
+        self.merged_command_guide.extend(self.command_guide.clone());
+        self.merged_theme_selector = self.core_window.clone();
+        self.merged_theme_selector.extend(self.theme_selector.clone());
+        self.merged_search_overlay = self.core_window.clone();
+        self.merged_search_overlay.extend(self.search_overlay.clone());
     }
 
     /// Get the effective keymap for a component: general (core_window) bindings plus
@@ -326,6 +356,9 @@ impl KeymapConfig {
                 ComponentName::ChatList => &self.merged_chat_list,
                 ComponentName::Chat => &self.merged_chat,
                 ComponentName::Prompt => &self.merged_prompt,
+                ComponentName::CommandGuide => &self.merged_command_guide,
+                ComponentName::ThemeSelector => &self.merged_theme_selector,
+                ComponentName::SearchOverlay => &self.merged_search_overlay,
                 _ => &self.core_window,
             },
             None => &self.core_window,
@@ -393,11 +426,44 @@ impl ConfigFile for KeymapConfig {
                         }
                     }
                 }
+                if let Some(command_guide) = other.command_guide {
+                    for (k, v) in Self::keymaps_vec_to_map(command_guide.keymap, KeymapKind::CommandGuide) {
+                        if self.command_guide.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the command_guide section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
+                    }
+                }
+                if let Some(theme_selector) = other.theme_selector {
+                    for (k, v) in Self::keymaps_vec_to_map(theme_selector.keymap, KeymapKind::ThemeSelector) {
+                        if self.theme_selector.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the theme_selector section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
+                    }
+                }
+                if let Some(search_overlay) = other.search_overlay {
+                    for (k, v) in Self::keymaps_vec_to_map(search_overlay.keymap, KeymapKind::SearchOverlay) {
+                        if self.search_overlay.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the search_overlay section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
+                    }
+                }
                 Self::check_duplicates(
                     &self.core_window,
                     &self.chat_list,
                     &self.chat,
                     &self.prompt,
+                    &self.command_guide,
+                    &self.theme_selector,
+                    &self.search_overlay,
                 );
                 self.rebuild_merged();
                 self.clone()
@@ -421,15 +487,33 @@ impl From<KeymapRaw> for KeymapConfig {
             Self::keymaps_vec_to_map(raw.chat_list.unwrap().keymap, KeymapKind::ChatList);
         let chat = Self::keymaps_vec_to_map(raw.chat.unwrap().keymap, KeymapKind::Chat);
         let prompt = Self::keymaps_vec_to_map(raw.prompt.unwrap().keymap, KeymapKind::Prompt);
-        Self::check_duplicates(&core_window, &chat_list, &chat, &prompt);
+        let command_guide = Self::keymaps_vec_to_map(
+            raw.command_guide.unwrap_or(KeymapMode { keymap: vec![] }).keymap,
+            KeymapKind::CommandGuide,
+        );
+        let theme_selector = Self::keymaps_vec_to_map(
+            raw.theme_selector.unwrap_or(KeymapMode { keymap: vec![] }).keymap,
+            KeymapKind::ThemeSelector,
+        );
+        let search_overlay = Self::keymaps_vec_to_map(
+            raw.search_overlay.unwrap_or(KeymapMode { keymap: vec![] }).keymap,
+            KeymapKind::SearchOverlay,
+        );
+        Self::check_duplicates(&core_window, &chat_list, &chat, &prompt, &command_guide, &theme_selector, &search_overlay);
         let mut config = Self {
             core_window,
             chat_list,
             chat,
             prompt,
+            command_guide,
+            theme_selector,
+            search_overlay,
             merged_chat_list: HashMap::new(),
             merged_chat: HashMap::new(),
             merged_prompt: HashMap::new(),
+            merged_command_guide: HashMap::new(),
+            merged_theme_selector: HashMap::new(),
+            merged_search_overlay: HashMap::new(),
         };
         config.rebuild_merged();
         config
@@ -509,12 +593,18 @@ mod tests {
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 0);
         assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
+        assert_eq!(keymap_config.command_guide.len(), 0);
+        assert_eq!(keymap_config.theme_selector.len(), 0);
+        assert_eq!(keymap_config.search_overlay.len(), 0);
     }
 
     #[test]
@@ -530,12 +620,18 @@ mod tests {
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 1);
         assert_eq!(keymap_config.chat_list.len(), 0);
         assert_eq!(keymap_config.chat.len(), 0);
         assert_eq!(keymap_config.prompt.len(), 0);
+        assert_eq!(keymap_config.command_guide.len(), 0);
+        assert_eq!(keymap_config.theme_selector.len(), 0);
+        assert_eq!(keymap_config.search_overlay.len(), 0);
     }
 
     #[test]
@@ -551,6 +647,9 @@ mod tests {
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
         };
         let mut keymap_config = KeymapConfig::from(keymap_raw);
         let keymap_raw = KeymapRaw {
@@ -564,6 +663,9 @@ mod tests {
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -604,6 +706,9 @@ mod tests {
             chat_list: Some(KeymapMode { keymap: vec![] }),
             chat: Some(KeymapMode { keymap: vec![] }),
             prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
 

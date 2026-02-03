@@ -32,4 +32,10 @@ pub struct KeymapRaw {
     pub chat: Option<KeymapMode>,
     /// The keymap for the chat edit mode.
     pub prompt: Option<KeymapMode>,
+    /// The keymap for the command guide popup.
+    pub command_guide: Option<KeymapMode>,
+    /// The keymap for the theme selector popup.
+    pub theme_selector: Option<KeymapMode>,
+    /// The keymap for the search overlay popup.
+    pub search_overlay: Option<KeymapMode>,
 }

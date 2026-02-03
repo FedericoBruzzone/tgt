@@ -193,13 +193,6 @@ impl Component for ThemeSelector {
             Action::Key(key_code, _modifiers) => {
                 if self.visible {
                     match key_code {
-                        crossterm::event::KeyCode::Esc => {
-                            self.hide();
-                            // Send HideThemeSelector action to CoreWindow
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                tx.send(Action::HideThemeSelector).unwrap_or(());
-                            }
-                        }
                         crossterm::event::KeyCode::Up => {
                             self.select_previous();
                         }

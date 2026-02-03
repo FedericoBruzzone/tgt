@@ -343,17 +343,34 @@ impl Component for CoreWindow {
                     if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
                         component.update(Action::HideCommandGuide);
                     }
+                    // Unfocus when hiding
+                    self.component_focused = None;
+                    self.app_context.set_focused_component(None);
                 } else {
                     self.show_command_guide = true;
+                    // Focus the command guide so its keymap is active
+                    self.component_focused = Some(ComponentName::CommandGuide);
+                    self.app_context.set_focused_component(self.component_focused);
                     if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
+                        component.focus();
                         component.update(action.clone());
                     }
+                    // Unfocus other components
+                    self.components
+                        .iter_mut()
+                        .filter(|(name, _)| *name != &ComponentName::CommandGuide)
+                        .for_each(|(_, component)| component.unfocus());
                 }
             }
             Action::HideCommandGuide => {
                 self.show_command_guide = false;
                 if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
                     component.update(action.clone());
+                }
+                // Unfocus when hiding
+                if self.component_focused == Some(ComponentName::CommandGuide) {
+                    self.component_focused = None;
+                    self.app_context.set_focused_component(None);
                 }
             }
             Action::ShowThemeSelector => {
@@ -364,18 +381,35 @@ impl Component for CoreWindow {
                     {
                         component.update(Action::HideThemeSelector);
                     }
+                    // Unfocus when hiding
+                    self.component_focused = None;
+                    self.app_context.set_focused_component(None);
                 } else {
                     self.show_theme_selector = true;
+                    // Focus the theme selector so its keymap is active
+                    self.component_focused = Some(ComponentName::ThemeSelector);
+                    self.app_context.set_focused_component(self.component_focused);
                     if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
                     {
+                        component.focus();
                         component.update(action.clone());
                     }
+                    // Unfocus other components
+                    self.components
+                        .iter_mut()
+                        .filter(|(name, _)| *name != &ComponentName::ThemeSelector)
+                        .for_each(|(_, component)| component.unfocus());
                 }
             }
             Action::HideThemeSelector => {
                 self.show_theme_selector = false;
                 if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector) {
                     component.update(action.clone());
+                }
+                // Unfocus when hiding
+                if self.component_focused == Some(ComponentName::ThemeSelector) {
+                    self.component_focused = None;
+                    self.app_context.set_focused_component(None);
                 }
             }
             Action::SwitchTheme => {
@@ -421,46 +455,8 @@ impl Component for CoreWindow {
                 }
             }
             Action::Key(key_code, modifiers) => {
-                // If search overlay is visible, send keys to it
-                if self.show_search_overlay {
-                    if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay)
-                    {
-                        component.update(Action::Key(key_code, modifiers.clone()));
-                    }
-                    return;
-                }
-                // If theme selector is visible, send keys to it
-                if self.show_theme_selector {
-                    if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
-                    {
-                        component.update(Action::Key(key_code, modifiers.clone()));
-                    }
-                    return; // Don't send to focused component when theme selector is visible
-                }
-                // If command guide is visible, handle Esc/F1 to close it
-                if self.show_command_guide {
-                    match key_code {
-                        crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::F(1) => {
-                            self.show_command_guide = false;
-                            if let Some(component) =
-                                self.components.get_mut(&ComponentName::CommandGuide)
-                            {
-                                component.update(Action::HideCommandGuide);
-                            }
-                            return; // Don't process key event further
-                        }
-                        _ => {
-                            // Send other keys to command guide when visible
-                            if let Some(component) =
-                                self.components.get_mut(&ComponentName::CommandGuide)
-                            {
-                                component.update(Action::Key(key_code, modifiers.clone()));
-                            }
-                            return; // Don't send to focused component when guide is visible
-                        }
-                    }
-                }
-                // Note: Alt+F1 to open is handled by the keymap system via ShowCommandGuide action
+                // Note: Popup components (CommandGuide, ThemeSelector, SearchOverlay) are now focusable and use keymaps.
+                // Key events are routed to the focused component via the keymap system in run.rs.
                 // Send key events to focused component
                 if let Some(focused) = self.component_focused {
                     self.components
@@ -531,6 +527,11 @@ impl Component for CoreWindow {
                 if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
                     component.update(Action::CloseSearchOverlay);
                     component.unfocus();
+                }
+                // Unfocus when hiding
+                if self.component_focused == Some(ComponentName::SearchOverlay) {
+                    self.component_focused = None;
+                    self.app_context.set_focused_component(None);
                 }
                 // Refocus Chat after closing search
                 self.component_focused = Some(ComponentName::Chat);

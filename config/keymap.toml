@@ -5,7 +5,8 @@ keymap = [
   # { keys = ["w", "w"], command = "quit", description = "Quit the application"},
 
   # Quit the application
-  # Note that when the prompt is focused, the "q" key will be used to type the letter "q".
+  # Note: To allow typing "q" in the prompt, override this binding in the [prompt] section.
+  # If not overridden, "q" will trigger quit even when typing in the prompt.
   { keys = ["q"], command = "try_quit", description = "Quit the application"},
   # Quit the application
   { keys = ["ctrl+c"], command = "try_quit", description = "Quit the application"},
@@ -100,5 +101,35 @@ keymap = [
   { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
   # Open message search overlay (same as Alt+R in chat section)
   { keys = ["alt+r"], command = "chat_window_search", description = "Open message search overlay"},
+]
+
+# The command_guide key bindings are only usable when the command guide popup is focused.
+# When the command guide is focused, core_window bindings apply too (e.g. Alt+1/2/3).
+# Only list command guide-specific bindings here.
+[command_guide]
+keymap = [
+  # Close the command guide popup
+  { keys = ["esc"], command = "hide_command_guide", description = "Close the command guide"},
+  { keys = ["f1"], command = "hide_command_guide", description = "Close the command guide"},
+]
+
+# The theme_selector key bindings are only usable when the theme selector popup is focused.
+# When the theme selector is focused, core_window bindings apply too (e.g. Alt+1/2/3).
+# Only list theme selector-specific bindings here.
+[theme_selector]
+keymap = [
+  # Close the theme selector popup
+  { keys = ["esc"], command = "hide_theme_selector", description = "Close the theme selector"},
+]
+
+# The search_overlay key bindings are only usable when the search overlay popup is focused.
+# When the search overlay is focused, core_window bindings apply too (e.g. Alt+1/2/3).
+# Only list search overlay-specific bindings here.
+[search_overlay]
+keymap = [
+  # Close the search overlay popup
+  { keys = ["esc"], command = "close_search_overlay", description = "Close the search overlay"},
+  # Submit search query (when no results) or confirm selection and jump (when results exist)
+  { keys = ["enter"], command = "search_overlay_submit", description = "Submit search or confirm selection"},
 ]
 

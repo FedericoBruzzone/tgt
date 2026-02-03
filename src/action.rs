@@ -210,6 +210,10 @@ pub enum Action {
     CloseSearchOverlay,
     /// Show the search overlay (open server search UI).
     ShowSearchOverlay,
+    /// Submit search query (Enter when no results).
+    SearchOverlaySubmit,
+    /// Confirm selection and jump to message (Enter when results exist).
+    SearchOverlayConfirm,
 
     /// SwitchTheme action.
     /// This action is used to switch to the next theme in the theme list.
@@ -284,6 +288,10 @@ impl FromStr for Action {
             "hide_theme_selector" => Ok(Action::HideThemeSelector),
             "switch_theme" => Ok(Action::SwitchTheme),
             "prompt_copy" => Ok(Action::PromptCopy),
+            "close_search_overlay" => Ok(Action::CloseSearchOverlay),
+            "show_search_overlay" => Ok(Action::ShowSearchOverlay),
+            "search_overlay_submit" => Ok(Action::SearchOverlaySubmit),
+            "search_overlay_confirm" => Ok(Action::SearchOverlayConfirm),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

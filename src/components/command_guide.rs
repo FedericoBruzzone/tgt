@@ -253,13 +253,6 @@ impl Component for CommandGuide {
             Action::Key(key_code, _modifiers) => {
                 if self.visible {
                     match key_code {
-                        crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::F(1) => {
-                            self.hide();
-                            // Send HideCommandGuide action to CoreWindow
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                tx.send(Action::HideCommandGuide).unwrap_or(());
-                            }
-                        }
                         crossterm::event::KeyCode::Up => {
                             self.scroll_offset = self.scroll_offset.saturating_sub(1);
                         }
@@ -486,36 +479,30 @@ mod tests {
     #[test]
     fn test_command_guide_close_with_esc_when_visible() {
         let app_context = create_test_app_context();
-        let (tx, _rx) = mpsc::unbounded_channel();
         let mut guide = CommandGuide::new(app_context);
 
-        guide.register_action_handler(tx).unwrap();
         guide.show();
-        assert!(guide.is_visible(), "Guide should be visible before Esc");
+        assert!(guide.is_visible(), "Guide should be visible before HideCommandGuide");
 
-        let modifiers = Modifiers::from(KeyModifiers::empty());
-        guide.update(Action::Key(KeyCode::Esc, modifiers));
+        guide.update(Action::HideCommandGuide);
         assert!(
             !guide.is_visible(),
-            "Command guide should be hidden after Esc key when visible"
+            "Command guide should be hidden after HideCommandGuide action when visible"
         );
     }
 
     #[test]
     fn test_command_guide_close_with_f1_when_visible() {
         let app_context = create_test_app_context();
-        let (tx, _rx) = mpsc::unbounded_channel();
         let mut guide = CommandGuide::new(app_context);
 
-        guide.register_action_handler(tx).unwrap();
         guide.show();
-        assert!(guide.is_visible(), "Guide should be visible before F1");
+        assert!(guide.is_visible(), "Guide should be visible before HideCommandGuide");
 
-        let modifiers = Modifiers::from(KeyModifiers::empty());
-        guide.update(Action::Key(KeyCode::F(1), modifiers));
+        guide.update(Action::HideCommandGuide);
         assert!(
             !guide.is_visible(),
-            "Command guide should be hidden after F1 key when visible"
+            "Command guide should be hidden after HideCommandGuide action when visible"
         );
     }
 
