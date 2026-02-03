@@ -639,6 +639,31 @@ impl TgBackend {
         let tg_context = self.app_context.tg_context();
         let action_tx = self.app_context.action_tx().clone();
 
+        // Create debouncer for chat list rebuild requests
+        let (debounce_tx, mut debounce_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+        let action_tx_debounce = action_tx.clone();
+        let can_quit_debounce = can_quit.clone();
+
+        // Spawn debounce task: batches rapid chat update events into a single UI rebuild
+        tokio::spawn(async move {
+            let debounce_delay = std::time::Duration::from_millis(100);
+            while !can_quit_debounce.load(Ordering::Acquire) {
+                // Wait for first rebuild request
+                if debounce_rx.recv().await.is_none() {
+                    break;
+                }
+
+                // Drain any additional requests that arrived during the delay
+                tokio::time::sleep(debounce_delay).await;
+                while debounce_rx.try_recv().is_ok() {
+                    // Drain all pending requests
+                }
+
+                // Send single rebuild action
+                let _ = action_tx_debounce.send(Action::ChatHistoryAppended);
+            }
+        });
+
         self.handle_updates = tokio::spawn(async move {
             tracing::info!("Starting handling updates from TDLib");
             while !can_quit.load(Ordering::Acquire) {
@@ -697,15 +722,15 @@ impl TgBackend {
                                 &mut chat,
                                 positions,
                             );
-                            // Trigger chat list rebuild to show new chat
-                            let _ = action_tx.send(Action::ChatHistoryAppended);
+                            // Request debounced chat list rebuild to show new chat
+                            let _ = debounce_tx.send(());
                         }
                         Update::ChatTitle(update_chat) => {
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.title = update_chat.title;
-                                    // Trigger chat list rebuild to update chat name
-                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    // Request debounced chat list rebuild to update chat name
+                                    let _ = debounce_tx.send(());
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -733,8 +758,8 @@ impl TgBackend {
                                         chat,
                                         update_chat.positions,
                                     );
-                                    // Trigger chat list rebuild to update last message and position
-                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    // Request debounced chat list rebuild to update last message and position
+                                    let _ = debounce_tx.send(());
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -770,8 +795,8 @@ impl TgBackend {
                                             chat,
                                             new_position,
                                         );
-                                        // Trigger chat list rebuild to update chat order
-                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        // Request debounced chat list rebuild to update chat order
+                                        let _ = debounce_tx.send(());
                                     }
                                     None => update_dequeue.push_back(update),
                                 }
@@ -783,8 +808,8 @@ impl TgBackend {
                                     chat.last_read_inbox_message_id =
                                         update_chat.last_read_inbox_message_id;
                                     chat.unread_count = update_chat.unread_count;
-                                    // Trigger chat list rebuild to update unread count display
-                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    // Request debounced chat list rebuild to update unread count display
+                                    let _ = debounce_tx.send(());
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -794,8 +819,8 @@ impl TgBackend {
                                 Some(chat) => {
                                     chat.last_read_outbox_message_id =
                                         update_chat.last_read_outbox_message_id;
-                                    // Trigger chat list rebuild to update read status display
-                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    // Request debounced chat list rebuild to update read status display
+                                    let _ = debounce_tx.send(());
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -924,8 +949,8 @@ impl TgBackend {
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.is_marked_as_unread = update_chat.is_marked_as_unread;
-                                    // Trigger chat list rebuild to update unread marker display
-                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    // Request debounced chat list rebuild to update unread marker display
+                                    let _ = debounce_tx.send(());
                                 }
                                 None => update_dequeue.push_back(update),
                             }
