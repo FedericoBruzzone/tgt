@@ -773,6 +773,8 @@ impl TgBackend {
                                     chat.last_read_inbox_message_id =
                                         update_chat.last_read_inbox_message_id;
                                     chat.unread_count = update_chat.unread_count;
+                                    // Trigger chat list rebuild to update unread count display
+                                    let _ = action_tx.send(Action::ChatHistoryAppended);
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -782,6 +784,8 @@ impl TgBackend {
                                 Some(chat) => {
                                     chat.last_read_outbox_message_id =
                                         update_chat.last_read_outbox_message_id;
+                                    // Trigger chat list rebuild to update read status display
+                                    let _ = action_tx.send(Action::ChatHistoryAppended);
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -910,6 +914,8 @@ impl TgBackend {
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.is_marked_as_unread = update_chat.is_marked_as_unread;
+                                    // Trigger chat list rebuild to update unread marker display
+                                    let _ = action_tx.send(Action::ChatHistoryAppended);
                                 }
                                 None => update_dequeue.push_back(update),
                             }
