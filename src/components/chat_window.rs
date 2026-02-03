@@ -253,6 +253,48 @@ impl ChatWindow {
         }
     }
 
+    /// Navigate to previous message and view its photo.
+    fn view_photo_previous(&mut self) {
+        if self.message_list.is_empty() {
+            return;
+        }
+        
+        let current = self.message_list_state.selected().unwrap_or(0);
+        let previous = if current > 0 {
+            current - 1
+        } else {
+            self.message_list.len() - 1 // Wrap to last
+        };
+        
+        self.message_list_state.select(Some(previous));
+        let message_id = self.message_list[previous].id();
+        
+        if let Some(tx) = self.action_tx.as_ref() {
+            let _ = tx.send(Action::ViewPhotoMessage(message_id));
+        }
+    }
+
+    /// Navigate to next message and view its photo.
+    fn view_photo_next(&mut self) {
+        if self.message_list.is_empty() {
+            return;
+        }
+        
+        let current = self.message_list_state.selected().unwrap_or(0);
+        let next = if current < self.message_list.len() - 1 {
+            current + 1
+        } else {
+            0 // Wrap to first
+        };
+        
+        self.message_list_state.select(Some(next));
+        let message_id = self.message_list[next].id();
+        
+        if let Some(tx) = self.action_tx.as_ref() {
+            let _ = tx.send(Action::ViewPhotoMessage(message_id));
+        }
+    }
+
     /// Wraps each line with a border span on one side only (reply-target border-only highlight).
     /// Messages from others: `│` at the start of each line. Messages from me: `│` at the end.
     /// This keeps borders aligned and avoids broken vertical bars under each other.
@@ -327,6 +369,14 @@ impl Component for ChatWindow {
             Action::ShowPhotoViewer => {
                 // User pressed Alt+V to view photo from selected message
                 self.view_photo_selected();
+            }
+            Action::PhotoViewerPrevious => {
+                // Navigate to previous message and view its photo
+                self.view_photo_previous();
+            }
+            Action::PhotoViewerNext => {
+                // Navigate to next message and view its photo
+                self.view_photo_next();
             }
             Action::ViewPhotoMessage(message_id) => {
                 // Forward to CoreWindow to show the photo viewer

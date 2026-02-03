@@ -526,6 +526,13 @@ impl Component for CoreWindow {
                     .filter(|(name, _)| *name != &ComponentName::PhotoViewer)
                     .for_each(|(_, component)| component.unfocus());
             }
+            Action::PhotoViewerPrevious | Action::PhotoViewerNext => {
+                // Forward navigation actions to ChatWindow to handle message selection
+                // ChatWindow will respond by sending ViewPhotoMessage with the new message_id
+                if let Some(chat_window) = self.components.get_mut(&ComponentName::Chat) {
+                    chat_window.update(action);
+                }
+            }
             Action::HidePhotoViewer => {
                 self.show_photo_viewer = false;
                 if let Some(component) = self.components.get_mut(&ComponentName::PhotoViewer) {
