@@ -363,9 +363,15 @@ impl Component for ChatWindow {
         self.refresh_message_list_from_store();
 
         // After jump-to-message: select the target and clear the flag
-        let jump_target = self.app_context.tg_context().jump_target_message_id().as_i64();
+        let jump_target = self
+            .app_context
+            .tg_context()
+            .jump_target_message_id()
+            .as_i64();
         if jump_target != 0 {
-            self.app_context.tg_context().set_jump_target_message_id_i64(0);
+            self.app_context
+                .tg_context()
+                .set_jump_target_message_id_i64(0);
             if let Some(idx) = self.message_list.iter().position(|m| m.id() == jump_target) {
                 self.message_list_state.select(Some(idx));
             }

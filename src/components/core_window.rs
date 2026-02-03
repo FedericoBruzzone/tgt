@@ -344,7 +344,7 @@ impl Component for CoreWindow {
                         self.hide_popup(prev_focused);
                     }
                 }
-                
+
                 self.component_focused = Some(component_name);
                 self.app_context
                     .set_focused_component(self.component_focused);
@@ -415,11 +415,12 @@ impl Component for CoreWindow {
                 } else {
                     // Hide all other popup components before showing this one
                     self.hide_other_popups(ComponentName::CommandGuide);
-                    
+
                     self.show_command_guide = true;
                     // Focus the command guide so its keymap is active
                     self.component_focused = Some(ComponentName::CommandGuide);
-                    self.app_context.set_focused_component(self.component_focused);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
                     if let Some(component) = self.components.get_mut(&ComponentName::CommandGuide) {
                         component.focus();
                         component.update(action.clone());
@@ -456,11 +457,12 @@ impl Component for CoreWindow {
                 } else {
                     // Hide all other popup components before showing this one
                     self.hide_other_popups(ComponentName::ThemeSelector);
-                    
+
                     self.show_theme_selector = true;
                     // Focus the theme selector so its keymap is active
                     self.component_focused = Some(ComponentName::ThemeSelector);
-                    self.app_context.set_focused_component(self.component_focused);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
                     if let Some(component) = self.components.get_mut(&ComponentName::ThemeSelector)
                     {
                         component.focus();
@@ -582,7 +584,7 @@ impl Component for CoreWindow {
             Action::ChatWindowSearch => {
                 // Hide all other popup components before showing this one
                 self.hide_other_popups(ComponentName::SearchOverlay);
-                
+
                 // Show server-side search overlay and focus it
                 self.show_search_overlay = true;
                 if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
@@ -993,10 +995,7 @@ mod tests {
 
         // Show command guide
         window.update(Action::ShowCommandGuide);
-        assert!(
-            window.show_command_guide,
-            "Command guide should be visible"
-        );
+        assert!(window.show_command_guide, "Command guide should be visible");
         assert_eq!(
             window.component_focused,
             Some(ComponentName::CommandGuide),

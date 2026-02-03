@@ -9,7 +9,10 @@ use crate::{
     tg::tg_context::TgContext,
 };
 use ratatui::style::Style;
-use std::sync::{atomic::{AtomicBool, AtomicU8}, Arc, Mutex, MutexGuard};
+use std::sync::{
+    atomic::{AtomicBool, AtomicU8},
+    Arc, Mutex, MutexGuard,
+};
 use std::{io, sync::atomic::Ordering};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
@@ -324,7 +327,8 @@ impl AppContext {
     /// Lock-free write using atomic operations.
     #[inline]
     pub fn set_focused_component(&self, component: Option<ComponentName>) {
-        self.focused_component.store(Self::encode_component(component), Ordering::Release);
+        self.focused_component
+            .store(Self::encode_component(component), Ordering::Release);
     }
 
     // ===== COMMON ======

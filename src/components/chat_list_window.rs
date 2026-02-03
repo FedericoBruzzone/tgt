@@ -285,9 +285,13 @@ impl ChatListWindow {
                 self.app_context
                     .tg_context()
                     .set_open_chat_user(chat.user.clone());
-                self.app_context.tg_context().set_open_chat_id_i64(chat.chat_id);
+                self.app_context
+                    .tg_context()
+                    .set_open_chat_id_i64(chat.chat_id);
                 self.app_context.tg_context().clear_open_chat_messages();
-                self.app_context.tg_context().set_jump_target_message_id_i64(0);
+                self.app_context
+                    .tg_context()
+                    .set_jump_target_message_id_i64(0);
                 self.app_context
                     .action_tx()
                     .send(Action::FocusComponent(Prompt))
@@ -336,7 +340,7 @@ impl ChatListWindow {
 
     /// Rebuild visible_chats from get_chats_index() with current filter/sort; then sync selection.
     /// Call from update() so draw() and confirm_selection() see the same list (no race with draw() re-sort).
-    /// 
+    ///
     /// # Arguments
     /// * `preserve_selection` - If true, preserve the current selection index (clamp if needed) instead of syncing to open chat.
     fn rebuild_visible_chats(&mut self) {
@@ -390,12 +394,17 @@ impl ChatListWindow {
             }
         }
         self.visible_chats = items;
-        
+
         if preserve_selection {
             // Preserve current selection index, clamping if needed
             if let Some(idx) = current_selection {
                 let clamped_idx = idx.min(self.visible_chats.len().saturating_sub(1));
-                self.chat_list_state.select(if self.visible_chats.is_empty() { None } else { Some(clamped_idx) });
+                self.chat_list_state
+                    .select(if self.visible_chats.is_empty() {
+                        None
+                    } else {
+                        Some(clamped_idx)
+                    });
             }
         } else {
             // Sync selection to currently open chat

@@ -985,7 +985,8 @@ impl TgBackend {
                         }
                         Update::DeleteMessages(update_delete_messages) => {
                             // Only touch open_chat_messages when update is for the open chat.
-                            if tg_context.open_chat_id().as_i64() == update_delete_messages.chat_id {
+                            if tg_context.open_chat_id().as_i64() == update_delete_messages.chat_id
+                            {
                                 // When from_cache is true, TDLib evicted messages from its local cache
                                 // (e.g. GC/sync after ~60s). They were NOT deleted on the server.
                                 // Do not remove from our UI; optionally re-fetch so user sees them again.
