@@ -35,10 +35,18 @@ impl DateTimeEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessageContentType {
+    Text,
+    Photo { file_id: i32, file_path: String },
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MessageEntry {
     id: i64,
     sender_id: TdMessageSender,
     message_content: Vec<Line<'static>>,
+    content_type: MessageContentType,
     reply_to: Option<TdMessageReplyTo>,
     timestamp: DateTimeEntry,
     is_edited: bool,
@@ -52,6 +60,7 @@ impl MessageEntry {
             id,
             sender_id: TdMessageSender::User(0),
             message_content: vec![Line::from("")],
+            content_type: MessageContentType::Text,
             reply_to: None,
             timestamp: DateTimeEntry { timestamp: 0 },
             is_edited: false,
@@ -60,6 +69,10 @@ impl MessageEntry {
 
     pub fn id(&self) -> i64 {
         self.id
+    }
+
+    pub fn content_type(&self) -> &MessageContentType {
+        &self.content_type
     }
 
     pub fn timestamp(&self) -> &DateTimeEntry {
@@ -82,7 +95,9 @@ impl MessageEntry {
     }
 
     pub fn set_message_content(&mut self, content: &MessageContent) {
-        self.message_content = Self::message_content_lines(content);
+        let (lines, content_type) = Self::message_content_with_type(content);
+        self.message_content = lines;
+        self.content_type = content_type;
     }
 
     pub fn set_is_edited(&mut self, is_edited: bool) {
@@ -196,15 +211,36 @@ impl MessageEntry {
     }
 
     fn message_content_lines(content: &MessageContent) -> Vec<Line<'static>> {
+        Self::message_content_with_type(content).0
+    }
+
+    fn message_content_with_type(content: &MessageContent) -> (Vec<Line<'static>>, MessageContentType) {
         match content {
-            MessageContent::MessageText(m) => Self::format_message_content(&m.text),
-            MessageContent::MessageAudio(_) => vec![Line::from("🎵 Audio")],
-            MessageContent::MessagePhoto(_) => vec![Line::from("📷 Photo")],
-            MessageContent::MessageSticker(_) => vec![Line::from("🎨 Sticker")],
-            MessageContent::MessageVideo(_) => vec![Line::from("🎥 Video")],
-            MessageContent::MessageAnimation(_) => vec![Line::from("🎞️ Animation")],
-            MessageContent::MessageVoiceNote(_) => vec![Line::from("🎤 Voice Note")],
-            MessageContent::MessageDocument(_) => vec![Line::from("📄 Document")],
+            MessageContent::MessageText(m) => {
+                (Self::format_message_content(&m.text), MessageContentType::Text)
+            }
+            MessageContent::MessagePhoto(photo) => {
+                // Get the best available photo size (usually the last one is the largest)
+                let file_info = photo
+                    .photo
+                    .sizes
+                    .last()
+                    .map(|size| (size.photo.id, size.photo.local.path.clone()))
+                    .unwrap_or((0, String::new()));
+                (
+                    vec![Line::from("📷 Photo (press Alt+V to view)")],
+                    MessageContentType::Photo {
+                        file_id: file_info.0,
+                        file_path: file_info.1,
+                    },
+                )
+            }
+            MessageContent::MessageAudio(_) => (vec![Line::from("🎵 Audio")], MessageContentType::Other),
+            MessageContent::MessageSticker(_) => (vec![Line::from("🎨 Sticker")], MessageContentType::Other),
+            MessageContent::MessageVideo(_) => (vec![Line::from("🎥 Video")], MessageContentType::Other),
+            MessageContent::MessageAnimation(_) => (vec![Line::from("🎞️ Animation")], MessageContentType::Other),
+            MessageContent::MessageVoiceNote(_) => (vec![Line::from("🎤 Voice Note")], MessageContentType::Other),
+            MessageContent::MessageDocument(_) => (vec![Line::from("📄 Document")], MessageContentType::Other),
             MessageContent::MessageCall(call) => {
                 let call_type = if call.is_video {
                     "📹 Video Call"
@@ -216,27 +252,27 @@ impl MessageEntry {
                 } else {
                     String::new()
                 };
-                vec![Line::from(format!("{}{}", call_type, duration_text))]
+                (vec![Line::from(format!("{}{}", call_type, duration_text))], MessageContentType::Other)
             }
-            MessageContent::MessageVideoChatStarted(_) => vec![Line::from("📹 Video chat started")],
+            MessageContent::MessageVideoChatStarted(_) => (vec![Line::from("📹 Video chat started")], MessageContentType::Other),
             MessageContent::MessageVideoChatEnded(ended) => {
                 let duration_text = if ended.duration > 0 {
                     format!(" ({}s)", ended.duration)
                 } else {
                     String::new()
                 };
-                vec![Line::from(format!("📹 Video chat ended{}", duration_text))]
+                (vec![Line::from(format!("📹 Video chat ended{}", duration_text))], MessageContentType::Other)
             }
             MessageContent::MessageVideoChatScheduled(scheduled) => {
-                vec![Line::from(format!(
+                (vec![Line::from(format!(
                     "📹 Video chat scheduled for {}",
                     DateTimeEntry::convert_time(scheduled.start_date)
-                ))]
+                ))], MessageContentType::Other)
             }
             MessageContent::MessageInviteVideoChatParticipants(_) => {
-                vec![Line::from("📹 Invited to video chat")]
+                (vec![Line::from("📹 Invited to video chat")], MessageContentType::Other)
             }
-            _ => vec![Line::from("")],
+            _ => (vec![Line::from("")], MessageContentType::Other),
         }
     }
 
@@ -545,13 +581,15 @@ impl MessageEntry {
 }
 impl From<&tdlib_rs::types::Message> for MessageEntry {
     fn from(message: &tdlib_rs::types::Message) -> Self {
+        let (message_content, content_type) = Self::message_content_with_type(&message.content);
         Self {
             id: message.id,
             sender_id: match &message.sender_id {
                 MessageSender::User(user) => TdMessageSender::User(user.user_id),
                 MessageSender::Chat(chat) => TdMessageSender::Chat(chat.chat_id),
             },
-            message_content: Self::message_content_lines(&message.content),
+            message_content,
+            content_type,
             reply_to: match &message.reply_to {
                 Some(reply) => match reply {
                     MessageReplyTo::Message(message) => {

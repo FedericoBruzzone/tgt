@@ -82,7 +82,7 @@ impl Component for TitleBar {
     fn draw(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) -> io::Result<()> {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(0), Constraint::Percentage(100)].as_ref())
+            .constraints([Constraint::Percentage(0), Constraint::Percentage(100)])
             .split(area);
 
         let name: Vec<char> = self.name.chars().collect::<Vec<char>>();

@@ -278,7 +278,7 @@ impl AppContext {
     }
 
     /// Encodes `Option<ComponentName>` to a `u8` for atomic storage.
-    /// Encoding: 0 = None, 1-11 = ComponentName variants.
+    /// Encoding: 0 = None, 1-12 = ComponentName variants.
     #[inline]
     fn encode_component(component: Option<ComponentName>) -> u8 {
         match component {
@@ -293,11 +293,12 @@ impl AppContext {
             Some(ComponentName::CommandGuide) => 8,
             Some(ComponentName::ThemeSelector) => 9,
             Some(ComponentName::SearchOverlay) => 10,
+            Some(ComponentName::PhotoViewer) => 11,
         }
     }
 
     /// Decodes a `u8` to `Option<ComponentName>` from atomic storage.
-    /// Encoding: 0 = None, 1-11 = ComponentName variants.
+    /// Encoding: 0 = None, 1-12 = ComponentName variants.
     #[inline]
     fn decode_component(encoded: u8) -> Option<ComponentName> {
         match encoded {
@@ -312,6 +313,7 @@ impl AppContext {
             8 => Some(ComponentName::CommandGuide),
             9 => Some(ComponentName::ThemeSelector),
             10 => Some(ComponentName::SearchOverlay),
+            11 => Some(ComponentName::PhotoViewer),
             _ => None, // Invalid encoding, treat as None
         }
     }

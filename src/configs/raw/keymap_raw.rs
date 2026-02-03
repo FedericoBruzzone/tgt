@@ -38,4 +38,6 @@ pub struct KeymapRaw {
     pub theme_selector: Option<KeymapMode>,
     /// The keymap for the search overlay popup.
     pub search_overlay: Option<KeymapMode>,
+    /// The keymap for the photo viewer popup.
+    pub photo_viewer: Option<KeymapMode>,
 }

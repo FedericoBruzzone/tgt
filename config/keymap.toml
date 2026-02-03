@@ -83,6 +83,8 @@ keymap = [
   { keys = ["e"], command = "chat_window_edit", description = "Edit the selected message"},
   # Reply to the selected message
   { keys = ["r"], command = "chat_window_reply", description = "Reply to the selected message"},
+  # View photo message
+  { keys = ["alt+v"], command = "view_photo_message", description = "View photo from selected message"},
   # Move focus to the prompt and set its state to search messages in the chat window.
   { keys = ["alt+r"], command = "chat_window_search", description = "Focus on prompt to start searching messages"},
   # Restore the default message ordering in the chat window.
@@ -131,5 +133,14 @@ keymap = [
   { keys = ["esc"], command = "close_search_overlay", description = "Close the search overlay"},
   # Submit search query (when no results) or confirm selection and jump (when results exist)
   { keys = ["enter"], command = "search_overlay_submit", description = "Submit search or confirm selection"},
+]
+
+# The photo_viewer key bindings are only usable when the photo viewer popup is focused.
+# When the photo viewer is focused, core_window bindings apply too (e.g. Alt+1/2/3).
+# Only list photo viewer-specific bindings here.
+[photo_viewer]
+keymap = [
+  # Close the photo viewer popup
+  { keys = ["esc"], command = "hide_photo_viewer", description = "Close the photo viewer"},
 ]
 

@@ -243,6 +243,16 @@ impl ChatWindow {
         }
     }
 
+    /// View photo from the selected message.
+    fn view_photo_selected(&self) {
+        if let Some(selected) = self.message_list_state.selected() {
+            let message_id = self.message_list[selected].id();
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::ViewPhotoMessage(message_id));
+            }
+        }
+    }
+
     /// Wraps each line with a border span on one side only (reply-target border-only highlight).
     /// Messages from others: `│` at the start of each line. Messages from me: `│` at the end.
     /// This keeps borders aligned and avoids broken vertical bars under each other.
@@ -314,6 +324,16 @@ impl Component for ChatWindow {
             Action::ChatWindowCopy => self.copy_selected(),
             Action::ChatWindowEdit => self.edit_selected(),
             Action::ShowChatWindowReply => self.reply_selected(),
+            Action::ShowPhotoViewer => {
+                // User pressed Alt+V to view photo from selected message
+                self.view_photo_selected();
+            }
+            Action::ViewPhotoMessage(message_id) => {
+                // Forward to CoreWindow to show the photo viewer
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::ViewPhotoMessage(message_id));
+                }
+            }
             Action::JumpCompleted(_message_id) => {
                 // Selection by message_id is applied in draw() when jump_target_message_id is set
             }
