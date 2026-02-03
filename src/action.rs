@@ -228,6 +228,19 @@ pub enum Action {
     /// This action is used to hide the theme selector popup.
     HideThemeSelector,
 
+    /// ShowPhotoViewer action.
+    /// This action is used to show the photo viewer popup.
+    ShowPhotoViewer,
+    /// HidePhotoViewer action.
+    /// This action is used to hide the photo viewer popup.
+    HidePhotoViewer,
+    /// ViewPhotoMessage action with message_id.
+    /// This action is used to view a photo from a message.
+    ViewPhotoMessage(i64),
+    /// PhotoDownloaded action with file path.
+    /// This action is sent when a photo has been downloaded.
+    PhotoDownloaded(String),
+
     /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
     StatusMessage(String),
     /// PromptCopy: copy selected text in the prompt (overrides try_quit when prompt focused).
@@ -292,6 +305,9 @@ impl FromStr for Action {
             "show_search_overlay" => Ok(Action::ShowSearchOverlay),
             "search_overlay_submit" => Ok(Action::SearchOverlaySubmit),
             "search_overlay_confirm" => Ok(Action::SearchOverlayConfirm),
+            "view_photo_message" => Ok(Action::ShowPhotoViewer),
+            "show_photo_viewer" => Ok(Action::ShowPhotoViewer),
+            "hide_photo_viewer" => Ok(Action::HidePhotoViewer),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

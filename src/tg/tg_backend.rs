@@ -258,6 +258,34 @@ impl TgBackend {
         }
     }
 
+    /// Download a file from Telegram. Returns the local path when download completes.
+    #[allow(clippy::await_holding_lock)]
+    pub async fn download_file(
+        &self,
+        file_id: i32,
+        priority: i32,
+    ) -> Result<String, tdlib_rs::types::Error> {
+        match functions::download_file(
+            file_id,
+            priority,
+            0,     // offset
+            0,     // limit (0 = download entire file)
+            true,  // synchronous
+            self.client_id,
+        )
+        .await
+        {
+            Ok(tdlib_rs::enums::File::File(file)) => {
+                tracing::info!("File downloaded successfully: {:?}", file.local.path);
+                Ok(file.local.path)
+            }
+            Err(e) => {
+                tracing::error!("Failed to download file {}: {:?}", file_id, e);
+                Err(e)
+            }
+        }
+    }
+
     #[allow(clippy::await_holding_lock)]
     pub async fn get_chat_history(&mut self, chat_id: i64) {
         let start_len = self.app_context.tg_context().open_chat_messages().len();

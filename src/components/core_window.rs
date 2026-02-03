@@ -8,6 +8,7 @@ use crate::{
         chat_window::ChatWindow,
         command_guide::CommandGuide,
         component_traits::{Component, HandleFocus},
+        photo_viewer::PhotoViewer,
         prompt_window::PromptWindow,
         search_overlay::SearchOverlay,
         theme_selector::ThemeSelector,
@@ -58,6 +59,8 @@ pub struct CoreWindow {
     show_theme_selector: bool,
     /// Indicates whether the search overlay (server-side chat search) should be shown.
     show_search_overlay: bool,
+    /// Indicates whether the photo viewer should be shown.
+    show_photo_viewer: bool,
     /// Last known screen areas for focusable sections (chat list, chat, prompt) for click-to-focus.
     last_focusable_areas: HashMap<ComponentName, Rect>,
 }
@@ -114,6 +117,12 @@ impl CoreWindow {
                     .with_name(ComponentName::SearchOverlay.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::PhotoViewer,
+                PhotoViewer::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::PhotoViewer.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -131,6 +140,7 @@ impl CoreWindow {
         let show_command_guide = false;
         let show_theme_selector = false;
         let show_search_overlay = false;
+        let show_photo_viewer = false;
         let last_focusable_areas = HashMap::new();
 
         CoreWindow {
@@ -148,6 +158,7 @@ impl CoreWindow {
             show_command_guide,
             show_theme_selector,
             show_search_overlay,
+            show_photo_viewer,
             last_focusable_areas,
         }
     }
@@ -214,6 +225,7 @@ impl CoreWindow {
             ComponentName::CommandGuide => Action::HideCommandGuide,
             ComponentName::ThemeSelector => Action::HideThemeSelector,
             ComponentName::SearchOverlay => Action::CloseSearchOverlay,
+            ComponentName::PhotoViewer => Action::HidePhotoViewer,
             _ => return, // Not a popup, nothing to do
         };
 
@@ -222,6 +234,7 @@ impl CoreWindow {
             ComponentName::CommandGuide => self.show_command_guide,
             ComponentName::ThemeSelector => self.show_theme_selector,
             ComponentName::SearchOverlay => self.show_search_overlay,
+            ComponentName::PhotoViewer => self.show_photo_viewer,
             _ => false,
         };
 
@@ -231,6 +244,7 @@ impl CoreWindow {
                 ComponentName::CommandGuide => self.show_command_guide = false,
                 ComponentName::ThemeSelector => self.show_theme_selector = false,
                 ComponentName::SearchOverlay => self.show_search_overlay = false,
+                ComponentName::PhotoViewer => self.show_photo_viewer = false,
                 _ => {}
             }
 
@@ -361,6 +375,11 @@ impl Component for CoreWindow {
                 self.component_focused = None;
                 self.app_context.set_focused_component(None);
                 self.show_reply_message = false;
+                // Hide all popups when unfocusing
+                self.show_command_guide = false;
+                self.show_theme_selector = false;
+                self.show_search_overlay = false;
+                self.show_photo_viewer = false;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
                 }
@@ -482,6 +501,38 @@ impl Component for CoreWindow {
                 }
                 // Unfocus when hiding
                 if self.component_focused == Some(ComponentName::ThemeSelector) {
+                    self.component_focused = None;
+                    self.app_context.set_focused_component(None);
+                }
+            }
+            Action::ViewPhotoMessage(message_id) => {
+                // Hide all other popup components before showing photo viewer
+                self.hide_other_popups(ComponentName::PhotoViewer);
+
+                self.show_photo_viewer = true;
+                // Focus the photo viewer so its keymap is active
+                self.component_focused = Some(ComponentName::PhotoViewer);
+                self.app_context
+                    .set_focused_component(self.component_focused);
+                if let Some(component) = self.components.get_mut(&ComponentName::PhotoViewer) {
+                    component.focus();
+                    component.update(action.clone());
+                } else {
+                    tracing::error!("PhotoViewer component not found!");
+                }
+                // Unfocus other components
+                self.components
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &ComponentName::PhotoViewer)
+                    .for_each(|(_, component)| component.unfocus());
+            }
+            Action::HidePhotoViewer => {
+                self.show_photo_viewer = false;
+                if let Some(component) = self.components.get_mut(&ComponentName::PhotoViewer) {
+                    component.update(action.clone());
+                }
+                // Unfocus when hiding
+                if self.component_focused == Some(ComponentName::PhotoViewer) {
                     self.component_focused = None;
                     self.app_context.set_focused_component(None);
                 }
@@ -800,6 +851,15 @@ impl Component for CoreWindow {
                 .get_mut(&ComponentName::SearchOverlay)
                 .unwrap_or_else(|| {
                     panic!("Failed to get component: {}", ComponentName::SearchOverlay)
+                })
+                .draw(frame, area)?;
+        }
+
+        if self.show_photo_viewer {
+            self.components
+                .get_mut(&ComponentName::PhotoViewer)
+                .unwrap_or_else(|| {
+                    panic!("Failed to get component: {}", ComponentName::PhotoViewer)
                 })
                 .draw(frame, area)?;
         }

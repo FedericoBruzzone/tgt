@@ -24,6 +24,8 @@ pub enum ComponentName {
     ThemeSelector,
     /// The search overlay (server-side chat message search).
     SearchOverlay,
+    /// The photo viewer popup.
+    PhotoViewer,
 }
 
 impl ComponentName {
@@ -35,6 +37,7 @@ impl ComponentName {
             ComponentName::CommandGuide
                 | ComponentName::ThemeSelector
                 | ComponentName::SearchOverlay
+                | ComponentName::PhotoViewer
         )
     }
 }
@@ -52,6 +55,7 @@ impl Display for ComponentName {
             ComponentName::CommandGuide => write!(f, "Command Guide"),
             ComponentName::ThemeSelector => write!(f, "Theme Selector"),
             ComponentName::SearchOverlay => write!(f, "Search Overlay"),
+            ComponentName::PhotoViewer => write!(f, "Photo Viewer"),
         }
     }
 }

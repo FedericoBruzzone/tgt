@@ -203,6 +203,7 @@ async fn handle_tui_backend_events(
                 Some(ComponentName::CommandGuide) => &keymap_config.command_guide,
                 Some(ComponentName::ThemeSelector) => &keymap_config.theme_selector,
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
+                Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
                 _ => &keymap_config.core_window,
             };
 
@@ -306,6 +307,10 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::SwitchThemeTo(_)
             | Action::ShowThemeSelector
             | Action::HideThemeSelector
+            | Action::ShowPhotoViewer
+            | Action::HidePhotoViewer
+            | Action::ViewPhotoMessage(_)
+            | Action::PhotoDownloaded(_)
             | Action::ToggleChatList
             | Action::IncreaseChatListSize
             | Action::DecreaseChatListSize
@@ -615,6 +620,26 @@ pub async fn handle_app_actions(
             }
             Action::ViewAllMessages => {
                 tg_backend.view_all_messages().await;
+            }
+            Action::ViewPhotoMessage(message_id) => {
+                // Get the message and check if it's a photo that needs downloading
+                if let Some(message) = app_context.tg_context().get_message(*message_id) {
+                    if let crate::tg::message_entry::MessageContentType::Photo { file_id, file_path } = message.content_type() {
+                        // Check if file needs to be downloaded
+                        if file_path.is_empty() || !std::path::Path::new(file_path).exists() {
+                            // Download the file
+                            match tg_backend.download_file(*file_id, 32).await {
+                                Ok(downloaded_path) => {
+                                    // Notify PhotoViewer that the photo is ready
+                                    app_context.action_tx().send(Action::PhotoDownloaded(downloaded_path))?;
+                                }
+                                Err(e) => {
+                                    tracing::error!("Failed to download photo: {:?}", e);
+                                }
+                            }
+                        }
+                    }
+                }
             }
             _ => {}
         }
