@@ -336,7 +336,16 @@ impl ChatListWindow {
 
     /// Rebuild visible_chats from get_chats_index() with current filter/sort; then sync selection.
     /// Call from update() so draw() and confirm_selection() see the same list (no race with draw() re-sort).
+    /// 
+    /// # Arguments
+    /// * `preserve_selection` - If true, preserve the current selection index (clamp if needed) instead of syncing to open chat.
     fn rebuild_visible_chats(&mut self) {
+        self.rebuild_visible_chats_with_preserve_selection(false);
+    }
+
+    /// Rebuild visible_chats with option to preserve selection.
+    fn rebuild_visible_chats_with_preserve_selection(&mut self, preserve_selection: bool) {
+        let current_selection = self.chat_list_state.selected();
         let mut items = match self.app_context.tg_context().get_chats_index() {
             Ok(Some(list)) => list,
             _ => return,
@@ -381,7 +390,17 @@ impl ChatListWindow {
             }
         }
         self.visible_chats = items;
-        self.sync_selection_to_open_chat();
+        
+        if preserve_selection {
+            // Preserve current selection index, clamping if needed
+            if let Some(idx) = current_selection {
+                let clamped_idx = idx.min(self.visible_chats.len().saturating_sub(1));
+                self.chat_list_state.select(if self.visible_chats.is_empty() { None } else { Some(clamped_idx) });
+            }
+        } else {
+            // Sync selection to currently open chat
+            self.sync_selection_to_open_chat();
+        }
     }
 
     /// Enter search mode.
@@ -516,7 +535,11 @@ impl Component for ChatListWindow {
                 self.rebuild_visible_chats();
             }
             Action::ChatListSearch => self.start_search(),
-            Action::LoadChats(..) | Action::ChatHistoryAppended | Action::Resize(..) => {
+            Action::LoadChats(..) => {
+                // Preserve selection when loading more chats (user is scrolling)
+                self.rebuild_visible_chats_with_preserve_selection(true);
+            }
+            Action::ChatHistoryAppended | Action::Resize(..) => {
                 self.rebuild_visible_chats();
             }
             Action::FocusComponent(ComponentName::ChatList) => {
