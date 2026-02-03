@@ -203,6 +203,65 @@ impl CoreWindow {
         }
         self.size_prompt -= 1;
     }
+
+    /// Hide a specific popup component.
+    ///
+    /// # Arguments
+    /// * `popup_name` - The popup component to hide.
+    fn hide_popup(&mut self, popup_name: ComponentName) {
+        // Determine the hide action for this popup
+        let hide_action = match popup_name {
+            ComponentName::CommandGuide => Action::HideCommandGuide,
+            ComponentName::ThemeSelector => Action::HideThemeSelector,
+            ComponentName::SearchOverlay => Action::CloseSearchOverlay,
+            _ => return, // Not a popup, nothing to do
+        };
+
+        // Check if this popup is currently visible
+        let is_visible = match popup_name {
+            ComponentName::CommandGuide => self.show_command_guide,
+            ComponentName::ThemeSelector => self.show_theme_selector,
+            ComponentName::SearchOverlay => self.show_search_overlay,
+            _ => false,
+        };
+
+        if is_visible {
+            // Update the visibility flag
+            match popup_name {
+                ComponentName::CommandGuide => self.show_command_guide = false,
+                ComponentName::ThemeSelector => self.show_theme_selector = false,
+                ComponentName::SearchOverlay => self.show_search_overlay = false,
+                _ => {}
+            }
+
+            // Update and unfocus the component
+            if let Some(component) = self.components.get_mut(&popup_name) {
+                component.update(hide_action);
+                component.unfocus();
+            }
+        }
+    }
+
+    /// Hide all popup components except the one specified.
+    /// This ensures only one popup is visible at a time.
+    ///
+    /// # Arguments
+    /// * `except` - The component name that should remain visible (if it's a popup).
+    fn hide_other_popups(&mut self, except: ComponentName) {
+        // List of all popup components
+        let popups = [
+            ComponentName::CommandGuide,
+            ComponentName::ThemeSelector,
+            ComponentName::SearchOverlay,
+        ];
+
+        for popup_name in popups {
+            // Skip the popup we want to keep visible
+            if popup_name != except {
+                self.hide_popup(popup_name);
+            }
+        }
+    }
 }
 /// Implement the `HandleFocus` trait for the `CoreWindow` struct.
 /// This trait allows the `CoreWindow` to be focused or unfocused.
@@ -279,6 +338,13 @@ impl Component for CoreWindow {
     fn update(&mut self, action: Action) {
         match action {
             Action::FocusComponent(component_name) => {
+                // If the previously focused component was a popup, hide it automatically
+                if let Some(prev_focused) = self.component_focused {
+                    if prev_focused.is_popup() && prev_focused != component_name {
+                        self.hide_popup(prev_focused);
+                    }
+                }
+                
                 self.component_focused = Some(component_name);
                 self.app_context
                     .set_focused_component(self.component_focused);
@@ -347,6 +413,9 @@ impl Component for CoreWindow {
                     self.component_focused = None;
                     self.app_context.set_focused_component(None);
                 } else {
+                    // Hide all other popup components before showing this one
+                    self.hide_other_popups(ComponentName::CommandGuide);
+                    
                     self.show_command_guide = true;
                     // Focus the command guide so its keymap is active
                     self.component_focused = Some(ComponentName::CommandGuide);
@@ -385,6 +454,9 @@ impl Component for CoreWindow {
                     self.component_focused = None;
                     self.app_context.set_focused_component(None);
                 } else {
+                    // Hide all other popup components before showing this one
+                    self.hide_other_popups(ComponentName::ThemeSelector);
+                    
                     self.show_theme_selector = true;
                     // Focus the theme selector so its keymap is active
                     self.component_focused = Some(ComponentName::ThemeSelector);
@@ -508,6 +580,9 @@ impl Component for CoreWindow {
                 }
             }
             Action::ChatWindowSearch => {
+                // Hide all other popup components before showing this one
+                self.hide_other_popups(ComponentName::SearchOverlay);
+                
                 // Show server-side search overlay and focus it
                 self.show_search_overlay = true;
                 if let Some(component) = self.components.get_mut(&ComponentName::SearchOverlay) {
@@ -910,5 +985,149 @@ mod tests {
             Some(Action::FocusComponent(ComponentName::ChatList)),
             "First click in chat list when Chat focused should focus ChatList (not open a chat)"
         );
+    }
+
+    #[test]
+    fn test_showing_popup_hides_other_popups() {
+        let mut window = create_test_core_window();
+
+        // Show command guide
+        window.update(Action::ShowCommandGuide);
+        assert!(
+            window.show_command_guide,
+            "Command guide should be visible"
+        );
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::CommandGuide),
+            "Command guide should be focused"
+        );
+
+        // Show theme selector - should hide command guide (both show action and focus change)
+        window.update(Action::ShowThemeSelector);
+        assert!(
+            window.show_theme_selector,
+            "Theme selector should be visible"
+        );
+        assert!(
+            !window.show_command_guide,
+            "Command guide should be hidden when theme selector is shown"
+        );
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::ThemeSelector),
+            "Theme selector should be focused"
+        );
+
+        // Show search overlay - should hide theme selector
+        window.update(Action::ChatWindowSearch);
+        assert!(
+            window.show_search_overlay,
+            "Search overlay should be visible"
+        );
+        assert!(
+            !window.show_theme_selector,
+            "Theme selector should be hidden when search overlay is shown"
+        );
+        assert!(
+            !window.show_command_guide,
+            "Command guide should still be hidden"
+        );
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::SearchOverlay),
+            "Search overlay should be focused"
+        );
+    }
+
+    #[test]
+    fn test_popup_to_popup_focus_hides_previous() {
+        let mut window = create_test_core_window();
+
+        // Show and focus command guide
+        window.update(Action::ShowCommandGuide);
+        assert!(window.show_command_guide, "Command guide should be visible");
+
+        // Manually show theme selector and focus it (simulating direct focus)
+        window.show_theme_selector = true;
+        window.update(Action::FocusComponent(ComponentName::ThemeSelector));
+
+        // Command guide should be hidden because we focused away from it (popup to popup)
+        assert!(
+            !window.show_command_guide,
+            "Command guide should be hidden when focusing theme selector"
+        );
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::ThemeSelector),
+            "Theme selector should be focused"
+        );
+    }
+
+    #[test]
+    fn test_focus_component_hides_previous_popup() {
+        let mut window = create_test_core_window();
+
+        // Show command guide
+        window.update(Action::ShowCommandGuide);
+        assert!(window.show_command_guide, "Command guide should be visible");
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::CommandGuide),
+            "Command guide should be focused"
+        );
+
+        // Focus ChatList - should hide command guide since it was a popup
+        window.update(Action::FocusComponent(ComponentName::ChatList));
+        assert!(
+            !window.show_command_guide,
+            "Command guide should be hidden when focusing another component"
+        );
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::ChatList),
+            "ChatList should be focused"
+        );
+
+        // Show theme selector
+        window.update(Action::ShowThemeSelector);
+        assert!(
+            window.show_theme_selector,
+            "Theme selector should be visible"
+        );
+
+        // Focus Chat - should hide theme selector
+        window.update(Action::FocusComponent(ComponentName::Chat));
+        assert!(
+            !window.show_theme_selector,
+            "Theme selector should be hidden when focusing Chat"
+        );
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::Chat),
+            "Chat should be focused"
+        );
+    }
+
+    #[test]
+    fn test_focus_non_popup_does_not_hide_non_popup() {
+        let mut window = create_test_core_window();
+
+        // Focus ChatList
+        window.update(Action::FocusComponent(ComponentName::ChatList));
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::ChatList),
+            "ChatList should be focused"
+        );
+
+        // Focus Chat - should not trigger any hiding since ChatList is not a popup
+        window.update(Action::FocusComponent(ComponentName::Chat));
+        assert_eq!(
+            window.component_focused,
+            Some(ComponentName::Chat),
+            "Chat should be focused"
+        );
+        // No assertions about hiding because ChatList is not a popup component
     }
 }
