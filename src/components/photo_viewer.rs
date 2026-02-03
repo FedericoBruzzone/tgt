@@ -183,6 +183,10 @@ impl Component for PhotoViewer {
             Action::PhotoDownloaded(file_path) => {
                 self.on_photo_downloaded(file_path);
             }
+            Action::PhotoViewerPrevious | Action::PhotoViewerNext => {
+                // These actions are handled by CoreWindow, which forwards them to ChatWindow
+                // No action needed here
+            }
             Action::Key(key_code, _modifiers) => {
                 if self.visible {
                     match key_code {

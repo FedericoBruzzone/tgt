@@ -240,6 +240,12 @@ pub enum Action {
     /// PhotoDownloaded action with file path.
     /// This action is sent when a photo has been downloaded.
     PhotoDownloaded(String),
+    /// PhotoViewerPrevious action.
+    /// Navigate to previous message in photo viewer.
+    PhotoViewerPrevious,
+    /// PhotoViewerNext action.
+    /// Navigate to next message in photo viewer.
+    PhotoViewerNext,
 
     /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
     StatusMessage(String),
@@ -308,6 +314,8 @@ impl FromStr for Action {
             "view_photo_message" => Ok(Action::ShowPhotoViewer),
             "show_photo_viewer" => Ok(Action::ShowPhotoViewer),
             "hide_photo_viewer" => Ok(Action::HidePhotoViewer),
+            "photo_viewer_previous" => Ok(Action::PhotoViewerPrevious),
+            "photo_viewer_next" => Ok(Action::PhotoViewerNext),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

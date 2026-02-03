@@ -142,5 +142,10 @@ keymap = [
 keymap = [
   # Close the photo viewer popup
   { keys = ["esc"], command = "hide_photo_viewer", description = "Close the photo viewer"},
+  # Navigate to previous/next message
+  { keys = ["up"], command = "photo_viewer_previous", description = "View previous message"},
+  { keys = ["down"], command = "photo_viewer_next", description = "View next message"},
+  { keys = ["k"], command = "photo_viewer_previous", description = "View previous message"},
+  { keys = ["j"], command = "photo_viewer_next", description = "View next message"},
 ]
 
