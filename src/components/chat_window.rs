@@ -38,8 +38,6 @@ pub struct ChatWindow {
     focused: bool,
     /// When true, next draw will select the newest message (Alt+C restore order).
     request_jump_to_latest: bool,
-    /// Last snapshot len we logged as "suspicious" (0 or 1) to avoid flooding the log.
-    last_logged_suspicious_len: Option<usize>,
 }
 /// Implementation of the `ChatWindow` struct.
 impl ChatWindow {
@@ -64,7 +62,6 @@ impl ChatWindow {
             message_list_state,
             focused,
             request_jump_to_latest: false,
-            last_logged_suspicious_len: None,
         }
     }
     /// Set the name of the `ChatWindow`.
@@ -83,20 +80,6 @@ impl ChatWindow {
     /// TOCTOU: another thread clearing the store between ordered_message_ids() and get_message().
     fn refresh_message_list_from_store(&mut self) {
         self.message_list = self.app_context.tg_context().ordered_messages_snapshot();
-        let open_id = self.app_context.tg_context().open_chat_id().as_i64();
-        let len = self.message_list.len();
-        if open_id != 0 && len <= 1 {
-            if self.last_logged_suspicious_len != Some(len) {
-                tracing::info!(
-                    open_chat_id = open_id,
-                    message_count = len,
-                    "chat window: snapshot has 0 or 1 messages while chat is open"
-                );
-                self.last_logged_suspicious_len = Some(len);
-            }
-        } else {
-            self.last_logged_suspicious_len = None;
-        }
     }
 
     /// Select the next message item in the list.
@@ -121,20 +104,20 @@ impl ChatWindow {
             }
         }
 
-        let i = match (len, self.message_list_state.selected()) {
-            (0, _) => {
-                self.message_list_state.select(None);
-                return;
-            }
-            (_, Some(i)) => {
-                if i == 0 {
-                    0
-                } else {
-                    i - 1
-                }
-            }
-            (_, None) => 0,
-        };
+        // Handle empty list: unselect and return early
+        if len == 0 {
+            self.message_list_state.select(None);
+            return;
+        }
+
+        // Calculate next index: decrement current selection (towards older messages).
+        // Bounds check: saturating_sub prevents going below 0 when already at oldest message (index 0).
+        // If no selection, start at index 0 (oldest message).
+        let i = self
+            .message_list_state
+            .selected()
+            .map(|i| i.saturating_sub(1))
+            .unwrap_or(0);
         self.message_list_state.select(Some(i));
     }
 
@@ -160,20 +143,21 @@ impl ChatWindow {
             }
         }
 
-        let i = match (len, self.message_list_state.selected()) {
-            (0, _) => {
-                self.message_list_state.select(None);
-                return;
-            }
-            (_, Some(i)) => {
-                if i >= len.saturating_sub(1) {
-                    i
-                } else {
-                    i + 1
-                }
-            }
-            (_, None) => 0,
-        };
+        // Handle empty list: unselect and return early
+        if len == 0 {
+            self.message_list_state.select(None);
+            return;
+        }
+
+        // Calculate previous index: increment current selection (towards newer messages).
+        // Bounds check: min(max_idx) prevents going above len-1 when already at newest message (index len-1).
+        // If no selection, start at index 0 (oldest message).
+        let max_idx = len.saturating_sub(1);
+        let i = self
+            .message_list_state
+            .selected()
+            .map(|i| (i + 1).min(max_idx))
+            .unwrap_or(0);
         self.message_list_state.select(Some(i));
     }
 
