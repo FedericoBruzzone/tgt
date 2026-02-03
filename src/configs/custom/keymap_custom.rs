@@ -305,6 +305,7 @@ impl KeymapConfig {
     /// * `command_guide` - The command guide keymap.
     /// * `theme_selector` - The theme selector keymap.
     /// * `search_overlay` - The search overlay keymap.
+    #[allow(clippy::too_many_arguments)]
     fn check_duplicates(
         default: &HashMap<Event, ActionBinding>,
         chat_list: &HashMap<Event, ActionBinding>,
@@ -353,8 +354,7 @@ impl KeymapConfig {
         self.merged_search_overlay
             .extend(self.search_overlay.clone());
         self.merged_photo_viewer = self.core_window.clone();
-        self.merged_photo_viewer
-            .extend(self.photo_viewer.clone());
+        self.merged_photo_viewer.extend(self.photo_viewer.clone());
     }
 
     /// Get the effective keymap for a component: general (core_window) bindings plus
@@ -651,6 +651,7 @@ mod tests {
             command_guide: None,
             theme_selector: None,
             search_overlay: None,
+            photo_viewer: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 0);
@@ -678,6 +679,7 @@ mod tests {
             command_guide: None,
             theme_selector: None,
             search_overlay: None,
+            photo_viewer: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -705,6 +707,7 @@ mod tests {
             command_guide: None,
             theme_selector: None,
             search_overlay: None,
+            photo_viewer: None,
         };
         let mut keymap_config = KeymapConfig::from(keymap_raw);
         let keymap_raw = KeymapRaw {
@@ -721,6 +724,7 @@ mod tests {
             command_guide: None,
             theme_selector: None,
             search_overlay: None,
+            photo_viewer: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -764,6 +768,7 @@ mod tests {
             command_guide: None,
             theme_selector: None,
             search_overlay: None,
+            photo_viewer: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
 

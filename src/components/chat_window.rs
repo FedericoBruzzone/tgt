@@ -257,7 +257,7 @@ impl ChatWindow {
     fn view_photo_previous(&mut self) {
         // Reuse the existing navigation logic with lazy loading
         self.next();
-        
+
         // After navigation, send action to view the photo of the selected message
         if let Some(selected) = self.message_list_state.selected() {
             if let Some(message) = self.message_list.get(selected) {
@@ -273,7 +273,7 @@ impl ChatWindow {
     fn view_photo_next(&mut self) {
         // Reuse the existing navigation logic with lazy loading
         self.previous();
-        
+
         // After navigation, send action to view the photo of the selected message
         if let Some(selected) = self.message_list_state.selected() {
             if let Some(message) = self.message_list.get(selected) {
