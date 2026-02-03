@@ -5,12 +5,12 @@ use crate::{
     tg::message_entry::MessageContentType,
 };
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
-use ratatui_image::{picker::Picker, protocol::StatefulProtocol, StatefulImage};
+use ratatui_image::{picker::Picker, protocol::StatefulProtocol, Resize, StatefulImage};
 use std::{io, path::Path, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -24,6 +24,7 @@ enum PhotoState {
     Loaded {
         message_id: i64,
         image_state: StatefulProtocol,
+        original_image: image::DynamicImage,
     },
     /// Error loading photo
     Error { message: String },
@@ -127,10 +128,11 @@ impl PhotoViewer {
     fn load_photo_from_path(&mut self, message_id: i64, path: &str) {
         match image::open(path) {
             Ok(img) => {
-                let image_state = self.picker.new_resize_protocol(img);
+                let image_state = self.picker.new_resize_protocol(img.clone());
                 self.photo_state = PhotoState::Loaded {
                     message_id,
                     image_state,
+                    original_image: img,
                 };
             }
             Err(e) => {
@@ -230,6 +232,18 @@ impl Component for PhotoViewer {
         let inner_area = block.inner(popup_area);
         frame.render_widget(block, popup_area);
 
+        // Split inner area: main content area + instructions at bottom
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(3),      // Main content area
+                Constraint::Length(1),   // Instructions
+            ])
+            .split(inner_area);
+
+        let content_area = layout[0];
+        let instructions_area = layout[1];
+
         // Render based on state
         match &mut self.photo_state {
             PhotoState::None => {
@@ -240,7 +254,7 @@ impl Component for PhotoViewer {
                 let paragraph = Paragraph::new(text)
                     .style(self.app_context.style_chat())
                     .alignment(Alignment::Center);
-                frame.render_widget(paragraph, inner_area);
+                frame.render_widget(paragraph, content_area);
             }
             PhotoState::Loading { .. } => {
                 let text = vec![Line::from(Span::styled(
@@ -250,12 +264,46 @@ impl Component for PhotoViewer {
                 let paragraph = Paragraph::new(text)
                     .style(self.app_context.style_chat())
                     .alignment(Alignment::Center);
-                frame.render_widget(paragraph, inner_area);
+                frame.render_widget(paragraph, content_area);
             }
-            PhotoState::Loaded { image_state, .. } => {
-                // Render the image using StatefulImage widget
-                let image_widget = StatefulImage::default();
-                frame.render_stateful_widget(image_widget, inner_area, image_state);
+            PhotoState::Loaded { image_state, original_image, .. } => {
+                // Get font size from picker to properly calculate dimensions
+                let font_size = self.picker.font_size();
+                let font_width = font_size.0 as f32;
+                let font_height = font_size.1 as f32;
+                let (img_width, img_height) = (original_image.width() as f32, original_image.height() as f32);
+                
+                // Calculate available pixel dimensions
+                let available_width_px = content_area.width as f32 * font_width;
+                let available_height_px = content_area.height as f32 * font_height;
+                
+                // Calculate scale to fit image in available space while maintaining aspect ratio
+                let scale_x = available_width_px / img_width;
+                let scale_y = available_height_px / img_height;
+                let scale = scale_x.min(scale_y);
+                
+                // Calculate actual display dimensions in pixels
+                let display_width_px = img_width * scale;
+                let display_height_px = img_height * scale;
+                
+                // Convert back to character cells
+                let display_width_cells = (display_width_px / font_width).ceil() as u16;
+                let display_height_cells = (display_height_px / font_height).ceil() as u16;
+                
+                // Center the image rect within content_area
+                let x_offset = (content_area.width.saturating_sub(display_width_cells)) / 2;
+                let y_offset = (content_area.height.saturating_sub(display_height_cells)) / 2;
+                
+                let image_rect = Rect::new(
+                    content_area.x + x_offset,
+                    content_area.y + y_offset,
+                    display_width_cells,
+                    display_height_cells,
+                );
+                
+                // Render the image using StatefulImage widget with Fit resize mode
+                let image_widget = StatefulImage::new().resize(Resize::Fit(None));
+                frame.render_stateful_widget(image_widget, image_rect, image_state);
             }
             PhotoState::Error { message } => {
                 let text = vec![
@@ -271,14 +319,11 @@ impl Component for PhotoViewer {
                 let paragraph = Paragraph::new(text)
                     .style(self.app_context.style_chat())
                     .alignment(Alignment::Center);
-                frame.render_widget(paragraph, inner_area);
+                frame.render_widget(paragraph, content_area);
             }
         }
 
         // Draw instructions at the bottom
-        let instructions_y = inner_area.y + inner_area.height.saturating_sub(2);
-        let instructions_area = Rect::new(inner_area.x, instructions_y, inner_area.width, 2);
-
         let instructions = vec![Line::from(vec![Span::styled(
             "Esc(default) to Close",
             self.app_context.style_timestamp(),

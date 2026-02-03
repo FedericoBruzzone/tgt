@@ -505,7 +505,7 @@ impl Component for CoreWindow {
                     self.app_context.set_focused_component(None);
                 }
             }
-            Action::ViewPhotoMessage(message_id) => {
+            Action::ViewPhotoMessage(_) => {
                 // Hide all other popup components before showing photo viewer
                 self.hide_other_popups(ComponentName::PhotoViewer);
 
