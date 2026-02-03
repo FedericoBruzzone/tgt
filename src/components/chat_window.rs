@@ -253,18 +253,36 @@ impl ChatWindow {
         }
     }
 
-    /// Navigate to previous message and view its photo.
+    /// Navigate to previous message and view its photo (up = towards newer messages).
     fn view_photo_previous(&mut self) {
-        if self.message_list.is_empty() {
+        let len = self.message_list.len();
+        
+        // Load more history when near top of loaded range (and not already loading)
+        if len > 0 && !self.app_context.tg_context().is_history_loading() {
+            let oldest = self.app_context.tg_context().oldest_message_id();
+            let selected_id = self
+                .message_list_state
+                .selected()
+                .and_then(|i| self.message_list.get(i).map(|m| m.id()));
+            let near_top = match (oldest, selected_id) {
+                (Some(old), Some(sel)) => sel == old,
+                (_, Some(_)) => self.message_list_state.selected() == Some(0),
+                _ => false,
+            };
+            if near_top {
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    let _ = event_tx.send(Event::GetChatHistory);
+                }
+            }
+        }
+        
+        if len == 0 {
             return;
         }
         
+        // Navigate to previous (newer) message
         let current = self.message_list_state.selected().unwrap_or(0);
-        let previous = if current > 0 {
-            current - 1
-        } else {
-            self.message_list.len() - 1 // Wrap to last
-        };
+        let previous = current.saturating_sub(1);
         
         self.message_list_state.select(Some(previous));
         let message_id = self.message_list[previous].id();
@@ -274,17 +292,39 @@ impl ChatWindow {
         }
     }
 
-    /// Navigate to next message and view its photo.
+    /// Navigate to next message and view its photo (down = towards older messages).
     fn view_photo_next(&mut self) {
-        if self.message_list.is_empty() {
+        let len = self.message_list.len();
+        
+        // Load newer messages when near bottom (so user can scroll forward in time)
+        if len > 0 && !self.app_context.tg_context().is_history_loading() {
+            let newest = self.app_context.tg_context().newest_message_id();
+            let selected_id = self
+                .message_list_state
+                .selected()
+                .and_then(|i| self.message_list.get(i).map(|m| m.id()));
+            let near_bottom = match (newest, selected_id) {
+                (Some(new), Some(sel)) => sel == new,
+                (_, Some(_)) => self.message_list_state.selected() == Some(len.saturating_sub(1)),
+                _ => false,
+            };
+            if near_bottom {
+                if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
+                    let _ = event_tx.send(Event::GetChatHistoryNewer);
+                }
+            }
+        }
+        
+        if len == 0 {
             return;
         }
         
+        // Navigate to next (older) message
         let current = self.message_list_state.selected().unwrap_or(0);
-        let next = if current < self.message_list.len() - 1 {
+        let next = if current < len - 1 {
             current + 1
         } else {
-            0 // Wrap to first
+            len - 1 // Stay at last message
         };
         
         self.message_list_state.select(Some(next));
