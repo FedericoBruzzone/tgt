@@ -426,6 +426,7 @@ pub async fn handle_app_actions(
                     if let Some(from_id) = newest {
                         app_context.tg_context().set_history_loading(true);
                         // TDLib: offset -N = from_message_id + N newer messages; limit >= -offset
+                        // Use offset -49 to get from_id (which we already have) + 49 newer, then filter out from_id
                         const NEWER_BATCH: i32 = 50;
                         let (entries, _) = tg_backend
                             .get_chat_history_batch(
@@ -438,10 +439,18 @@ pub async fn handle_app_actions(
                         if app_context.tg_context().open_chat_id().as_i64() == chat_id
                             && !entries.is_empty()
                         {
-                            app_context
-                                .tg_context()
-                                .open_chat_messages()
-                                .insert_messages(entries);
+                            // Skip the first message if it's the boundary message we already have
+                            let new_messages = if entries.first().map(|e| e.id()) == Some(from_id) {
+                                &entries[1..]
+                            } else {
+                                &entries[..]
+                            };
+                            if !new_messages.is_empty() {
+                                app_context
+                                    .tg_context()
+                                    .open_chat_messages()
+                                    .insert_messages(new_messages.iter().cloned());
+                            }
                         }
                         app_context.tg_context().set_history_loading(false);
                         let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
