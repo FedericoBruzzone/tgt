@@ -115,7 +115,7 @@ impl Input {
         self.cursor.1
     }
     /// Get the text of the `Input` struct.
-    fn text(&mut self) -> &Vec<Vec<InputCell>> {
+    fn text(&self) -> &Vec<Vec<InputCell>> {
         &self.text
     }
     /// Send search updates if in search mode.
@@ -483,11 +483,11 @@ impl Input {
                     .collect()
             })
             .collect();
-        for _ in 0..self.text.len() - 1 {
-            if let Some(tx) = self.action_tx.as_ref() {
-                tx.send(Action::IncreasePromptSize).unwrap();
-            }
-        }
+        let extra_lines = self.text.len().saturating_sub(1);
+        self.correct_prompt_size = extra_lines;
+        // Let restore_prompt_size() send IncreasePromptSize on next focused draw,
+        // so we only adjust size once and the prompt is correctly sized when shown.
+        self.is_restored = false;
         self.cursor = (0, 0);
     }
 
