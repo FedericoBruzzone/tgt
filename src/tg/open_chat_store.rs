@@ -48,17 +48,68 @@ pub struct OpenChatMessageStore {
     range: LoadedRange,
 }
 
+/// Maximum number of messages to keep in memory per chat to prevent unbounded growth.
+/// When exceeded, messages outside the sliding window are evicted based on which direction
+/// the user is scrolling. This prevents performance degradation when scrolling back months.
+/// Using 500 allows for jump loading (~100 older + ~300 newer) plus incremental scroll batches.
+const MAX_MESSAGES_IN_CACHE: usize = 500;
+/// When cache is full, keep this many messages and evict the rest from the opposite end
+const MIN_MESSAGES_AFTER_EVICTION: usize = 400;
+
 impl OpenChatMessageStore {
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Insert messages (backend/task only). Updates view window.
+    /// If cache exceeds MAX_MESSAGES_IN_CACHE, evicts messages based on scroll direction.
     pub fn insert_messages(&mut self, messages: impl IntoIterator<Item = MessageEntry>) {
+        let old_oldest = self.range.oldest_message_id;
+
         for entry in messages {
             let id = entry.id();
             self.range.extend_with(id);
             self.cache.insert(id, entry);
+        }
+
+        // Evict messages if cache is too large (sliding window)
+        if self.cache.len() > MAX_MESSAGES_IN_CACHE {
+            let to_remove = self.cache.len() - MIN_MESSAGES_AFTER_EVICTION;
+
+            // Detect scroll direction by comparing old and new ranges
+            let scrolling_backwards = match (old_oldest, self.range.oldest_message_id) {
+                (Some(old), Some(new)) => new < old, // Loading older messages
+                _ => false,
+            };
+
+            let keys_to_remove: Vec<i64> = if scrolling_backwards {
+                // Scrolling backwards (loading older): evict NEWEST messages
+                self.cache.keys().rev().take(to_remove).copied().collect()
+            } else {
+                // Scrolling forwards or receiving new: evict OLDEST messages
+                self.cache.keys().take(to_remove).copied().collect()
+            };
+
+            for key in &keys_to_remove {
+                self.cache.remove(key);
+            }
+
+            // Recompute range after eviction
+            self.range = self.cache.keys().fold(LoadedRange::new(), |mut r, &k| {
+                r.extend_with(k);
+                r
+            });
+
+            tracing::debug!(
+                removed = to_remove,
+                remaining = self.cache.len(),
+                direction = if scrolling_backwards {
+                    "backwards"
+                } else {
+                    "forwards"
+                },
+                "Evicted messages from cache (sliding window)"
+            );
         }
     }
 
@@ -193,5 +244,49 @@ mod tests {
         assert_eq!(store.from_message_id_for_load_older(), 0);
         store.insert_messages([make_entry(100), make_entry(50)]);
         assert_eq!(store.from_message_id_for_load_older(), 50);
+    }
+
+    #[test]
+    fn cache_evicts_oldest_when_exceeding_max() {
+        let mut store = OpenChatMessageStore::new();
+
+        // Insert MAX_MESSAGES_IN_CACHE + 10 messages
+        let extra = 10;
+        let total = MAX_MESSAGES_IN_CACHE + extra;
+        let messages: Vec<_> = (1..=total as i64).map(make_entry).collect();
+        store.insert_messages(messages);
+
+        // Should evict down to MIN_MESSAGES_AFTER_EVICTION
+        assert_eq!(store.len(), MIN_MESSAGES_AFTER_EVICTION);
+
+        // Some oldest messages should be evicted
+        assert!(store.get_message(1).is_none());
+
+        // Newest messages should still be present
+        assert!(store.get_message(total as i64).is_some());
+        assert!(store.get_message((total - 50) as i64).is_some());
+    }
+
+    #[test]
+    fn cache_eviction_on_new_message() {
+        let mut store = OpenChatMessageStore::new();
+
+        // Fill cache to MAX_MESSAGES_IN_CACHE (IDs 1..2000)
+        store.insert_messages((1..=MAX_MESSAGES_IN_CACHE as i64).map(make_entry));
+        assert_eq!(store.len(), MAX_MESSAGES_IN_CACHE);
+
+        // Add one more message (triggers eviction)
+        store.insert_messages([make_entry((MAX_MESSAGES_IN_CACHE + 1) as i64)]);
+
+        // Should evict down to MIN_MESSAGES_AFTER_EVICTION
+        assert_eq!(store.len(), MIN_MESSAGES_AFTER_EVICTION);
+
+        // Oldest message (ID=1) should be evicted
+        assert!(store.get_message(1).is_none());
+
+        // Newest message should be present
+        assert!(store
+            .get_message((MAX_MESSAGES_IN_CACHE + 1) as i64)
+            .is_some());
     }
 }

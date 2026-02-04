@@ -297,7 +297,6 @@ impl ChatListWindow {
                     .send(Action::FocusComponent(Prompt))
                     .unwrap();
 
-                self.app_context.tg_context().set_from_message_id(0);
                 // Start loading chat history immediately (same handle_app_actions run).
                 // Event::GetChatHistory is also sent for tg_backend; Action ensures we spawn the task now.
                 let _ = self.app_context.action_tx().send(Action::GetChatHistory);
