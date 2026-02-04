@@ -132,8 +132,18 @@ pub trait ConfigFile: Sized + Default + Clone {
                 }
                 Err(e) => {
                     tracing::error!("Failed to parse {file_name}: {e}");
-                    eprintln!("Failed to parse {file_name}: {e}");
-                    std::process::exit(1);
+                    eprintln!("Warning: Failed to parse {file_name}: {e}");
+                    eprintln!("Falling back to default configuration. Your old config has been backed up.");
+
+                    // Backup the invalid config file
+                    let backup_path = file_path.with_extension("toml.backup");
+                    if let Err(backup_err) = std::fs::copy(&file_path, &backup_path) {
+                        tracing::warn!("Failed to backup invalid config: {backup_err}");
+                    } else {
+                        eprintln!("Backed up to: {}", backup_path.display());
+                    }
+
+                    None
                 }
             },
             None => {
@@ -172,9 +182,18 @@ pub trait ConfigFile: Sized + Default + Clone {
                     }
                     Err(e) => {
                         tracing::error!("Failed to parse {}: {}", file_name, e);
-                        eprintln!("Failed to parse {file_name}: {e}");
-                        std::process::exit(1);
-                        // S::default()
+                        eprintln!("Warning: Failed to parse {file_name}: {e}");
+                        eprintln!("Falling back to default configuration. Your old config has been backed up.");
+
+                        // Backup the invalid config file
+                        let backup_path = file_path.with_extension("toml.backup");
+                        if let Err(backup_err) = std::fs::copy(&file_path, &backup_path) {
+                            tracing::warn!("Failed to backup invalid config: {backup_err}");
+                        } else {
+                            eprintln!("Backed up to: {}", backup_path.display());
+                        }
+
+                        S::default()
                     }
                 }
             }

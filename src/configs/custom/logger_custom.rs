@@ -86,7 +86,30 @@ impl ConfigFile for LoggerConfig {
 /// The default logger configuration.
 impl Default for LoggerConfig {
     fn default() -> Self {
-        Self::default_result().unwrap()
+        // Try to load from config file, but fall back to hardcoded defaults if it doesn't exist
+        Self::default_result().unwrap_or_else(|e| {
+            tracing::warn!("Failed to load logger config, using hardcoded defaults: {e}");
+
+            // Hardcoded defaults matching config/logger.toml
+            let log_dir = utils::tgt_dir()
+                .unwrap_or_else(|_| std::env::current_dir().unwrap())
+                .join(".data/logs")
+                .to_string_lossy()
+                .to_string();
+
+            // Create log directory if it doesn't exist
+            if !Path::new(&log_dir).exists() {
+                let _ = std::fs::create_dir_all(&log_dir);
+            }
+
+            Self {
+                log_dir,
+                log_file: "tgt.log".to_string(),
+                rotation_frequency: "daily".to_string(),
+                max_old_log_files: 7,
+                log_level: "info".to_string(),
+            }
+        })
     }
 }
 /// The conversion from the raw logger configuration to the logger

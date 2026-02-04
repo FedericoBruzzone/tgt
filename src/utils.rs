@@ -4,7 +4,7 @@ use std::{env, io, path::PathBuf};
 pub const TGT: &str = "tgt";
 pub const TGT_CONFIG_DIR: &str = "TGT_CONFIG_DIR";
 
-/// Get the project directory.
+/// Get the project directory, creating it if it doesn't exist.
 ///
 /// # Returns
 /// The project directory.
@@ -16,20 +16,30 @@ pub fn tgt_dir() -> io::Result<PathBuf> {
 
     // Release
     let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
-    let tgt = format!("{home}/.tgt");
-    // Check if the directory exists
-    if PathBuf::from(&tgt).exists() {
-        Ok(PathBuf::from(&tgt))
-    } else {
-        panic!("The directory {tgt} does not exist.");
+    let tgt_path = PathBuf::from(format!("{home}/.tgt"));
+
+    // Create the directory if it doesn't exist
+    if !tgt_path.exists() {
+        std::fs::create_dir_all(&tgt_path)?;
+        tracing::info!("Created .tgt directory at: {}", tgt_path.display());
     }
+
+    Ok(tgt_path)
 }
-/// Get the default configuration directory.
+/// Get the default configuration directory, creating it if it doesn't exist.
 ///
 /// # Returns
 /// The default configuration directory.
 pub fn tgt_config_dir() -> io::Result<PathBuf> {
-    Ok(tgt_dir()?.join("config"))
+    let config_dir = tgt_dir()?.join("config");
+
+    // Create the config directory if it doesn't exist
+    if !config_dir.exists() {
+        std::fs::create_dir_all(&config_dir)?;
+        tracing::info!("Created config directory at: {}", config_dir.display());
+    }
+
+    Ok(config_dir)
 }
 
 /// Fail with an error message and exit the application.
