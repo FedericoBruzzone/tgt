@@ -83,7 +83,7 @@ First, create the required TOML configuration files in `~/.tgt/config` using the
 ```bash
 git clone https://github.com/FedericoBruzzone/tgt ~/tgt
 mkdir -p ~/.tgt/config
-cp ~/tgt/config/* ~/.tgt/config
+cp -r ~/tgt/config/* ~/.tgt/config
 ```
 
 After setting up the configuration files, you have two installation options:
