@@ -256,10 +256,12 @@ impl TgContext {
 
     pub fn unread_messages(&self) -> Vec<i64> {
         let mut unread_messages: Vec<i64> = Vec::new();
+        let last_read_id = self.last_read_inbox_message_id();
+
+        // Only include messages newer than the last read message
         for id in self.open_chat_messages().ordered_message_ids() {
-            unread_messages.push(id);
-            if id == self.last_read_inbox_message_id() {
-                break;
+            if id > last_read_id {
+                unread_messages.push(id);
             }
         }
         unread_messages
