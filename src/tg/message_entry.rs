@@ -241,22 +241,29 @@ impl MessageEntry {
     }
 
     fn from_span_to_lines(span: Span) -> Vec<Line<'static>> {
-        span.content
-            .split('\n')
-            .map(|s| Line::from(Span::styled(s.to_owned(), span.style)))
-            .collect::<Vec<Line>>()
+        // Keep newlines in span content; don't split here
+        // Splitting happens later in wrapping logic where newlines are properly handled
+        if span.content.is_empty() {
+            vec![]
+        } else {
+            // Convert to owned string to ensure 'static lifetime
+            vec![Line::from(vec![Span::styled(span.content.to_string(), span.style)])]
+        }
     }
 
     fn from_spans_to_lines(spans: Vec<Span>) -> Vec<Line<'static>> {
-        let vec = spans
-            .iter()
+        let filtered: Vec<Span<'static>> = spans
+            .into_iter()
             .filter(|s| !s.content.is_empty())
-            .flat_map(|s| Self::from_span_to_lines(s.clone()))
-            .collect::<Vec<Line>>();
-        if vec.is_empty() {
+            .map(|s| Span::styled(s.content.to_string(), s.style))
+            .collect();
+        
+        if filtered.is_empty() {
             vec![Line::from("")]
         } else {
-            vec
+            // Group all spans into a single line; newlines within spans
+            // will be handled by the wrapping logic
+            vec![Line::from(filtered)]
         }
     }
 
@@ -277,23 +284,43 @@ impl MessageEntry {
         wrap_width: i32,
     ) -> Vec<Line<'static>> {
         if wrap_width == -1 {
-            // No wrap
-            self.message_content
-                .iter()
-                .map(|l| {
-                    l.iter()
-                        .map(|s| {
-                            Span::styled(
-                                s.content.clone(),
-                                Self::merge_two_style(s.style, content_style),
-                            )
-                        })
-                        .collect()
-                })
-                .collect::<Vec<Line>>()
+            // No wrap - split on newlines within spans
+            let mut lines = Vec::new();
+            for line in &self.message_content {
+                let mut current_line = Line::default();
+                
+                for span in line.iter() {
+                    if span.content.contains('\n') {
+                        // Split this span on newlines
+                        let parts: Vec<&str> = span.content.split('\n').collect();
+                        for (i, part) in parts.iter().enumerate() {
+                            if i > 0 {
+                                // Push current line and start a new one
+                                lines.push(std::mem::take(&mut current_line));
+                            }
+                            if !part.is_empty() {
+                                current_line.spans.push(Span::styled(
+                                    (*part).to_string(),
+                                    Self::merge_two_style(span.style, content_style),
+                                ));
+                            }
+                        }
+                    } else {
+                        current_line.spans.push(Span::styled(
+                            span.content.clone(),
+                            Self::merge_two_style(span.style, content_style),
+                        ));
+                    }
+                }
+                
+                if !current_line.spans.is_empty() || lines.is_empty() {
+                    lines.push(current_line);
+                }
+            }
+            lines
         } else {
             // Wrap by display width (so emoji/CJK don't overflow)
-            // Preserve blank lines (e.g., around code blocks)
+            // Preserve blank lines and newlines within content
             let wrap = wrap_width.max(1) as usize;
             let mut lines = Vec::new();
             let mut current_line = Line::default();
@@ -310,9 +337,16 @@ impl MessageEntry {
                     continue;
                 }
 
-                // Wrap non-blank lines
+                // Wrap non-blank lines, handling newlines within spans
                 for span in line.iter() {
                     for c in span.content.chars() {
+                        // Handle newline characters by starting a new line
+                        if c == '\n' {
+                            lines.push(std::mem::take(&mut current_line));
+                            current_line_width = 0;
+                            continue;
+                        }
+                        
                         let w = c.width().unwrap_or(1);
                         if c == ' ' && current_line_width >= wrap {
                             lines.push(std::mem::take(&mut current_line));
@@ -629,11 +663,11 @@ mod message_parsing_tests {
             ],
         );
         let entry = MessageEntry::from(&msg);
-        // One line per span (from_spans_to_lines); adjacent entities yield "a", "b" -> "a\nb"
-        assert_eq!(entry.message_content_to_string(), "a\nb");
+        // Adjacent entities stay on same line (no newline between them)
+        assert_eq!(entry.message_content_to_string(), "ab");
     }
 
-    /// Two non-overlapping entities: output is exact text, one line per span.
+    /// Two non-overlapping entities: output is exact text, all on same line.
     #[test]
     fn format_message_content_two_non_overlapping_no_duplicate() {
         let msg = message_with_entities(
@@ -652,8 +686,8 @@ mod message_parsing_tests {
             ],
         );
         let entry = MessageEntry::from(&msg);
-        // One line per span: "hello", " ", "world" -> "hello\n \nworld"
-        assert_eq!(entry.message_content_to_string(), "hello\n \nworld");
+        // All spans on same line (no newlines in original text)
+        assert_eq!(entry.message_content_to_string(), "hello world");
     }
 
     /// Empty entities: plain text.
@@ -662,6 +696,44 @@ mod message_parsing_tests {
         let msg = message_with_entities("plain", vec![]);
         let entry = MessageEntry::from(&msg);
         assert_eq!(entry.message_content_to_string(), "plain");
+    }
+
+    /// Multiline plain text: newlines should be preserved.
+    #[test]
+    fn format_message_content_multiline_plain() {
+        let msg = message_with_entities("line1\nline2\nline3", vec![]);
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "line1\nline2\nline3");
+    }
+
+    /// Multiline text with entities: newlines should be preserved.
+    #[test]
+    fn format_message_content_multiline_with_entities() {
+        let msg = message_with_entities(
+            "hello\nworld",
+            vec![TextEntity {
+                offset: 0,
+                length: 5,
+                r#type: TextEntityType::Bold,
+            }],
+        );
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "hello\nworld");
+    }
+
+    /// Multiline text with entity spanning newline.
+    #[test]
+    fn format_message_content_entity_spans_newline() {
+        let msg = message_with_entities(
+            "hello\nworld",
+            vec![TextEntity {
+                offset: 0,
+                length: 11, // Spans the entire text including newline
+                r#type: TextEntityType::Bold,
+            }],
+        );
+        let entry = MessageEntry::from(&msg);
+        assert_eq!(entry.message_content_to_string(), "hello\nworld");
     }
 
     /// Call messages should display with duration.
