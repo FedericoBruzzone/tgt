@@ -691,6 +691,12 @@ impl Component for CoreWindow {
                     }
                 }
             }
+            Action::EditMessage(..) | Action::ReplyMessage(..) => {
+                // Always dispatch to Prompt so the message is loaded regardless of focus order.
+                if let Some(component) = self.components.get_mut(&ComponentName::Prompt) {
+                    component.update(action);
+                }
+            }
             Action::LoadChats(..) | Action::ChatHistoryAppended | Action::Resize(..) => {
                 // Always forward to ChatList so it can rebuild_visible_chats (populates visible_chats).
                 if let Some(component) = self.components.get_mut(&ComponentName::ChatList) {

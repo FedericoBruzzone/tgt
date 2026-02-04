@@ -313,6 +313,7 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::DecreasePromptSize
             | Action::ShowChatWindowReply
             | Action::HideChatWindowReply
+            | Action::EditMessage(_, _)
             | Action::ReplyMessage(_, _)
             | Action::ShowCommandGuide
             | Action::HideCommandGuide
