@@ -1116,6 +1116,17 @@ impl TgBackend {
                                     for id in ids {
                                         store.remove_message(*id);
                                     }
+                                    // Send rate-limited chat list rebuild to update chat list (last message may have changed)
+                                    let now = std::time::Instant::now();
+                                    if now.duration_since(last_chat_list_update).as_millis()
+                                        >= rate_limit_ms
+                                    {
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        last_chat_list_update = now;
+                                        needs_chat_list_update = false;
+                                    } else {
+                                        needs_chat_list_update = true;
+                                    }
                                 }
                             }
                             // Update::Option(option) => {
