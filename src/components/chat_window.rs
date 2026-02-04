@@ -374,7 +374,7 @@ impl Component for ChatWindow {
                 .set_jump_target_message_id_i64(0);
             if let Some(idx) = self.message_list.iter().position(|m| m.id() == jump_target) {
                 self.message_list_state.select(Some(idx));
-            } 
+            }
         } else {
             // Alt+C restore order: jump to latest message
             if self.request_jump_to_latest {

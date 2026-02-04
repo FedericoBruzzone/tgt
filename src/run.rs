@@ -397,10 +397,8 @@ pub async fn handle_app_actions(
                         }
 
                         // Always use the oldest message in cache (or 0 if empty) to ensure continuity
-                        let from_message_id = app_context
-                            .tg_context()
-                            .oldest_message_id()
-                            .unwrap_or(0);
+                        let from_message_id =
+                            app_context.tg_context().oldest_message_id().unwrap_or(0);
                         let (entries, _has_more) = tg_backend
                             .get_chat_history_one_batch(chat_id, from_message_id)
                             .await;
@@ -501,7 +499,7 @@ pub async fn handle_app_actions(
                     let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
                     continue;
                 }
-                
+
                 // Clear chat history BEFORE loading new messages to ensure clean slate
                 app_context.tg_context().clear_open_chat_messages();
                 app_context.tg_context().set_history_loading(true);
@@ -512,12 +510,12 @@ pub async fn handle_app_actions(
                 const OLDER_LIMIT: i32 = 100; // target + 99 older messages
                 const NEWER_BATCH_SIZE: i32 = 99; // max we can use with offset -98
                 const NEWER_BATCHES: usize = 3; // 3 batches of ~99 = ~297 newer messages
-                
+
                 // Get target + 99 older messages (offset 0 = include from_message_id)
                 let (mut all_entries, _) = tg_backend
                     .get_chat_history_batch(chat_id, *message_id, 0, OLDER_LIMIT)
                     .await;
-                
+
                 // Load newer messages in multiple batches (TDLib offset limit is -100)
                 let mut current_from_id = *message_id;
                 for batch_num in 0..NEWER_BATCHES {
@@ -529,28 +527,28 @@ pub async fn handle_app_actions(
                             NEWER_BATCH_SIZE,
                         )
                         .await;
-                    
+
                     if entries_newer.is_empty() {
                         break;
                     }
-                    
+
                     // Filter out the boundary message (already have it from previous batch or older)
                     let new_msgs: Vec<_> = entries_newer
                         .into_iter()
                         .filter(|e| e.id() != current_from_id)
                         .collect();
-                    
+
                     if new_msgs.is_empty() {
                         break;
                     }
-                    
+
                     // Update boundary for next batch
                     if let Some(last) = new_msgs.last() {
                         current_from_id = last.id();
                     }
-                    
+
                     all_entries.extend(new_msgs);
-                    
+
                     tracing::debug!(
                         batch_num,
                         loaded = all_entries.len(),
@@ -572,7 +570,7 @@ pub async fn handle_app_actions(
                         .tg_context()
                         .open_chat_messages()
                         .insert_messages(all_entries);
-                    
+
                     let final_oldest = app_context.tg_context().oldest_message_id();
                     let final_newest = app_context.tg_context().newest_message_id();
                     let has_target = app_context.tg_context().get_message(*message_id).is_some();

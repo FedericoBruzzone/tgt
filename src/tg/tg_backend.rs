@@ -1060,6 +1060,8 @@ impl TgBackend {
                                     let tx = tg_context.event_tx().as_ref().cloned();
                                     if let Some(tx) = tx {
                                         let _ = tx.send(Event::ChatMessageAdded(message.id));
+                                        // Auto-mark new messages as read when chat is open
+                                        let _ = tx.send(Event::ViewAllMessages);
                                     }
                                 }
                             }
