@@ -247,7 +247,10 @@ impl MessageEntry {
             vec![]
         } else {
             // Convert to owned string to ensure 'static lifetime
-            vec![Line::from(vec![Span::styled(span.content.to_string(), span.style)])]
+            vec![Line::from(vec![Span::styled(
+                span.content.to_string(),
+                span.style,
+            )])]
         }
     }
 
@@ -257,7 +260,7 @@ impl MessageEntry {
             .filter(|s| !s.content.is_empty())
             .map(|s| Span::styled(s.content.to_string(), s.style))
             .collect();
-        
+
         if filtered.is_empty() {
             vec![Line::from("")]
         } else {
@@ -288,7 +291,7 @@ impl MessageEntry {
             let mut lines = Vec::new();
             for line in &self.message_content {
                 let mut current_line = Line::default();
-                
+
                 for span in line.iter() {
                     if span.content.contains('\n') {
                         // Split this span on newlines
@@ -312,7 +315,7 @@ impl MessageEntry {
                         ));
                     }
                 }
-                
+
                 if !current_line.spans.is_empty() || lines.is_empty() {
                     lines.push(current_line);
                 }
@@ -346,7 +349,7 @@ impl MessageEntry {
                             current_line_width = 0;
                             continue;
                         }
-                        
+
                         let w = c.width().unwrap_or(1);
                         if c == ' ' && current_line_width >= wrap {
                             lines.push(std::mem::take(&mut current_line));
