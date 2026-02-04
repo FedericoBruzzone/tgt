@@ -384,34 +384,40 @@ pub async fn handle_app_actions(
                 if !app_context.tg_context().is_history_loading() {
                     app_context.tg_context().set_history_loading(true);
                     let chat_id = app_context.tg_context().open_chat_id().as_i64();
-                    const INITIAL_LOAD_TARGET: usize = 100;
-                    let start_len = app_context.tg_context().open_chat_messages().len();
-                    loop {
-                        // Only insert for the chat that is still open (guard against stale load).
+                    let cache_len_before = app_context.tg_context().open_chat_messages().len();
+
+                    // If cache is empty (initial load), load 100 messages to fill the window
+                    // Otherwise, load just ONE batch (50 messages) for incremental scrolling
+                    let target_load = if cache_len_before == 0 { 100 } else { 50 };
+                    let mut loaded_count = 0;
+
+                    while loaded_count < target_load {
                         if app_context.tg_context().open_chat_id().as_i64() != chat_id {
                             break;
                         }
-                        let from_message_id = app_context.tg_context().from_message_id();
+
+                        // Always use the oldest message in cache (or 0 if empty) to ensure continuity
+                        let from_message_id = app_context
+                            .tg_context()
+                            .oldest_message_id()
+                            .unwrap_or(0);
                         let (entries, _has_more) = tg_backend
                             .get_chat_history_one_batch(chat_id, from_message_id)
                             .await;
+
                         if entries.is_empty() {
                             break;
                         }
+
                         if app_context.tg_context().open_chat_id().as_i64() != chat_id {
                             break;
                         }
+
                         let tg = app_context.tg_context();
+                        loaded_count += entries.len();
                         tg.open_chat_messages().insert_messages(entries.clone());
-                        if let Some(last) = entries.last() {
-                            tg.set_from_message_id(last.id());
-                        }
-                        let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
-                        let current_len = app_context.tg_context().open_chat_messages().len();
-                        if current_len >= start_len + INITIAL_LOAD_TARGET {
-                            break;
-                        }
                     }
+
                     app_context.tg_context().set_history_loading(false);
                     let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
                 }
@@ -495,36 +501,98 @@ pub async fn handle_app_actions(
                     let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
                     continue;
                 }
-                // Fetch first; only clear when we have messages to insert (avoids "empty response" overwrite).
+                
+                // Clear chat history BEFORE loading new messages to ensure clean slate
+                app_context.tg_context().clear_open_chat_messages();
                 app_context.tg_context().set_history_loading(true);
-                app_context
-                    .tg_context()
-                    .set_jump_target_message_id_i64(*message_id);
-                const OLDER_LIMIT: i32 = 31; // target + 30 older
-                const NEWER_LIMIT: i32 = 16; // target + 15 newer (limit must be >= -offset)
-                let (entries_older, _) = tg_backend
+
+                // Load symmetric window around target message
+                // TDLib limitation: offset must be > -100, so we can't load 250 newer in one call
+                // Strategy: Load target + older messages, then load newer in multiple batches
+                const OLDER_LIMIT: i32 = 100; // target + 99 older messages
+                const NEWER_BATCH_SIZE: i32 = 99; // max we can use with offset -98
+                const NEWER_BATCHES: usize = 3; // 3 batches of ~99 = ~297 newer messages
+                
+                // Get target + 99 older messages (offset 0 = include from_message_id)
+                let (mut all_entries, _) = tg_backend
                     .get_chat_history_batch(chat_id, *message_id, 0, OLDER_LIMIT)
                     .await;
-                let (entries_newer, _) = tg_backend
-                    .get_chat_history_batch(chat_id, *message_id, -15, NEWER_LIMIT)
-                    .await;
-                if !entries_older.is_empty() || !entries_newer.is_empty() {
-                    //app_context.tg_context().clear_open_chat_messages();
-                    app_context
-                        .tg_context()
-                        .open_chat_messages()
-                        .insert_messages(entries_older);
-                    app_context
-                        .tg_context()
-                        .open_chat_messages()
-                        .insert_messages(entries_newer);
-                    let oldest = app_context
-                        .tg_context()
-                        .open_chat_messages()
-                        .oldest_message_id();
-                    if let Some(oldest_id) = oldest {
-                        app_context.tg_context().set_from_message_id(oldest_id);
+                
+                // Load newer messages in multiple batches (TDLib offset limit is -100)
+                let mut current_from_id = *message_id;
+                for batch_num in 0..NEWER_BATCHES {
+                    let (entries_newer, _) = tg_backend
+                        .get_chat_history_batch(
+                            chat_id,
+                            current_from_id,
+                            -(NEWER_BATCH_SIZE - 1),
+                            NEWER_BATCH_SIZE,
+                        )
+                        .await;
+                    
+                    if entries_newer.is_empty() {
+                        break;
                     }
+                    
+                    // Filter out the boundary message (already have it from previous batch or older)
+                    let new_msgs: Vec<_> = entries_newer
+                        .into_iter()
+                        .filter(|e| e.id() != current_from_id)
+                        .collect();
+                    
+                    if new_msgs.is_empty() {
+                        break;
+                    }
+                    
+                    // Update boundary for next batch
+                    if let Some(last) = new_msgs.last() {
+                        current_from_id = last.id();
+                    }
+                    
+                    all_entries.extend(new_msgs);
+                    
+                    tracing::debug!(
+                        batch_num,
+                        loaded = all_entries.len(),
+                        "JumpToMessage: loaded newer batch"
+                    );
+                }
+
+                tracing::debug!(
+                    target_id = message_id,
+                    total_count = all_entries.len(),
+                    first = all_entries.first().map(|e| e.id()),
+                    last = all_entries.last().map(|e| e.id()),
+                    "JumpToMessage: loaded all batches"
+                );
+
+                if !all_entries.is_empty() {
+                    // Insert messages into the fresh (already cleared) cache
+                    app_context
+                        .tg_context()
+                        .open_chat_messages()
+                        .insert_messages(all_entries);
+                    
+                    let final_oldest = app_context.tg_context().oldest_message_id();
+                    let final_newest = app_context.tg_context().newest_message_id();
+                    let has_target = app_context.tg_context().get_message(*message_id).is_some();
+                    tracing::debug!(
+                        target_id = message_id,
+                        has_target,
+                        final_oldest,
+                        final_newest,
+                        total_cached = app_context.tg_context().open_chat_messages().len(),
+                        "JumpToMessage: cache after insert"
+                    );
+                    // Only set jump target AFTER messages are inserted, so the message is in cache
+                    app_context
+                        .tg_context()
+                        .set_jump_target_message_id_i64(*message_id);
+                } else {
+                    tracing::warn!(
+                        target_id = message_id,
+                        "JumpToMessage: failed to load any messages, cache is empty"
+                    );
                 }
                 app_context.tg_context().set_history_loading(false);
                 let _ = app_context
