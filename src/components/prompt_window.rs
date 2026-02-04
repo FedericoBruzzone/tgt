@@ -572,17 +572,14 @@ impl Input {
         }
     }
     /// Convert the text of the `Input` struct to a string.
+    /// Lines are joined with newlines so multiline input is sent as a single message.
     fn text_to_string(&self) -> String {
         // TODO: Parse into markdown
-        let mut message = String::new();
-        self.text.iter().for_each(|e| {
-            if e.is_empty() {
-                message.push('\n');
-            } else {
-                e.iter().for_each(|e| message.push(e.c))
-            }
-        });
-        message
+        self.text
+            .iter()
+            .map(|line| line.iter().map(|c| c.c).collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 /// Implement the `Default` trait for the `Input` struct.
