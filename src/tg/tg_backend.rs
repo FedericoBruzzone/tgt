@@ -639,33 +639,13 @@ impl TgBackend {
         let tg_context = self.app_context.tg_context();
         let action_tx = self.app_context.action_tx().clone();
 
-        // Create debouncer for chat list rebuild requests
-        let (debounce_tx, mut debounce_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
-        let action_tx_debounce = action_tx.clone();
-        let can_quit_debounce = can_quit.clone();
-
-        // Spawn debounce task: batches rapid chat update events into a single UI rebuild
-        tokio::spawn(async move {
-            let debounce_delay = std::time::Duration::from_millis(100);
-            while !can_quit_debounce.load(Ordering::Acquire) {
-                // Wait for first rebuild request
-                if debounce_rx.recv().await.is_none() {
-                    break;
-                }
-
-                // Drain any additional requests that arrived during the delay
-                tokio::time::sleep(debounce_delay).await;
-                while debounce_rx.try_recv().is_ok() {
-                    // Drain all pending requests
-                }
-
-                // Send single rebuild action
-                let _ = action_tx_debounce.send(Action::ChatHistoryAppended);
-            }
-        });
-
         self.handle_updates = tokio::spawn(async move {
             tracing::info!("Starting handling updates from TDLib");
+            // Rate limiter: track last time we sent ChatHistoryAppended to prevent flooding
+            let mut last_chat_list_update = std::time::Instant::now();
+            let mut needs_chat_list_update = false; // Track if we skipped an update due to rate limiting
+            let rate_limit_ms = 16; // ~1 frame at 60fps
+
             while !can_quit.load(Ordering::Acquire) {
                 let mut update_dequeue: VecDeque<Update> = VecDeque::new();
                 if let Some((update, _client_id)) = tdlib_rs::receive() {
@@ -722,15 +702,33 @@ impl TgBackend {
                                 &mut chat,
                                 positions,
                             );
-                            // Request debounced chat list rebuild to show new chat
-                            let _ = debounce_tx.send(());
+                            // Send rate-limited chat list rebuild to show new chat
+                            let now = std::time::Instant::now();
+                            if now.duration_since(last_chat_list_update).as_millis()
+                                >= rate_limit_ms
+                            {
+                                let _ = action_tx.send(Action::ChatHistoryAppended);
+                                last_chat_list_update = now;
+                                needs_chat_list_update = false;
+                            } else {
+                                needs_chat_list_update = true;
+                            }
                         }
                         Update::ChatTitle(update_chat) => {
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.title = update_chat.title;
-                                    // Request debounced chat list rebuild to update chat name
-                                    let _ = debounce_tx.send(());
+                                    // Send rate-limited chat list rebuild to update chat name
+                                    let now = std::time::Instant::now();
+                                    if now.duration_since(last_chat_list_update).as_millis()
+                                        >= rate_limit_ms
+                                    {
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        last_chat_list_update = now;
+                                        needs_chat_list_update = false;
+                                    } else {
+                                        needs_chat_list_update = true;
+                                    }
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -758,8 +756,17 @@ impl TgBackend {
                                         chat,
                                         update_chat.positions,
                                     );
-                                    // Request debounced chat list rebuild to update last message and position
-                                    let _ = debounce_tx.send(());
+                                    // Send rate-limited chat list rebuild to update last message and position
+                                    let now = std::time::Instant::now();
+                                    if now.duration_since(last_chat_list_update).as_millis()
+                                        >= rate_limit_ms
+                                    {
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        last_chat_list_update = now;
+                                        needs_chat_list_update = false;
+                                    } else {
+                                        needs_chat_list_update = true;
+                                    }
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -795,8 +802,17 @@ impl TgBackend {
                                             chat,
                                             new_position,
                                         );
-                                        // Request debounced chat list rebuild to update chat order
-                                        let _ = debounce_tx.send(());
+                                        // Send rate-limited chat list rebuild to update chat order
+                                        let now = std::time::Instant::now();
+                                        if now.duration_since(last_chat_list_update).as_millis()
+                                            >= rate_limit_ms
+                                        {
+                                            let _ = action_tx.send(Action::ChatHistoryAppended);
+                                            last_chat_list_update = now;
+                                            needs_chat_list_update = false;
+                                        } else {
+                                            needs_chat_list_update = true;
+                                        }
                                     }
                                     None => update_dequeue.push_back(update),
                                 }
@@ -808,8 +824,17 @@ impl TgBackend {
                                     chat.last_read_inbox_message_id =
                                         update_chat.last_read_inbox_message_id;
                                     chat.unread_count = update_chat.unread_count;
-                                    // Request debounced chat list rebuild to update unread count display
-                                    let _ = debounce_tx.send(());
+                                    // Send rate-limited chat list rebuild to update unread count display
+                                    let now = std::time::Instant::now();
+                                    if now.duration_since(last_chat_list_update).as_millis()
+                                        >= rate_limit_ms
+                                    {
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        last_chat_list_update = now;
+                                        needs_chat_list_update = false;
+                                    } else {
+                                        needs_chat_list_update = true;
+                                    }
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -819,8 +844,17 @@ impl TgBackend {
                                 Some(chat) => {
                                     chat.last_read_outbox_message_id =
                                         update_chat.last_read_outbox_message_id;
-                                    // Request debounced chat list rebuild to update read status display
-                                    let _ = debounce_tx.send(());
+                                    // Send rate-limited chat list rebuild to update read status display
+                                    let now = std::time::Instant::now();
+                                    if now.duration_since(last_chat_list_update).as_millis()
+                                        >= rate_limit_ms
+                                    {
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        last_chat_list_update = now;
+                                        needs_chat_list_update = false;
+                                    } else {
+                                        needs_chat_list_update = true;
+                                    }
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -949,8 +983,17 @@ impl TgBackend {
                             match tg_context.chats().get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
                                     chat.is_marked_as_unread = update_chat.is_marked_as_unread;
-                                    // Request debounced chat list rebuild to update unread marker display
-                                    let _ = debounce_tx.send(());
+                                    // Send rate-limited chat list rebuild to update unread marker display
+                                    let now = std::time::Instant::now();
+                                    if now.duration_since(last_chat_list_update).as_millis()
+                                        >= rate_limit_ms
+                                    {
+                                        let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        last_chat_list_update = now;
+                                        needs_chat_list_update = false;
+                                    } else {
+                                        needs_chat_list_update = true;
+                                    }
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -1070,6 +1113,17 @@ impl TgBackend {
                         // _ => eprintln!("[HANDLE UPDATE]: {update:?}"),
                         _ => {
                             // tracing::info!("Unhandled update: {:?}", update);
+                        }
+                    }
+
+                    // After processing update, send pending chat list update if rate limit has passed
+                    // This ensures the final update after a burst gets sent
+                    if needs_chat_list_update {
+                        let now = std::time::Instant::now();
+                        if now.duration_since(last_chat_list_update).as_millis() >= rate_limit_ms {
+                            let _ = action_tx.send(Action::ChatHistoryAppended);
+                            last_chat_list_update = now;
+                            needs_chat_list_update = false;
                         }
                     }
                 }
