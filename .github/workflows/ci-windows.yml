@@ -163,6 +163,7 @@ jobs:
 
       - name: Run cargo test
         run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        timeout-minutes: 2
 
       - name: Run cargo clippy
         run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings

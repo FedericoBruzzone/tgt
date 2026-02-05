@@ -152,6 +152,7 @@ jobs:
         run: |
           if [ -d "tdlib/lib" ]; then export DYLD_LIBRARY_PATH="$(pwd)/tdlib/lib"; fi
           cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        timeout-minutes: 2
 
       - name: Run cargo clippy
         run: |
