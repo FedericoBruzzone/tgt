@@ -44,7 +44,7 @@ jobs:
       - name: Install needed packages
         run: |
           sudo apt update
-          sudo apt install libc++-dev libc++abi-dev
+          sudo apt install -y libc++-dev libc++abi-dev libchafa-dev
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore

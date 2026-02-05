@@ -41,6 +41,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Chafa (for ratatui-image): MSYS2 UCRT64 provides pkg-config + chafa for the build
+      - name: Install Chafa (MSYS2 UCRT64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: ${{ runner.arch == 'X64' && 'mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-chafa' || 'mingw-w64-ucrt-aarch64-pkg-config mingw-w64-ucrt-aarch64-chafa' }}
+
+      - name: Add MSYS2 UCRT64 to PATH for cargo (find pkg-config and chafa)
+        run: |
+          $msys2 = "C:\msys64\ucrt64"
+          echo "$msys2\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "PKG_CONFIG_PATH=$msys2\lib\pkgconfig" >> $env:GITHUB_ENV
+        shell: pwsh
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
