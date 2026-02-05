@@ -44,6 +44,9 @@ jobs:
       - name: Install needed packages
         run: |
           sudo apt update
+          sudo apt install -y software-properties-common
+          sudo add-apt-repository -y ppa:hpjansson/chafa
+          sudo apt update
           sudo apt install -y libc++-dev libc++abi-dev libchafa-dev
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
@@ -82,7 +85,8 @@ jobs:
       - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH
         if: matrix.feature == 'pkg-config'
         run: |
-          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
+          # Prepend tdlib so it is found; keep existing path so chafa (libchafa-dev) is still found
+          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
       - name: Set LOCAL_TDLIB_PATH
         if: matrix.feature == 'local-tdlib'
