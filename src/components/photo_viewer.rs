@@ -105,7 +105,8 @@ impl PhotoViewer {
                 if !file_path.is_empty() && Path::new(file_path).exists() {
                     // Decode on background thread via run loop (avoids blocking main thread)
                     if let Some(tx) = self.action_tx.as_ref() {
-                        let _ = tx.send(Action::LoadPhotoFromPath(file_path.to_string(), message_id));
+                        let _ =
+                            tx.send(Action::LoadPhotoFromPath(file_path.to_string(), message_id));
                     }
                 }
                 // If file doesn't exist, download will be handled by run.rs when it receives ViewPhotoMessage
@@ -151,9 +152,7 @@ impl PhotoViewer {
                 };
             }
             Err(e) => {
-                self.photo_state = PhotoState::Error {
-                    message: e,
-                };
+                self.photo_state = PhotoState::Error { message: e };
             }
         }
         let _ = message_id;
@@ -202,7 +201,10 @@ impl Component for PhotoViewer {
                 self.on_photo_downloaded(file_path);
             }
             Action::PhotoDecoded(message_id) => {
-                if let PhotoState::Loading { message_id: loading_id } = self.photo_state {
+                if let PhotoState::Loading {
+                    message_id: loading_id,
+                } = self.photo_state
+                {
                     if message_id == loading_id {
                         if let Some(result) =
                             self.app_context.take_pending_photo_decoded(message_id)
@@ -330,11 +332,9 @@ impl Component for PhotoViewer {
                         let display_height_px = img_height * scale;
 
                         let display_width_cells = (display_width_px / font_width).ceil() as u16;
-                        let display_height_cells =
-                            (display_height_px / font_height).ceil() as u16;
+                        let display_height_cells = (display_height_px / font_height).ceil() as u16;
 
-                        let x_offset =
-                            (content_area.width.saturating_sub(display_width_cells)) / 2;
+                        let x_offset = (content_area.width.saturating_sub(display_width_cells)) / 2;
                         let y_offset =
                             (content_area.height.saturating_sub(display_height_cells)) / 2;
 

@@ -661,10 +661,10 @@ pub async fn handle_app_actions(
                     .await
                     .unwrap_or_else(|e| Err(e.to_string()));
                     // Optionally downscale to reduce memory and protocol work (max 1920 on longer side)
-                    let result = result.and_then(|img| {
+                    let result = result.map(|img| {
                         const MAX_DIM: u32 = 1920;
                         let (w, h) = (img.width(), img.height());
-                        let scaled = if w.max(h) > MAX_DIM {
+                        if w.max(h) > MAX_DIM {
                             if w >= h {
                                 img.thumbnail(MAX_DIM, (h * MAX_DIM / w).max(1))
                             } else {
@@ -672,8 +672,7 @@ pub async fn handle_app_actions(
                             }
                         } else {
                             img
-                        };
-                        Ok(scaled)
+                        }
                     });
                     app_ctx.set_pending_photo_decoded(msg_id, result);
                     let _ = action_tx.send(Action::PhotoDecoded(msg_id));
