@@ -240,6 +240,11 @@ pub enum Action {
     /// PhotoDownloaded action with file path.
     /// This action is sent when a photo has been downloaded.
     PhotoDownloaded(String),
+    /// Load photo from path on a background thread (decode off main thread).
+    /// Payload: (path, message_id). Run loop spawns blocking task and sends PhotoDecoded(i64).
+    LoadPhotoFromPath(String, i64),
+    /// Photo decoded on background thread; result is in app_context pending_photo slot.
+    PhotoDecoded(i64),
     /// PhotoViewerPrevious action.
     /// Navigate to previous message in photo viewer.
     PhotoViewerPrevious,

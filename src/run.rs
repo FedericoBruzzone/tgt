@@ -311,6 +311,7 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::HidePhotoViewer
             | Action::ViewPhotoMessage(_)
             | Action::PhotoDownloaded(_)
+            | Action::PhotoDecoded(_)
             | Action::ToggleChatList
             | Action::IncreaseChatListSize
             | Action::DecreaseChatListSize
@@ -634,7 +635,7 @@ pub async fn handle_app_actions(
                             // Download the file
                             match tg_backend.download_file(*file_id, 32).await {
                                 Ok(downloaded_path) => {
-                                    // Notify PhotoViewer that the photo is ready
+                                    // Notify PhotoViewer that the photo is ready (viewer will send LoadPhotoFromPath)
                                     app_context
                                         .action_tx()
                                         .send(Action::PhotoDownloaded(downloaded_path))?;
@@ -646,6 +647,37 @@ pub async fn handle_app_actions(
                         }
                     }
                 }
+            }
+            Action::LoadPhotoFromPath(path, message_id) => {
+                // Decode image on a blocking thread to avoid stalling the main loop
+                let action_tx = app_context.action_tx().clone();
+                let app_ctx = Arc::clone(&app_context);
+                let path = path.clone();
+                let msg_id = *message_id;
+                tokio::spawn(async move {
+                    let result = tokio::task::spawn_blocking(move || {
+                        image::open(&path).map_err(|e| e.to_string())
+                    })
+                    .await
+                    .unwrap_or_else(|e| Err(e.to_string()));
+                    // Optionally downscale to reduce memory and protocol work (max 1920 on longer side)
+                    let result = result.and_then(|img| {
+                        const MAX_DIM: u32 = 1920;
+                        let (w, h) = (img.width(), img.height());
+                        let scaled = if w.max(h) > MAX_DIM {
+                            if w >= h {
+                                img.thumbnail(MAX_DIM, (h * MAX_DIM / w).max(1))
+                            } else {
+                                img.thumbnail((w * MAX_DIM / h).max(1), MAX_DIM)
+                            }
+                        } else {
+                            img
+                        };
+                        Ok(scaled)
+                    });
+                    app_ctx.set_pending_photo_decoded(msg_id, result);
+                    let _ = action_tx.send(Action::PhotoDecoded(msg_id));
+                });
             }
             _ => {}
         }
