@@ -19,12 +19,15 @@ use tokio::sync::mpsc::UnboundedSender;
 enum PhotoState {
     /// No photo selected
     None,
-    /// Photo is being downloaded
+    /// Photo is being downloaded or decoded
     Loading { message_id: i64 },
-    /// Photo is loaded and ready to display
+    /// Photo is loaded and ready to display (dimensions stored to avoid keeping full image)
     Loaded {
         image_state: StatefulProtocol,
-        original_image: image::DynamicImage,
+        width: u32,
+        height: u32,
+        /// Cached content area and image rect to avoid recalc every frame
+        cached_rect: Option<(Rect, Rect)>,
     },
     /// Error loading photo
     Error { message: String },
@@ -100,8 +103,10 @@ impl PhotoViewer {
             {
                 // Check if file is already downloaded
                 if !file_path.is_empty() && Path::new(file_path).exists() {
-                    // File already exists, load it immediately
-                    self.load_photo_from_path(message_id, file_path);
+                    // Decode on background thread via run loop (avoids blocking main thread)
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::LoadPhotoFromPath(file_path.to_string(), message_id));
+                    }
                 }
                 // If file doesn't exist, download will be handled by run.rs when it receives ViewPhotoMessage
                 // Keep showing Loading state until PhotoDownloaded is received
@@ -128,28 +133,38 @@ impl PhotoViewer {
         self.visible
     }
 
-    /// Load a photo from a file path
-    fn load_photo_from_path(&mut self, _message_id: i64, path: &str) {
-        match image::open(path) {
+    /// Apply decoded image from background (called when receiving PhotoDecoded).
+    fn apply_decoded_photo(
+        &mut self,
+        message_id: i64,
+        result: Result<image::DynamicImage, String>,
+    ) {
+        match result {
             Ok(img) => {
-                let image_state = self.picker.new_resize_protocol(img.clone());
+                let (width, height) = (img.width(), img.height());
+                let image_state = self.picker.new_resize_protocol(img);
                 self.photo_state = PhotoState::Loaded {
                     image_state,
-                    original_image: img,
+                    width,
+                    height,
+                    cached_rect: None,
                 };
             }
             Err(e) => {
                 self.photo_state = PhotoState::Error {
-                    message: format!("Failed to load image: {}", e),
+                    message: e,
                 };
             }
         }
+        let _ = message_id;
     }
 
-    /// Update photo state when download completes
+    /// Update photo state when download completes: request async decode (no blocking).
     pub fn on_photo_downloaded(&mut self, file_path: String) {
         if let PhotoState::Loading { message_id } = self.photo_state {
-            self.load_photo_from_path(message_id, &file_path);
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::LoadPhotoFromPath(file_path, message_id));
+            }
         }
     }
 }
@@ -185,6 +200,17 @@ impl Component for PhotoViewer {
             }
             Action::PhotoDownloaded(file_path) => {
                 self.on_photo_downloaded(file_path);
+            }
+            Action::PhotoDecoded(message_id) => {
+                if let PhotoState::Loading { message_id: loading_id } = self.photo_state {
+                    if message_id == loading_id {
+                        if let Some(result) =
+                            self.app_context.take_pending_photo_decoded(message_id)
+                        {
+                            self.apply_decoded_photo(message_id, result);
+                        }
+                    }
+                }
             }
             Action::PhotoViewerPrevious | Action::PhotoViewerNext => {
                 // These actions are handled by CoreWindow, which forwards them to ChatWindow
@@ -274,47 +300,55 @@ impl Component for PhotoViewer {
             }
             PhotoState::Loaded {
                 image_state,
-                original_image,
-                ..
+                width,
+                height,
+                cached_rect,
             } => {
-                // Get font size from picker to properly calculate dimensions
-                let font_size = self.picker.font_size();
-                let font_width = font_size.0 as f32;
-                let font_height = font_size.1 as f32;
-                let (img_width, img_height) = (
-                    original_image.width() as f32,
-                    original_image.height() as f32,
-                );
+                // Reuse cached rect when content area and dimensions unchanged to save CPU
+                let image_rect = match cached_rect {
+                    Some((ref cached_content, ref cached_image))
+                        if *cached_content == content_area
+                            && cached_image.width > 0
+                            && cached_image.height > 0 =>
+                    {
+                        *cached_image
+                    }
+                    _ => {
+                        let font_size = self.picker.font_size();
+                        let font_width = font_size.0 as f32;
+                        let font_height = font_size.1 as f32;
+                        let (img_width, img_height) = (*width as f32, *height as f32);
 
-                // Calculate available pixel dimensions
-                let available_width_px = content_area.width as f32 * font_width;
-                let available_height_px = content_area.height as f32 * font_height;
+                        let available_width_px = content_area.width as f32 * font_width;
+                        let available_height_px = content_area.height as f32 * font_height;
 
-                // Calculate scale to fit image in available space while maintaining aspect ratio
-                let scale_x = available_width_px / img_width;
-                let scale_y = available_height_px / img_height;
-                let scale = scale_x.min(scale_y);
+                        let scale_x = available_width_px / img_width;
+                        let scale_y = available_height_px / img_height;
+                        let scale = scale_x.min(scale_y);
 
-                // Calculate actual display dimensions in pixels
-                let display_width_px = img_width * scale;
-                let display_height_px = img_height * scale;
+                        let display_width_px = img_width * scale;
+                        let display_height_px = img_height * scale;
 
-                // Convert back to character cells
-                let display_width_cells = (display_width_px / font_width).ceil() as u16;
-                let display_height_cells = (display_height_px / font_height).ceil() as u16;
+                        let display_width_cells = (display_width_px / font_width).ceil() as u16;
+                        let display_height_cells =
+                            (display_height_px / font_height).ceil() as u16;
 
-                // Center the image rect within content_area
-                let x_offset = (content_area.width.saturating_sub(display_width_cells)) / 2;
-                let y_offset = (content_area.height.saturating_sub(display_height_cells)) / 2;
+                        let x_offset =
+                            (content_area.width.saturating_sub(display_width_cells)) / 2;
+                        let y_offset =
+                            (content_area.height.saturating_sub(display_height_cells)) / 2;
 
-                let image_rect = Rect::new(
-                    content_area.x + x_offset,
-                    content_area.y + y_offset,
-                    display_width_cells,
-                    display_height_cells,
-                );
+                        let rect = Rect::new(
+                            content_area.x + x_offset,
+                            content_area.y + y_offset,
+                            display_width_cells,
+                            display_height_cells,
+                        );
+                        *cached_rect = Some((content_area, rect));
+                        rect
+                    }
+                };
 
-                // Render the image using StatefulImage widget with Fit resize mode
                 let image_widget = StatefulImage::new().resize(Resize::Fit(None));
                 frame.render_stateful_widget(image_widget, image_rect, image_state);
             }
