@@ -57,12 +57,6 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
 arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.43"
-# Windows ARM64: no chafa in MSYS2 UCRT64; use other backends (halfblocks etc.)
-[target.'cfg(all(windows, target_arch = "aarch64"))'.dependencies.ratatui-image]
-version = "10.0.4"
-default-features = false
-features = ["crossterm", "image-defaults"]
-
 ratatui-image = { version = "10.0.4", default-features = false, features = ["chafa-dyn", "crossterm", "image-defaults"] }
 image = "0.25.9"
 signal-hook = "0.4.3"
@@ -78,6 +72,12 @@ tdlib-rs = "1.2.0"
 
 [dev-dependencies]
 tempfile = "3.24.0"
+
+# Windows ARM64: no chafa in MSYS2 UCRT64; use other backends (halfblocks etc.)
+[target.'cfg(all(windows, target_arch = "aarch64"))'.dependencies.ratatui-image]
+version = "10.0.4"
+default-features = false
+features = ["crossterm", "image-defaults"]
 
 [profile.release]
 lto = true
