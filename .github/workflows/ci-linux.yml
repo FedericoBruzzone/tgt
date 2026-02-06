@@ -45,38 +45,43 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
+          sudo apt-get install -y software-properties-common
           
-          # Determine Ubuntu version codename
           CODENAME=$(lsb_release -cs)
-          echo "Operating system codename: $CODENAME"
-
-          # Only add PPA if we are on Jammy (22.04)
-          # Noble (24.04) has Chafa 1.14.0 natively.
           if [ "$CODENAME" == "jammy" ]; then
-            sudo apt-get install -y software-properties-common
             sudo add-apt-repository -y ppa:hpjansson/chafa
             sudo apt-get update -qq
           fi
           
-          # Ensure universe is enabled for all versions
           sudo add-apt-repository -y universe
           sudo apt-get update -qq
           
-          sudo apt-get install -y libc++-dev libc++abi-dev libchafa-dev pkg-config build-essential
+          # Added libglib2.0-dev: chafa.pc requires glib-2.0.pc
+          sudo apt-get install -y \
+            libc++-dev \
+            libc++abi-dev \
+            libchafa-dev \
+            libglib2.0-dev \
+            pkg-config \
+            build-essential
 
       - name: Configure Multiarch Paths
         run: |
           TRIPLET=$(gcc -dumpmachine)
           echo "ARCH_TRIPLET=$TRIPLET" >> $GITHUB_ENV
-          # Standard locations + architecture specific locations
+          # Prioritize the triplet-specific path to avoid architecture mismatch
           echo "PKG_CONFIG_PATH=/usr/lib/$TRIPLET/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
 
-      - name: Verify Chafa Version
+      - name: Diagnostic - Inspect chafa.pc
         run: |
-          echo "Version found by pkg-config:"
-          pkg-config --modversion chafa
-          echo "Installation path:"
-          pkg-config --variable=pcfiledir chafa
+          echo "--- Pkg-Config Search Path ---"
+          pkg-config --variable pc_path pkg-config
+          echo "--- GLib Check ---"
+          pkg-config --exists --print-errors glib-2.0 && pkg-config --modversion glib-2.0
+          echo "--- Chafa Check ---"
+          pkg-config --exists --print-errors chafa && pkg-config --modversion chafa
+          echo "--- Raw Chafa.pc Content ---"
+          cat $(pkg-config --variable=pcfiledir chafa)/chafa.pc || echo "Could not find chafa.pc"
 
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
@@ -114,7 +119,7 @@ jobs:
       - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH for TDLib
         if: matrix.feature == 'pkg-config'
         run: |
-          # Prepend TDLib to the existing path containing Chafa
+          # Prepend TDLib to path while keeping the Chafa/GLib paths we set earlier
           echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib:${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
 
