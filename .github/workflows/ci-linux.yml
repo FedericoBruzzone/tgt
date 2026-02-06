@@ -45,28 +45,38 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y software-properties-common
           
-          # Ubuntu 22.04 (ubuntu-latest) has Chafa 1.6.0. We need 1.8.0+.
-          # Ubuntu 24.04 already has 1.14.0.
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          # Determine Ubuntu version codename
+          CODENAME=$(lsb_release -cs)
+          echo "Operating system codename: $CODENAME"
+
+          # Only add PPA if we are on Jammy (22.04)
+          # Noble (24.04) has Chafa 1.14.0 natively.
+          if [ "$CODENAME" == "jammy" ]; then
+            sudo apt-get install -y software-properties-common
             sudo add-apt-repository -y ppa:hpjansson/chafa
-          else
-            sudo add-apt-repository -y universe
+            sudo apt-get update -qq
           fi
           
+          # Ensure universe is enabled for all versions
+          sudo add-apt-repository -y universe
           sudo apt-get update -qq
+          
           sudo apt-get install -y libc++-dev libc++abi-dev libchafa-dev pkg-config build-essential
 
       - name: Configure Multiarch Paths
         run: |
           TRIPLET=$(gcc -dumpmachine)
           echo "ARCH_TRIPLET=$TRIPLET" >> $GITHUB_ENV
-          # Ensure local and system paths are indexed
+          # Standard locations + architecture specific locations
           echo "PKG_CONFIG_PATH=/usr/lib/$TRIPLET/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
 
       - name: Verify Chafa Version
-        run: pkg-config --modversion chafa
+        run: |
+          echo "Version found by pkg-config:"
+          pkg-config --modversion chafa
+          echo "Installation path:"
+          pkg-config --variable=pcfiledir chafa
 
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
