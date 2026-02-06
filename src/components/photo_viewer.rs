@@ -11,6 +11,7 @@ use ratatui::{
     Frame,
 };
 use ratatui_image::{picker::Picker, protocol::StatefulProtocol, Resize, StatefulImage};
+use std::io::IsTerminal;
 use std::{io, path::Path, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -60,11 +61,13 @@ impl PhotoViewer {
     /// # Returns
     /// * `Self` - The new instance of the `PhotoViewer` struct.
     pub fn new(app_context: Arc<AppContext>) -> Self {
-        // Create picker - use from_query_stdio for automatic detection
-        let picker = Picker::from_query_stdio().unwrap_or_else(|_| {
-            // Fallback to halfblocks if query fails
+        // Create picker. Only query terminal when stdout is a TTY (real UI); in tests/CI
+        // stdout is not a TTY and from_query_stdio() can block or timeout on Windows.
+        let picker = if std::io::stdout().is_terminal() {
+            Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks())
+        } else {
             Picker::halfblocks()
-        });
+        };
 
         PhotoViewer {
             app_context,
