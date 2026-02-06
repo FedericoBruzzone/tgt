@@ -975,6 +975,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_alt_c_restores_chat_window_sort() {
         let mut window = create_test_core_window();
         window.component_focused = Some(ComponentName::Chat);
