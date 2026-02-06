@@ -57,7 +57,8 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
 arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.43"
-ratatui-image = { version = "10.0.4", default-features = false, features = ["chafa-dyn", "crossterm", "image-defaults"] }
+# Default: no chafa (Windows ARM64, Linux aarch64). Chafa enabled per-target below.
+ratatui-image = { version = "10.0.4", default-features = false, features = ["crossterm", "image-defaults"] }
 image = "0.25.9"
 signal-hook = "0.4.3"
 clap = { version = "4.5.56", features = ["derive"] }
@@ -73,11 +74,23 @@ tdlib-rs = "1.2.0"
 [dev-dependencies]
 tempfile = "3.24.0"
 
-# Windows ARM64: no chafa in MSYS2 UCRT64; use other backends (halfblocks etc.)
-[target.'cfg(all(windows, target_arch = "aarch64"))'.dependencies.ratatui-image]
+# macOS: chafa via Homebrew
+[target.'cfg(target_os = "macos")'.dependencies.ratatui-image]
 version = "10.0.4"
 default-features = false
-features = ["crossterm", "image-defaults"]
+features = ["chafa-dyn", "crossterm", "image-defaults"]
+
+# Linux x86_64: chafa via libchafa-dev
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies.ratatui-image]
+version = "10.0.4"
+default-features = false
+features = ["chafa-dyn", "crossterm", "image-defaults"]
+
+# Windows x64: chafa via MSYS2 UCRT64 (ARM64 uses default above, no chafa)
+[target.'cfg(all(windows, target_arch = "x86_64"))'.dependencies.ratatui-image]
+version = "10.0.4"
+default-features = false
+features = ["chafa-dyn", "crossterm", "image-defaults"]
 
 [profile.release]
 lto = true
