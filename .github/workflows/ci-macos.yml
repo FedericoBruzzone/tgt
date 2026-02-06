@@ -30,7 +30,6 @@ env:
 
 jobs:
   ci:
-    if: false  # This disables the entire workflow
     strategy:
       fail-fast: false
       matrix:
