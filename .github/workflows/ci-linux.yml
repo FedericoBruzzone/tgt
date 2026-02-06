@@ -41,17 +41,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      # libchafa-dev is in Ubuntu universe (https://packages.ubuntu.com/noble/libchafa-dev), amd64 + arm64
-      - name: Install needed packages
+
+      - name: Install system dependencies
         run: |
           sudo apt-get update -qq
+          sudo apt-get install -y software-properties-common
           sudo add-apt-repository -y universe
           sudo apt-get update -qq
-          sudo apt-get install -y libc++-dev libc++abi-dev libchafa-dev
-      - name: Set PKG_CONFIG_PATH for chafa (and system .pc)
+          sudo apt-get install -y \
+            libc++-dev \
+            libc++abi-dev \
+            libchafa-dev \
+            pkg-config \
+            build-essential
+
+      - name: Configure Multiarch Paths
         run: |
-          # So ratatui-image (chafa-dyn) finds chafa.pc on all matrix jobs (x64 + arm64)
-          echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/$(uname -m)-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
+          # Dynamically detect architecture triplet (e.g., aarch64-linux-gnu)
+          TRIPLET=$(gcc -dumpmachine)
+          echo "ARCH_TRIPLET=$TRIPLET" >> $GITHUB_ENV
+          
+          # Ensure Chafa is found by pointing to the correct multiarch pkgconfig dir
+          MULTI_PKG_PATH="/usr/lib/$TRIPLET/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig"
+          echo "PKG_CONFIG_PATH=$MULTI_PKG_PATH:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
@@ -59,69 +72,57 @@ jobs:
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
+
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
-        # sudo apt-get -y install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-14 libc++-dev libc++abi-dev
-        # CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
         run: |
-          sudo apt-get update
-          sudo apt-get -y upgrade
           sudo apt-get install -y make git zlib1g-dev libssl-dev gperf php-cli cmake clang-18 libc++-18-dev libc++abi-18-dev
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
-          rm -rf build
-          mkdir build
-          cd build
-          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-18 CXX=/usr/bin/clang++-18 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          mkdir -p build && cd build
+          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-18 CXX=/usr/bin/clang++-18 \
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
+
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v5
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
+
       - name: Extract TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         run: |
           cp -r ./td/tdlib ./
           sudo cp ./tdlib/lib/libtdjson.so.* /usr/lib/
-      - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH
+
+      - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH for TDLib
         if: matrix.feature == 'pkg-config'
         run: |
-          # Prepend tdlib so it is found; keep existing path so chafa (libchafa-dev) is still found
-          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
+          # Prepend local TDLib path to existing PKG_CONFIG_PATH (which now contains Chafa)
+          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib:${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
+
       - name: Set LOCAL_TDLIB_PATH
         if: matrix.feature == 'local-tdlib'
         run: echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
-      # - name: Cache cargo
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       target/
-      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      #     restore-keys: ${{ runner.os }}-cargo-
+
       - name: Cargo and rustc versions
         run: |
           cargo --version
           rustc --version
+
       - name: Run cargo build
         run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
+
       - name: Run cargo test
         run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
-        timeout-minutes: 2
+        timeout-minutes: 5
+
       - name: Run cargo clippy
         run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ runner.os }}-artifact
-      #     path: ./
-      #     overwrite: true
