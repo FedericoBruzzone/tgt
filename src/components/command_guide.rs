@@ -164,6 +164,13 @@ impl CommandGuide {
             lines.push(Line::from(line));
         }
 
+        // Photo Viewer (open from Chat with Alt+V when a photo message is selected)
+        let photo_viewer_lines =
+            self.get_keybindings_section("Photo Viewer", &keymap_config.photo_viewer);
+        for line in photo_viewer_lines {
+            lines.push(Line::from(line));
+        }
+
         // Mouse
         lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
@@ -201,7 +208,7 @@ impl CommandGuide {
         lines.push(Line::from("  ]"));
         lines.push(Line::from(""));
         lines.push(Line::from(
-            "Available components: core_window, chat_list, chat, prompt",
+            "Available components: core_window, chat_list, chat, prompt, photo_viewer",
         ));
         lines.push(Line::from(""));
         lines.push(Line::from("Example:"));
