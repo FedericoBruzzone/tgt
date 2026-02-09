@@ -132,6 +132,18 @@ jobs:
           cargo --version
           rustc --version
 
+      # With download-tdlib, tdlib-rs fetches libtdjson at build time; the build script
+      # needs it in LD_LIBRARY_PATH when it runs. Pre-build tdlib-rs so we can locate
+      # the lib and set LD_LIBRARY_PATH for the rest of the job.
+      - name: Set LD_LIBRARY_PATH for download-tdlib
+        if: matrix.feature == 'download-tdlib'
+        run: |
+          cargo build --no-default-features --features tdlib-rs/download-tdlib -p tdlib-rs 2>/dev/null || true
+          TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)
+          if [ -n "$TDLIB_LIB" ]; then
+            echo "LD_LIBRARY_PATH=$(dirname "$TDLIB_LIB"):${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
+          fi
+
       - name: Run cargo build
         run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
 
