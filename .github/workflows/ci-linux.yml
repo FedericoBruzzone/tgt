@@ -152,7 +152,14 @@ jobs:
         timeout-minutes: 5
 
       - name: Run cargo clippy
-        run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: |
+          if [ "${{ matrix.feature }}" = "download-tdlib" ]; then
+            TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)
+            if [ -n "$TDLIB_LIB" ]; then
+              export LD_LIBRARY_PATH="$(dirname "$TDLIB_LIB"):${LD_LIBRARY_PATH:-}"
+            fi
+          fi
+          cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
 
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
