@@ -274,7 +274,7 @@ impl Component for PhotoViewer {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Min(3),    // Main content area
-                Constraint::Length(1), // Instructions
+                Constraint::Length(2), // Default keymap guide
             ])
             .split(inner_area);
 
@@ -373,11 +373,20 @@ impl Component for PhotoViewer {
             }
         }
 
-        // Draw instructions at the bottom
-        let instructions = vec![Line::from(vec![Span::styled(
-            "Esc(default) to Close",
-            self.app_context.style_timestamp(),
-        )])];
+        // Draw default keymap guide at the bottom (matches config/keymap.toml [photo_viewer])
+        let style_help = self.app_context.style_timestamp();
+        let instructions = vec![
+            Line::from(vec![
+                Span::styled("Esc", style_help),
+                Span::styled("Close", style_help),
+            ]),
+            Line::from(vec![
+                Span::styled("Up, k ", style_help),
+                Span::styled("Prev  ·  ", style_help),
+                Span::styled("Down, j ", style_help),
+                Span::styled("Next", style_help),
+            ]),
+        ];
 
         let instructions_paragraph = Paragraph::new(instructions)
             .style(self.app_context.style_chat())

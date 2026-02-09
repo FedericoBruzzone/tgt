@@ -53,6 +53,20 @@ fn ensure_config_folder_exists() {
 }
 
 fn main() -> std::io::Result<()> {
+    // chafa-dyn and chafa-static are not supported on Windows ARM; fail the build if enabled there
+    let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+    let feature_chafa_dyn = std::env::var("CARGO_CFG_FEATURE_CHAFA_DYN").unwrap_or_default();
+    let feature_chafa_static = std::env::var("CARGO_CFG_FEATURE_CHAFA_STATIC").unwrap_or_default();
+    if os == "windows" && arch == "aarch64" {
+        if feature_chafa_dyn == "1" {
+            panic!("the chafa-dyn feature is not supported on Windows ARM; build without --features chafa-dyn");
+        }
+        if feature_chafa_static == "1" {
+            panic!("the chafa-static feature is not supported on Windows ARM; build without --features chafa-static");
+        }
+    }
+
     if cfg!(debug_assertions) {
         tdlib_rs::build::build(None);
         return Ok(());
