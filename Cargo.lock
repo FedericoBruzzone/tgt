@@ -3250,9 +3250,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e9018c9d814e5f30cc16a0f03271aeab3571e609612d9fe78c1aa8d11c2f62"
+checksum = "ab3f43e3283ab1488b624b44b0e988d0acea0b3214e694730a055cb6b2efa801"
 dependencies = [
  "base64",
  "bytes",
@@ -4034,7 +4034,7 @@ dependencies = [
  "nucleo-matcher",
  "ratatui 0.30.0",
  "ratatui-image",
- "reqwest 0.13.1",
+ "reqwest 0.13.2",
  "serde",
  "signal-hook 0.4.3",
  "tdlib-rs",
