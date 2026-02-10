@@ -165,6 +165,26 @@ impl Component for StatusBar {
             ));
             spans.push(Span::raw("     "));
         }
+        #[cfg(feature = "voice-message")]
+        {
+            let state = self.app_context.voice_playback_state();
+            if state.is_playing && state.message_id.is_some() {
+                let m = state.position_secs / 60;
+                let s = state.position_secs % 60;
+                let dm = state.duration_secs / 60;
+                let ds = state.duration_secs % 60;
+                // Short label "V:" so "V: 0:00/0:00" fits in narrow terminals and duration is visible
+                spans.push(Span::styled(
+                    "V: ",
+                    self.app_context.style_status_bar_message_quit_text(),
+                ));
+                spans.push(Span::styled(
+                    format!("{}:{:02}/{}:{:02}", m, s, dm, ds),
+                    self.app_context.style_status_bar_size_info_numbers(),
+                ));
+                spans.push(Span::raw("   "));
+            }
+        }
         spans.extend([
             Span::styled("Size: ", self.app_context.style_status_bar_size_info_text()),
             Span::styled(
