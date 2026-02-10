@@ -100,6 +100,8 @@ pub enum Action {
     TryQuit,
     /// Render action.
     Render,
+    /// Refresh action: requests a TUI redraw (e.g. from a timer so status bar updates).
+    Refresh,
     /// Resize action with width and height.
     Resize(u16, u16),
     /// Paste action with a `String`.
