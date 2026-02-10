@@ -99,13 +99,7 @@ pub async fn run_app(
             _ = tg_wake_rx.recv() => {}
         }
         while let Some(ev) = tui_backend.try_next() {
-            handle_tui_backend_one_event(
-                Arc::clone(&app_context),
-                tui,
-                tui_backend,
-                ev,
-            )
-            .await?;
+            handle_tui_backend_one_event(Arc::clone(&app_context), tui, tui_backend, ev).await?;
         }
         while let Some(ev) = tg_backend.next().await {
             handle_tg_backend_one_event(Arc::clone(&app_context), tg_backend, ev).await?;
@@ -128,63 +122,63 @@ async fn handle_tg_backend_one_event(
     event: Event,
 ) -> Result<(), AppError<Action>> {
     match event {
-            Event::LoadChats(chat_list, limit) => {
-                app_context
-                    .action_tx()
-                    .send(Action::LoadChats(chat_list, limit))?;
-            }
-            Event::SendMessage(message, reply_to) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessage(message, reply_to))?;
-            }
-            Event::SendMessageEdited(message_id, message) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessageEdited(message_id, message))?;
-            }
-            Event::GetChatHistory => {
-                app_context.action_tx().send(Action::GetChatHistory)?;
-            }
-            Event::GetChatHistoryNewer => {
-                app_context.action_tx().send(Action::GetChatHistoryNewer)?;
-            }
-            Event::DeleteMessages(message_ids, revoke) => {
-                app_context
-                    .action_tx()
-                    .send(Action::DeleteMessages(message_ids, revoke))?;
-            }
-            Event::EditMessage(message_id, message) => {
-                // It is important to focus the prompt before editing the message.
-                // Because the actions are sent to the focused component.
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
+        Event::LoadChats(chat_list, limit) => {
+            app_context
+                .action_tx()
+                .send(Action::LoadChats(chat_list, limit))?;
+        }
+        Event::SendMessage(message, reply_to) => {
+            app_context
+                .action_tx()
+                .send(Action::SendMessage(message, reply_to))?;
+        }
+        Event::SendMessageEdited(message_id, message) => {
+            app_context
+                .action_tx()
+                .send(Action::SendMessageEdited(message_id, message))?;
+        }
+        Event::GetChatHistory => {
+            app_context.action_tx().send(Action::GetChatHistory)?;
+        }
+        Event::GetChatHistoryNewer => {
+            app_context.action_tx().send(Action::GetChatHistoryNewer)?;
+        }
+        Event::DeleteMessages(message_ids, revoke) => {
+            app_context
+                .action_tx()
+                .send(Action::DeleteMessages(message_ids, revoke))?;
+        }
+        Event::EditMessage(message_id, message) => {
+            // It is important to focus the prompt before editing the message.
+            // Because the actions are sent to the focused component.
+            app_context
+                .action_tx()
+                .send(Action::FocusComponent(Prompt))?;
 
-                app_context
-                    .action_tx()
-                    .send(Action::EditMessage(message_id, message))?;
-            }
-            Event::ReplyMessage(message_id, message) => {
-                // Reply flow is now handled by ChatWindow sending FocusComponent(Prompt) + ReplyMessage
-                // directly to action_tx when user presses R. This branch is kept for any other caller.
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-                app_context
-                    .action_tx()
-                    .send(Action::ReplyMessage(message_id, message))?;
-            }
-            Event::ViewAllMessages => {
-                app_context.action_tx().send(Action::ViewAllMessages)?;
-            }
-            Event::ChatMessageAdded(message_id) => {
-                app_context
-                    .tg_context()
-                    .set_jump_target_message_id_i64(message_id);
-                app_context.action_tx().send(Action::ChatHistoryAppended)?;
-            }
-            _ => {}
+            app_context
+                .action_tx()
+                .send(Action::EditMessage(message_id, message))?;
+        }
+        Event::ReplyMessage(message_id, message) => {
+            // Reply flow is now handled by ChatWindow sending FocusComponent(Prompt) + ReplyMessage
+            // directly to action_tx when user presses R. This branch is kept for any other caller.
+            app_context
+                .action_tx()
+                .send(Action::FocusComponent(Prompt))?;
+            app_context
+                .action_tx()
+                .send(Action::ReplyMessage(message_id, message))?;
+        }
+        Event::ViewAllMessages => {
+            app_context.action_tx().send(Action::ViewAllMessages)?;
+        }
+        Event::ChatMessageAdded(message_id) => {
+            app_context
+                .tg_context()
+                .set_jump_target_message_id_i64(message_id);
+            app_context.action_tx().send(Action::ChatHistoryAppended)?;
+        }
+        _ => {}
     }
     Ok(())
 }
@@ -697,8 +691,8 @@ pub async fn handle_app_actions(
                             file_path
                         };
                         let state = app_context.voice_playback_state();
-                        let is_playing_this = state.message_id == Some(*message_id)
-                            && state.is_playing;
+                        let is_playing_this =
+                            state.message_id == Some(*message_id) && state.is_playing;
                         drop(state);
                         if is_playing_this {
                             app_context.voice_playback_send(

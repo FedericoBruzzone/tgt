@@ -107,7 +107,8 @@ pub struct AppContext {
     voice_playback_state: Mutex<crate::voice_playback::VoicePlaybackState>,
     #[cfg(feature = "voice-message")]
     /// Sender to the voice playback thread; None if audio output unavailable (e.g. Linux ARM).
-    voice_playback_tx: Mutex<Option<std::sync::mpsc::Sender<crate::voice_playback::VoicePlaybackCommand>>>,
+    voice_playback_tx:
+        Mutex<Option<std::sync::mpsc::Sender<crate::voice_playback::VoicePlaybackCommand>>>,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -319,10 +320,7 @@ impl AppContext {
 
     #[cfg(feature = "voice-message")]
     /// Send a command to the voice playback thread. Returns false if channel disconnected (thread exited).
-    pub fn voice_playback_send(
-        &self,
-        cmd: crate::voice_playback::VoicePlaybackCommand,
-    ) -> bool {
+    pub fn voice_playback_send(&self, cmd: crate::voice_playback::VoicePlaybackCommand) -> bool {
         if let Some(ref tx) = *self.voice_playback_tx.lock().unwrap() {
             tx.send(cmd).is_ok()
         } else {
