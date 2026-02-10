@@ -99,6 +99,15 @@ pub struct AppContext {
     /// The currently focused UI component, used for context-aware keymap lookup in the run loop.
     /// Uses AtomicU8 for lock-free reads/writes. Encoded as: 0 = None, 1-11 = ComponentName variants.
     focused_component: AtomicU8,
+    /// Result of background photo decode; consumed by PhotoViewer on PhotoDecoded(i64).
+    pending_photo_decoded: Mutex<Option<(i64, Result<image::DynamicImage, String>)>>,
+
+    #[cfg(feature = "voice-message")]
+    /// Current voice/audio playback state (message_id, position, duration). Updated by playback thread.
+    voice_playback_state: Mutex<crate::voice_playback::VoicePlaybackState>,
+    #[cfg(feature = "voice-message")]
+    /// Sender to the voice playback thread; None if audio output unavailable (e.g. Linux ARM).
+    voice_playback_tx: Mutex<Option<std::sync::mpsc::Sender<crate::voice_playback::VoicePlaybackCommand>>>,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -139,6 +148,11 @@ impl AppContext {
             tg_context: Arc::new(tg_context),
             cli_args: Mutex::new(cli_args),
             focused_component: AtomicU8::new(0), // 0 = None
+            pending_photo_decoded: Mutex::new(None),
+            #[cfg(feature = "voice-message")]
+            voice_playback_state: Mutex::new(crate::voice_playback::VoicePlaybackState::default()),
+            #[cfg(feature = "voice-message")]
+            voice_playback_tx: Mutex::new(None),
         })
     }
     /// Get the application configuration.
@@ -260,6 +274,60 @@ impl AppContext {
     #[inline]
     pub fn clear_render_flag(&self) -> bool {
         self.needs_render.swap(false, Ordering::SeqCst)
+    }
+
+    /// Set decoded photo from background thread; run loop calls this before sending PhotoDecoded(i64).
+    pub fn set_pending_photo_decoded(
+        &self,
+        message_id: i64,
+        result: Result<image::DynamicImage, String>,
+    ) {
+        *self.pending_photo_decoded.lock().unwrap() = Some((message_id, result));
+    }
+
+    /// Take decoded photo for PhotoViewer; returns None if message_id does not match or slot empty.
+    pub fn take_pending_photo_decoded(
+        &self,
+        message_id: i64,
+    ) -> Option<Result<image::DynamicImage, String>> {
+        let mut guard = self.pending_photo_decoded.lock().unwrap();
+        let taken = guard.take()?;
+        if taken.0 == message_id {
+            Some(taken.1)
+        } else {
+            *guard = Some(taken);
+            None
+        }
+    }
+
+    #[cfg(feature = "voice-message")]
+    /// Voice playback state (for status bar counter). Lock and read.
+    pub fn voice_playback_state(
+        &self,
+    ) -> MutexGuard<'_, crate::voice_playback::VoicePlaybackState> {
+        self.voice_playback_state.lock().unwrap()
+    }
+
+    #[cfg(feature = "voice-message")]
+    /// Set the command sender for the voice playback thread (called from run when thread is spawned).
+    pub fn set_voice_playback_tx(
+        &self,
+        tx: std::sync::mpsc::Sender<crate::voice_playback::VoicePlaybackCommand>,
+    ) {
+        *self.voice_playback_tx.lock().unwrap() = Some(tx);
+    }
+
+    #[cfg(feature = "voice-message")]
+    /// Send a command to the voice playback thread. Returns false if channel disconnected (thread exited).
+    pub fn voice_playback_send(
+        &self,
+        cmd: crate::voice_playback::VoicePlaybackCommand,
+    ) -> bool {
+        if let Some(ref tx) = *self.voice_playback_tx.lock().unwrap() {
+            tx.send(cmd).is_ok()
+        } else {
+            false
+        }
     }
 
     /// Get the Telegram context.

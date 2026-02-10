@@ -274,6 +274,17 @@ pub enum Action {
     StatusMessage(String),
     /// PromptCopy: copy selected text in the prompt (overrides try_quit when prompt focused).
     PromptCopy,
+
+    /// User requested play/stop voice (focus component resolves selected message and sends PlayVoiceMessage).
+    ToggleVoicePlayback,
+    /// Start or stop voice/audio playback for this message (toggle: if playing this, stop; else start from beginning).
+    PlayVoiceMessage(i64),
+    /// Voice playback actually started (playback thread appended source). Used so UI only shows counter when playback really started.
+    VoicePlaybackStarted(i64),
+    /// Voice playback position update (message_id, position_secs, duration_secs). Used by playback thread.
+    VoicePlaybackPosition(i64, u64, u64),
+    /// Voice playback ended for this message.
+    VoicePlaybackEnded(i64),
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -339,6 +350,7 @@ impl FromStr for Action {
             "hide_photo_viewer" => Ok(Action::HidePhotoViewer),
             "photo_viewer_previous" => Ok(Action::PhotoViewerPrevious),
             "photo_viewer_next" => Ok(Action::PhotoViewerNext),
+            "play_voice_message" => Ok(Action::ToggleVoicePlayback),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

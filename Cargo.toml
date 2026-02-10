@@ -32,13 +32,15 @@ categories = []
 
 [features]
 # By deafult you need to set the `LOCAL_TDLIB_PATH` environment variable to the path of the TDLib library. See CONTRIBUTING.md for more information.
-default = ["download-tdlib"]
+default = ["download-tdlib", "voice-message"]
 local-tdlib = ["tdlib-rs/local-tdlib"]
 download-tdlib = ["tdlib-rs/download-tdlib"]
 pkg-config = ["tdlib-rs/pkg-config"]
 # Enable chafa-based image rendering in ratatui-image (macOS, Linux x86_64, Windows x64). Not supported on Windows ARM.
 chafa-dyn = ["ratatui-image/chafa-dyn"]
 chafa-static = ["ratatui-image/chafa-static"]
+# Voice message and audio file playback (rodio). On Linux ARM, ALSA/cpal may be unavailable; disable with --no-default-features.
+voice-message = ["rodio", "ogg", "audiopus"]
 
 [package.metadata.system-deps]
 tdjson = "1.8.29"
@@ -67,6 +69,11 @@ signal-hook = "0.4.3"
 clap = { version = "4.5.56", features = ["derive"] }
 nucleo-matcher = "0.3.1"
 unicode-width = "0.2.0"
+# Voice message and audio playback (latest rodio; we implement Source in ogg_opus.rs).
+rodio = { version = "0.21", optional = true, default-features = true }
+# OGG Opus for Telegram voice notes (we implement the rodio Source in ogg_opus.rs; no magnum).
+ogg = { version = "0.8", optional = true }
+audiopus = { version = "0.2", optional = true }
 
 [build-dependencies]
 dirs = "6.0.0"
