@@ -173,16 +173,12 @@ impl Component for StatusBar {
                 let s = state.position_secs % 60;
                 let dm = state.duration_secs / 60;
                 let ds = state.duration_secs % 60;
-                // Short label "V:" so "V: 0:00/0:00" fits in narrow terminals and duration is visible
+                // Single span "V: 0:00/0:04" so it doesn't get split when the line wraps/truncates
+                let voice_text = format!("V: {}:{:02}/{}:{:02}   ", m, s, dm, ds);
                 spans.push(Span::styled(
-                    "V: ",
-                    self.app_context.style_status_bar_message_quit_text(),
-                ));
-                spans.push(Span::styled(
-                    format!("{}:{:02}/{}:{:02}", m, s, dm, ds),
+                    voice_text,
                     self.app_context.style_status_bar_size_info_numbers(),
                 ));
-                spans.push(Span::raw("   "));
             }
         }
         spans.extend([

@@ -99,8 +99,16 @@ async fn handle_tg_backend_events(
     app_context: Arc<AppContext>,
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
-    if let Some(event) = tg_backend.next().await {
-        match event {
+    // Timeout so we periodically return and process the action queue (e.g. VoicePlaybackPosition)
+    // and redraw the UI, even when no Telegram event arrives. Short timeout = smoother voice counter.
+    let poll = tokio::time::timeout(Duration::from_millis(100), tg_backend.next()).await;
+    let Some(event) = (match poll {
+        Ok(Some(ev)) => Some(ev),
+        Ok(None) | Err(_) => None,
+    }) else {
+        return Ok(());
+    };
+    match event {
             Event::LoadChats(chat_list, limit) => {
                 app_context
                     .action_tx()
@@ -158,7 +166,6 @@ async fn handle_tg_backend_events(
                 app_context.action_tx().send(Action::ChatHistoryAppended)?;
             }
             _ => {}
-        }
     }
     Ok(())
 }
@@ -179,9 +186,8 @@ async fn handle_tui_backend_events(
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
 ) -> Result<(), AppError<Action>> {
-    // Short timeout so we can process ChatHistoryAppended (and other actions) when
-    // the background history task completes, without requiring a key press.
-    let poll = tokio::time::timeout(Duration::from_millis(150), tui_backend.next()).await;
+    // Short timeout so we can process actions (e.g. VoicePlaybackPosition) and redraw without a key press.
+    let poll = tokio::time::timeout(Duration::from_millis(100), tui_backend.next()).await;
     let Some(event) = (match poll {
         Ok(Some(ev)) => Some(ev),
         Ok(None) | Err(_) => None,
