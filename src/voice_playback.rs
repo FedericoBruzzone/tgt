@@ -27,15 +27,15 @@ pub enum VoicePlaybackCommand {
 
 /// Spawns the playback thread and returns the command sender.
 /// Returns None if the audio output stream could not be opened (e.g. no ALSA on Linux ARM).
-/// Stream and sink are created inside the thread (rodio 0.14 OutputStream is not Send).
+/// Stream and sink are created inside the thread (rodio OutputStream is not Send).
 pub fn spawn_playback_thread(
     action_tx: UnboundedSender<Action>,
 ) -> Option<std::sync::mpsc::Sender<VoicePlaybackCommand>> {
     let (cmd_tx, cmd_rx) = std::sync::mpsc::channel();
 
     std::thread::spawn(move || {
-        let (stream, stream_handle) = match rodio::OutputStream::try_default() {
-            Ok(pair) => pair,
+        let stream = match rodio::OutputStreamBuilder::open_default_stream() {
+            Ok(s) => s,
             Err(e) => {
                 tracing::error!("Failed to open default audio stream: {:?}", e);
                 let _ = action_tx.send(Action::StatusMessage(
@@ -44,7 +44,7 @@ pub fn spawn_playback_thread(
                 return;
             }
         };
-        run_playback_loop(cmd_rx, stream_handle, stream, action_tx);
+        run_playback_loop(cmd_rx, stream, action_tx);
     });
 
     Some(cmd_tx)
@@ -52,22 +52,15 @@ pub fn spawn_playback_thread(
 
 fn run_playback_loop(
     cmd_rx: Receiver<VoicePlaybackCommand>,
-    stream_handle: rodio::OutputStreamHandle,
-    _stream: rodio::OutputStream, // must stay alive for playback
+    stream: rodio::OutputStream, // must stay alive for playback
     action_tx: UnboundedSender<Action>,
 ) {
-    const POSITION_UPDATE_INTERVAL_MS: u64 = 500;
+    // Update often enough that the UI can show each second even when the main loop is occasionally slow.
+    const POSITION_UPDATE_INTERVAL_MS: u64 = 250;
     let timeout = Duration::from_millis(POSITION_UPDATE_INTERVAL_MS);
 
-    // rodio 0.14: sink.stop() sets a permanent 'stopped' flag, so any newly appended source
-    // is immediately stopped by the sink's periodic_access. Create a new Sink per play/stop.
-    let mut sink = match rodio::Sink::try_new(&stream_handle) {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::error!("Failed to create initial audio sink: {:?}", e);
-            return;
-        }
-    };
+    // Create a new Sink per play/stop so playback actually starts (reusing a stopped sink would not play).
+    let mut sink = rodio::Sink::connect_new(stream.mixer());
 
     let mut current_message_id: Option<i64> = None;
     let mut current_duration_secs: u64 = 0;
@@ -82,16 +75,8 @@ fn run_playback_loop(
             }) => {
                 current_message_id = Some(message_id);
                 current_duration_secs = duration_secs;
-                // New Sink so playback actually starts (reusing a stopped sink would never play).
-                sink = match rodio::Sink::try_new(&stream_handle) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("Voice: failed to create sink: {:?}", e);
-                        let _ = action_tx.send(Action::VoicePlaybackEnded(message_id));
-                        current_message_id = None;
-                        continue;
-                    }
-                };
+                // New Sink so playback actually starts.
+                sink = rodio::Sink::connect_new(stream.mixer());
 
                 if path.is_empty() {
                     let _ = action_tx.send(Action::StatusMessage(
@@ -102,16 +87,21 @@ fn run_playback_loop(
                 } else if let Ok(file) = std::fs::File::open(&path) {
                     let reader = BufReader::new(file);
                     // Try OGG Opus first (Telegram voice notes); then rodio Decoder (MP3, etc.)
-                    let appended = match magnum::container::ogg::OpusSourceOgg::new(reader) {
+                    let appended = match crate::ogg_opus::OpusSourceOgg::new(reader) {
                         Ok(opus_source) => {
                             playback_start = std::time::Instant::now();
                             sink.append(opus_source);
-                            sink.play(); // ensure playback starts (stop() may leave sink paused in rodio 0.14)
+                            sink.play();
                             tracing::info!(
                                 "Voice: playing OGG Opus, sink.empty()={}",
                                 sink.empty()
                             );
                             let _ = action_tx.send(Action::VoicePlaybackStarted(message_id));
+                            let _ = action_tx.send(Action::VoicePlaybackPosition(
+                                message_id,
+                                0,
+                                duration_secs,
+                            ));
                             true
                         }
                         Err(e) => {
@@ -128,7 +118,7 @@ fn run_playback_loop(
                                 }
                             };
                             let reader = BufReader::new(file);
-                            match rodio::Decoder::new(reader) {
+                            match rodio::Decoder::try_from(reader) {
                                 Ok(source) => {
                                     playback_start = std::time::Instant::now();
                                     sink.append(source);
@@ -138,6 +128,11 @@ fn run_playback_loop(
                                         sink.empty()
                                     );
                                     let _ = action_tx.send(Action::VoicePlaybackStarted(message_id));
+                                    let _ = action_tx.send(Action::VoicePlaybackPosition(
+                                        message_id,
+                                        0,
+                                        duration_secs,
+                                    ));
                                     true
                                 }
                                 Err(dec_err) => {
@@ -168,10 +163,8 @@ fn run_playback_loop(
                 }
             }
             Ok(VoicePlaybackCommand::Stop) => {
-                // Replace with fresh sink so next Play gets a non-stopped sink; dropping stops current sound.
-                if let Ok(new_sink) = rodio::Sink::try_new(&stream_handle) {
-                    sink = new_sink;
-                }
+                // Replace with fresh sink so next Play gets a clean sink; dropping stops current sound.
+                sink = rodio::Sink::connect_new(stream.mixer());
                 current_message_id = None;
             }
             Err(RecvTimeoutError::Timeout) => {
