@@ -38,9 +38,7 @@ pub fn spawn_playback_thread(
             Ok(s) => s,
             Err(e) => {
                 tracing::error!("Failed to open default audio stream: {:?}", e);
-                let _ = action_tx.send(Action::StatusMessage(
-                    "Voice: no audio device".to_string(),
-                ));
+                let _ = action_tx.send(Action::StatusMessage("Voice: no audio device".to_string()));
                 return;
             }
         };
@@ -79,9 +77,8 @@ fn run_playback_loop(
                 sink = rodio::Sink::connect_new(stream.mixer());
 
                 if path.is_empty() {
-                    let _ = action_tx.send(Action::StatusMessage(
-                        "Voice: no file path".to_string(),
-                    ));
+                    let _ =
+                        action_tx.send(Action::StatusMessage("Voice: no file path".to_string()));
                     let _ = action_tx.send(Action::VoicePlaybackEnded(message_id));
                     current_message_id = None;
                 } else if let Ok(file) = std::fs::File::open(&path) {
@@ -127,7 +124,8 @@ fn run_playback_loop(
                                         "Voice: playing (rodio decoder), sink.empty()={}",
                                         sink.empty()
                                     );
-                                    let _ = action_tx.send(Action::VoicePlaybackStarted(message_id));
+                                    let _ =
+                                        action_tx.send(Action::VoicePlaybackStarted(message_id));
                                     let _ = action_tx.send(Action::VoicePlaybackPosition(
                                         message_id,
                                         0,
@@ -136,11 +134,7 @@ fn run_playback_loop(
                                     true
                                 }
                                 Err(dec_err) => {
-                                    tracing::error!(
-                                        "Voice decode failed: {} {:?}",
-                                        path,
-                                        dec_err
-                                    );
+                                    tracing::error!("Voice decode failed: {} {:?}", path, dec_err);
                                     let _ = action_tx.send(Action::StatusMessage(
                                         "Voice: decode failed (not OGG Opus?)".to_string(),
                                     ));
@@ -155,9 +149,8 @@ fn run_playback_loop(
                     }
                 } else {
                     tracing::error!("Failed to open audio file: {}", path);
-                    let _ = action_tx.send(Action::StatusMessage(
-                        "Voice: cannot open file".to_string(),
-                    ));
+                    let _ = action_tx
+                        .send(Action::StatusMessage("Voice: cannot open file".to_string()));
                     let _ = action_tx.send(Action::VoicePlaybackEnded(message_id));
                     current_message_id = None;
                 }
@@ -176,11 +169,7 @@ fn run_playback_loop(
                         current_message_id = None;
                     } else {
                         let pos_secs = playback_start.elapsed().as_secs();
-                        tracing::debug!(
-                            "Voice: position {}s/{}s",
-                            pos_secs,
-                            current_duration_secs
-                        );
+                        tracing::debug!("Voice: position {}s/{}s", pos_secs, current_duration_secs);
                         let _ = action_tx.send(Action::VoicePlaybackPosition(
                             msg_id,
                             pos_secs,

@@ -37,7 +37,10 @@ impl DateTimeEntry {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MessageContentType {
     Text,
-    Photo { file_id: i32, file_path: String },
+    Photo {
+        file_id: i32,
+        file_path: String,
+    },
     /// Voice note or voice message (file_id for download, file_path when local, duration in seconds).
     VoiceNote {
         file_id: i32,
