@@ -60,13 +60,17 @@ pub async fn run_app(
     tui.register_action_handler(app_context.action_tx().clone())?;
     app_context.mark_dirty();
 
+    // Voice wake: playback thread signals so status bar position updates immediately.
+    let (voice_wake_tx, mut voice_wake_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
     #[cfg(feature = "voice-message")]
     {
         let atx = app_context.action_tx().clone();
-        if let Some(tx) = crate::voice_playback::spawn_playback_thread(atx) {
+        if let Some(tx) = crate::voice_playback::spawn_playback_thread(atx, voice_wake_tx) {
             app_context.set_voice_playback_tx(tx);
         }
     }
+    #[cfg(not(feature = "voice-message"))]
+    let _voice_wake_tx = voice_wake_tx;
 
     // Notify ChatList to populate visible_chats from initial load (it only rebuilds on LoadChats/ChatHistoryAppended/Resize).
     let _ = app_context
@@ -97,6 +101,7 @@ pub async fn run_app(
             _ = tokio::time::sleep(Duration::from_millis(wait_ms)) => {}
             _ = wake_rx.recv() => {}
             _ = tg_wake_rx.recv() => {}
+            _ = voice_wake_rx.recv() => {}
         }
         while let Some(ev) = tui_backend.try_next() {
             handle_tui_backend_one_event(Arc::clone(&app_context), tui, tui_backend, ev).await?;

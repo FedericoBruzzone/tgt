@@ -28,8 +28,10 @@ pub enum VoicePlaybackCommand {
 /// Spawns the playback thread and returns the command sender.
 /// Returns None if the audio output stream could not be opened (e.g. no ALSA on Linux ARM).
 /// Stream and sink are created inside the thread (rodio OutputStream is not Send).
+/// `wake_tx`: signalled when position (or other UI) is updated so the main loop can redraw immediately.
 pub fn spawn_playback_thread(
     action_tx: UnboundedSender<Action>,
+    wake_tx: tokio::sync::mpsc::UnboundedSender<()>,
 ) -> Option<std::sync::mpsc::Sender<VoicePlaybackCommand>> {
     let (cmd_tx, cmd_rx) = std::sync::mpsc::channel();
 
@@ -42,7 +44,7 @@ pub fn spawn_playback_thread(
                 return;
             }
         };
-        run_playback_loop(cmd_rx, stream, action_tx);
+        run_playback_loop(cmd_rx, stream, action_tx, wake_tx);
     });
 
     Some(cmd_tx)
@@ -52,6 +54,7 @@ fn run_playback_loop(
     cmd_rx: Receiver<VoicePlaybackCommand>,
     stream: rodio::OutputStream, // must stay alive for playback
     action_tx: UnboundedSender<Action>,
+    wake_tx: tokio::sync::mpsc::UnboundedSender<()>,
 ) {
     // Update often enough that the UI can show each second even when the main loop is occasionally slow.
     const POSITION_UPDATE_INTERVAL_MS: u64 = 250;
@@ -175,6 +178,7 @@ fn run_playback_loop(
                             pos_secs,
                             current_duration_secs,
                         ));
+                        let _ = wake_tx.send(());
                     }
                 }
             }
