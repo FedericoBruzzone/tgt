@@ -2,6 +2,7 @@ pub mod action;
 pub mod app_context;
 pub mod app_error;
 pub mod cli;
+pub mod cli_commands;
 pub mod component_name;
 pub mod event;
 pub mod logger;
@@ -54,9 +55,8 @@ lazy_static! {
 ///
 /// # Returns
 /// * `Result<(), AppError>` - An Ok result or an error.
-async fn tokio_main() -> Result<(), AppError<()>> {
+async fn tokio_main(cli_args: cli::CliArgs) -> Result<(), AppError<()>> {
     tracing::info!("Starting tokio main");
-    let cli_args = cli::CliArgs::parse();
     tracing::info!("Parsed CLI arguments: {:?}", cli_args);
 
     // Initialize the lazy static variables
@@ -153,7 +153,32 @@ fn init_panic_hook(mouse: bool, paste: bool) {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError<()>> {
-    if let Err(e) = tokio_main().await {
+    let cli_args = cli::CliArgs::parse();
+
+    // Handle subcommands that exit without starting the TUI
+    if let Some(cli::CliSubcommand::Clear {
+        config,
+        data,
+        logs,
+        all,
+        yes,
+    }) = cli_args.subcommand
+    {
+        if let Err(e) = cli_commands::run_clear(config, data, logs, all, yes) {
+            eprintln!("clear failed: {}", e);
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+    if let Some(cli::CliSubcommand::InitConfig { force }) = cli_args.subcommand {
+        if let Err(e) = cli_commands::run_init_config(force) {
+            eprintln!("init-config failed: {}", e);
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    if let Err(e) = tokio_main(cli_args).await {
         tracing::error!("Something went wrong: {}", e);
         Err(e)
     } else {

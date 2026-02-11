@@ -1,14 +1,35 @@
-use clap::Parser;
-// use clap::Subcommand;
+use clap::{Parser, Subcommand};
 
 /// The CLI arguments for the application.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct CliArgs {
+    #[command(subcommand)]
+    pub subcommand: Option<CliSubcommand>,
     #[command(flatten)]
     telegram_cli: TelegramCli,
-    // #[command(subcommand)]
-    // telegram: Option<Telegram>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CliSubcommand {
+    /// Remove config, data, and/or log directories (with confirmation unless --yes).
+    Clear {
+        #[arg(short, long)]
+        config: bool,
+        #[arg(short, long)]
+        data: bool,
+        #[arg(short, long)]
+        logs: bool,
+        #[arg(long)]
+        all: bool,
+        #[arg(short, long)]
+        yes: bool,
+    },
+    /// Copy default config files to the user config directory (only missing files unless --force).
+    InitConfig {
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 impl CliArgs {

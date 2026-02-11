@@ -30,49 +30,12 @@ use std::sync::Arc;
 /// If themes directory contains: `theme.toml`, `monokai.toml`, `nord.toml`
 /// Returns: `["theme", "monokai", "nord"]`
 pub fn discover_available_themes() -> Vec<String> {
-    use crate::utils::{TGT, TGT_CONFIG_DIR};
-    use std::env;
+    use crate::configs::config_file::CONFIG_DIR_HIERARCHY;
 
     let mut theme_names = Vec::new();
 
-    // Search in config directory hierarchy (same order as CONFIG_DIR_HIERARCHY)
-    let search_dirs = if let Ok(config_dir) = env::var(TGT_CONFIG_DIR) {
-        vec![PathBuf::from(config_dir)]
-    } else {
-        let mut dirs = Vec::new();
-
-        // Debug mode: check current directory's config folder
-        if cfg!(debug_assertions) {
-            if let Ok(current_dir) = std::env::current_dir() {
-                let config_dir = current_dir.join("config");
-                if config_dir.is_dir() {
-                    dirs.push(config_dir);
-                }
-            }
-        }
-
-        // Standard user config directories
-        if let Some(user_config_dir) = if cfg!(target_os = "macos") {
-            dirs::home_dir().map(|h| h.join(".config"))
-        } else {
-            dirs::config_dir()
-        } {
-            let tgt_config = user_config_dir.join(TGT).join("config");
-            if tgt_config.is_dir() {
-                dirs.push(tgt_config);
-            }
-        }
-
-        // Also check ~/.tgt/config (where build.rs copies files in release mode)
-        if let Some(home) = dirs::home_dir() {
-            let tgt_config = home.join(format!(".{}", TGT)).join("config");
-            if tgt_config.is_dir() {
-                dirs.push(tgt_config);
-            }
-        }
-
-        dirs
-    };
+    // Search in config directory hierarchy (same as CONFIG_DIR_HIERARCHY)
+    let search_dirs: &Vec<PathBuf> = &CONFIG_DIR_HIERARCHY;
 
     // Search for theme files in each directory
     for config_dir in search_dirs {

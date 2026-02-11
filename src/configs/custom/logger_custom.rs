@@ -91,11 +91,21 @@ impl Default for LoggerConfig {
             tracing::warn!("Failed to load logger config, using hardcoded defaults: {e}");
 
             // Hardcoded defaults matching config/logger.toml
-            let log_dir = utils::tgt_dir()
-                .unwrap_or_else(|_| std::env::current_dir().unwrap())
-                .join(".data/logs")
-                .to_string_lossy()
-                .to_string();
+            let log_dir = if cfg!(debug_assertions) {
+                utils::tgt_dir()
+                    .unwrap_or_else(|_| std::env::current_dir().unwrap())
+                    .join(".data/logs")
+                    .to_string_lossy()
+                    .to_string()
+            } else if let Some(legacy) = utils::tgt_legacy_dir() {
+                legacy.join(".data/logs").to_string_lossy().to_string()
+            } else {
+                utils::tgt_state_dir()
+                    .unwrap_or_else(|_| std::env::current_dir().unwrap().join(".data"))
+                    .join("logs")
+                    .to_string_lossy()
+                    .to_string()
+            };
 
             // Create log directory if it doesn't exist
             if !Path::new(&log_dir).exists() {
@@ -116,11 +126,22 @@ impl Default for LoggerConfig {
 /// configuration.
 impl From<LoggerRaw> for LoggerConfig {
     fn from(raw: LoggerRaw) -> Self {
-        let log_dir = utils::tgt_dir()
-            .unwrap()
-            .join(raw.log_dir.unwrap())
-            .to_string_lossy()
-            .to_string();
+        let log_dir_rel = raw.log_dir.unwrap_or_else(|| ".data/logs".to_string());
+        let log_dir: String = if Path::new(&log_dir_rel).is_absolute() {
+            log_dir_rel.clone()
+        } else if cfg!(debug_assertions) {
+            utils::tgt_dir().unwrap().join(&log_dir_rel).to_string_lossy().to_string()
+        } else if let Some(legacy) = utils::tgt_legacy_dir() {
+            legacy.join(&log_dir_rel).to_string_lossy().to_string()
+        } else {
+            let state = utils::tgt_state_dir().unwrap();
+            let sub = if log_dir_rel == ".data/logs" {
+                "logs"
+            } else {
+                log_dir_rel.as_str()
+            };
+            state.join(sub).to_string_lossy().to_string()
+        };
         if !Path::new(&log_dir).exists() {
             std::fs::create_dir_all(&log_dir).unwrap();
         }
