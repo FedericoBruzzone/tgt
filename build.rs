@@ -1,8 +1,26 @@
+/// Returns (config_dir, tdlib_dir) using legacy ~/.tgt when it exists, else XDG.
+fn tgt_build_paths() -> (std::path::PathBuf, std::path::PathBuf) {
+    let home = dirs::home_dir().unwrap();
+    let legacy = home.join(".tgt");
+    if legacy.exists() && legacy.is_dir() {
+        (
+            legacy.join("config"),
+            legacy.join("tdlib"),
+        )
+    } else {
+        let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
+        let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
+        (
+            config_base.join("tgt").join("config"),
+            data_base.join("tgt").join("tdlib"),
+        )
+    }
+}
+
 fn ensure_config_folder_exists() {
-    let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
+    let (config_dest, _) = tgt_build_paths();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let config_source = format!("{manifest_dir}/config");
-    let config_dest = format!("{home}/.tgt/config");
 
     // Create config directory if it doesn't exist
     std::fs::create_dir_all(&config_dest).unwrap();
@@ -18,18 +36,18 @@ fn ensure_config_folder_exists() {
         }
 
         let file_name = path.file_name().unwrap();
-        let dest_file = format!("{}/{}", config_dest, file_name.to_str().unwrap());
+        let dest_file = config_dest.join(file_name);
 
         // Only copy if file doesn't exist (preserve user customizations)
-        if !std::path::Path::new(&dest_file).exists() {
-            println!("cargo:warning=Creating default config file: {}", dest_file);
-            std::fs::copy(path, dest_file).unwrap();
+        if !dest_file.exists() {
+            println!("cargo:warning=Creating default config file: {}", dest_file.display());
+            std::fs::copy(path, &dest_file).unwrap();
         }
     }
 
     // Copy themes directory recursively, but don't overwrite existing themes
     let themes_source = format!("{}/themes", config_source);
-    let themes_dest = format!("{}/themes", config_dest);
+    let themes_dest = config_dest.join("themes");
 
     if std::path::Path::new(&themes_source).exists() {
         std::fs::create_dir_all(&themes_dest).unwrap();
@@ -44,10 +62,10 @@ fn ensure_config_folder_exists() {
             }
 
             let file_name = path.file_name().unwrap();
-            let dest_file = format!("{}/{}", themes_dest, file_name.to_str().unwrap());
+            let dest_file = themes_dest.join(file_name);
 
             // Always update theme files (they're defaults, not user customizations)
-            std::fs::copy(path, dest_file).unwrap();
+            std::fs::copy(path, &dest_file).unwrap();
         }
     }
 }
@@ -75,9 +93,8 @@ fn main() -> std::io::Result<()> {
     // Only create configs if missing, don't delete existing ones
     ensure_config_folder_exists();
 
-    let home = dirs::home_dir().unwrap().to_str().unwrap().to_owned();
-    let dest = format!("{home}/.tgt/tdlib");
-    tdlib_rs::build::build(Some(dest));
+    let (_, tdlib_dest) = tgt_build_paths();
+    tdlib_rs::build::build(Some(tdlib_dest.to_string_lossy().into_owned()));
 
     Ok(())
 }
