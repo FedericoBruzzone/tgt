@@ -243,6 +243,61 @@ impl ChatWindow {
         }
     }
 
+    /// View photo from the selected message.
+    fn view_photo_selected(&self) {
+        if let Some(selected) = self.message_list_state.selected() {
+            let message_id = self.message_list[selected].id();
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::ViewPhotoMessage(message_id));
+            }
+        }
+    }
+
+    /// Toggle voice/audio playback for the selected message (Alt+P: start from beginning or stop).
+    fn play_voice_selected(&self) {
+        if let Some(selected) = self.message_list_state.selected() {
+            let entry = &self.message_list[selected];
+            if entry.voice_audio_file_info().is_some() {
+                let message_id = entry.id();
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::PlayVoiceMessage(message_id));
+                }
+            }
+        }
+    }
+
+    /// Navigate to previous message and view its photo (up = towards newer messages).
+    fn view_photo_previous(&mut self) {
+        // Reuse the existing navigation logic with lazy loading
+        self.next();
+
+        // After navigation, send action to view the photo of the selected message
+        if let Some(selected) = self.message_list_state.selected() {
+            if let Some(message) = self.message_list.get(selected) {
+                let message_id = message.id();
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::ViewPhotoMessage(message_id));
+                }
+            }
+        }
+    }
+
+    /// Navigate to next message and view its photo (down = towards older messages).
+    fn view_photo_next(&mut self) {
+        // Reuse the existing navigation logic with lazy loading
+        self.previous();
+
+        // After navigation, send action to view the photo of the selected message
+        if let Some(selected) = self.message_list_state.selected() {
+            if let Some(message) = self.message_list.get(selected) {
+                let message_id = message.id();
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::ViewPhotoMessage(message_id));
+                }
+            }
+        }
+    }
+
     /// Wraps each line with a border span on one side only (reply-target border-only highlight).
     /// Messages from others: `│` at the start of each line. Messages from me: `│` at the end.
     /// This keeps borders aligned and avoids broken vertical bars under each other.
@@ -314,6 +369,27 @@ impl Component for ChatWindow {
             Action::ChatWindowCopy => self.copy_selected(),
             Action::ChatWindowEdit => self.edit_selected(),
             Action::ShowChatWindowReply => self.reply_selected(),
+            Action::ShowPhotoViewer => {
+                // User pressed Alt+V to view photo from selected message
+                self.view_photo_selected();
+            }
+            Action::ToggleVoicePlayback => {
+                self.play_voice_selected();
+            }
+            Action::PhotoViewerPrevious => {
+                // Navigate to previous message and view its photo
+                self.view_photo_previous();
+            }
+            Action::PhotoViewerNext => {
+                // Navigate to next message and view its photo
+                self.view_photo_next();
+            }
+            Action::ViewPhotoMessage(message_id) => {
+                // Forward to CoreWindow to show the photo viewer
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::ViewPhotoMessage(message_id));
+                }
+            }
             Action::JumpCompleted(_message_id) => {
                 // Selection by message_id is applied in draw() when jump_target_message_id is set
             }

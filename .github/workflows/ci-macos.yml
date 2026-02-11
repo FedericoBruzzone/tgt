@@ -43,6 +43,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Install chafa (for ratatui-image)
+        run: brew install chafa
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         id: cache-tdlib-restore
@@ -149,6 +152,7 @@ jobs:
         run: |
           if [ -d "tdlib/lib" ]; then export DYLD_LIBRARY_PATH="$(pwd)/tdlib/lib"; fi
           cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        timeout-minutes: 2
 
       - name: Run cargo clippy
         run: |

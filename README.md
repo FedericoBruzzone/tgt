@@ -66,6 +66,37 @@ After the installation, you can run `tgt` with the following command:
 tgt --help
 ```
 
+### Features
+
+Build features can be combined (e.g. `cargo build --release --features download-tdlib,chafa-dyn`).
+
+| Feature | Description |
+|--------|-------------|
+| `default` | Enables `download-tdlib` so you don't need to set `LOCAL_TDLIB_PATH`. |
+| `download-tdlib` | Download and use TDLib automatically (recommended for most users). |
+| `local-tdlib` | Use TDLib from path in `LOCAL_TDLIB_PATH`. |
+| `pkg-config` | Find TDLib via pkg-config. |
+| `chafa-dyn` | Enable [chafa](https://github.com/hpjansson/chafa)-based image rendering in the photo viewer (dynamic linking). Requires the chafa library installed on the system. Not supported on Windows ARM. |
+| `chafa-static` | Same as `chafa-dyn` but links chafa statically. Not supported on Windows ARM. |
+
+**Chafa (image rendering)**  
+The `chafa-dyn` and `chafa-static` features use the [chafa](https://github.com/hpjansson/chafa) library to display images in the terminal. You must have chafa installed to use these features.
+
+**Installation methods for chafa**
+
+- **Linux (Debian/Ubuntu/Kali, Fedora, Arch, openSUSE, etc.)** — use your package manager:
+  - `sudo apt install chafa` (Debian/Ubuntu/Kali)
+  - `sudo dnf install chafa` (Fedora)
+  - `sudo pacman -S chafa` (Arch Linux)
+  - `sudo zypper in chafa` (openSUSE)
+  - `sudo emerge media-gfx/chafa` (Gentoo)
+- **macOS** — Homebrew or MacPorts:
+  - `brew install chafa`
+  - `sudo port install chafa`
+- **Windows** — Scoop or Windows Package Manager (winget):
+  - `scoop install chafa`
+  - `winget install hpjansson.Chafa`
+
 ### Arch Linux
 
 Thanks to [x-leehe](https://github.com/x-leehe) for creating the [AUR package](https://aur.archlinux.org/packages/tgt-client-git). You can install `tgt` from the AUR:
@@ -234,8 +265,23 @@ e:         Edit the message
 r:         Reply to the message
 d:         Delete the message for everyone
 D:         Delete the message for me
+alt+v:     View photo from selected message (opens photo viewer)
 alt+r:     Focus on prompt to search messages in the chat window
 alt+c:     Restore the default ordering of messages
+
+esc:               Return to the "None" state
+alt+1 | alt+left:  Focus on the chat list
+alt+2 | alt+right: Focus on the chat
+alt+3 | alt+down:  Focus on the prompt
+```
+
+_Photo Viewer_  
+Open from the chat by selecting a photo message and pressing `alt+v`. When the photo viewer is focused:
+
+```bash
+esc :   Close the photo viewer
+up | k:    View previous message
+down | j:  View next message
 
 esc:               Return to the "None" state
 alt+1 | alt+left:  Focus on the chat list

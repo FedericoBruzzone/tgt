@@ -35,10 +35,33 @@ impl DateTimeEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessageContentType {
+    Text,
+    Photo {
+        file_id: i32,
+        file_path: String,
+    },
+    /// Voice note or voice message (file_id for download, file_path when local, duration in seconds).
+    VoiceNote {
+        file_id: i32,
+        file_path: String,
+        duration_secs: i32,
+    },
+    /// Audio file message (file_id, file_path, duration in seconds).
+    Audio {
+        file_id: i32,
+        file_path: String,
+        duration_secs: i32,
+    },
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MessageEntry {
     id: i64,
     sender_id: TdMessageSender,
     message_content: Vec<Line<'static>>,
+    content_type: MessageContentType,
     reply_to: Option<TdMessageReplyTo>,
     timestamp: DateTimeEntry,
     is_edited: bool,
@@ -52,6 +75,7 @@ impl MessageEntry {
             id,
             sender_id: TdMessageSender::User(0),
             message_content: vec![Line::from("")],
+            content_type: MessageContentType::Text,
             reply_to: None,
             timestamp: DateTimeEntry { timestamp: 0 },
             is_edited: false,
@@ -60,6 +84,10 @@ impl MessageEntry {
 
     pub fn id(&self) -> i64 {
         self.id
+    }
+
+    pub fn content_type(&self) -> &MessageContentType {
+        &self.content_type
     }
 
     pub fn timestamp(&self) -> &DateTimeEntry {
@@ -82,11 +110,41 @@ impl MessageEntry {
     }
 
     pub fn set_message_content(&mut self, content: &MessageContent) {
-        self.message_content = Self::message_content_lines(content);
+        let (lines, content_type) = Self::message_content_with_type(content);
+        self.message_content = lines;
+        self.content_type = content_type;
     }
 
     pub fn set_is_edited(&mut self, is_edited: bool) {
         self.is_edited = is_edited;
+    }
+
+    /// Update the local file path for VoiceNote or Audio content (e.g. after download).
+    pub fn set_audio_file_path(&mut self, path: String) {
+        match &mut self.content_type {
+            MessageContentType::VoiceNote { file_path, .. }
+            | MessageContentType::Audio { file_path, .. } => {
+                *file_path = path;
+            }
+            _ => {}
+        }
+    }
+
+    /// If this message is voice or audio, returns (file_id, file_path, duration_secs).
+    pub fn voice_audio_file_info(&self) -> Option<(i32, String, i32)> {
+        match self.content_type() {
+            MessageContentType::VoiceNote {
+                file_id,
+                file_path,
+                duration_secs,
+            }
+            | MessageContentType::Audio {
+                file_id,
+                file_path,
+                duration_secs,
+            } => Some((*file_id, file_path.clone(), *duration_secs)),
+            _ => None,
+        }
     }
 
     pub fn get_text_styled(
@@ -195,16 +253,74 @@ impl MessageEntry {
         entry
     }
 
-    fn message_content_lines(content: &MessageContent) -> Vec<Line<'static>> {
+    fn message_content_with_type(
+        content: &MessageContent,
+    ) -> (Vec<Line<'static>>, MessageContentType) {
         match content {
-            MessageContent::MessageText(m) => Self::format_message_content(&m.text),
-            MessageContent::MessageAudio(_) => vec![Line::from("🎵 Audio")],
-            MessageContent::MessagePhoto(_) => vec![Line::from("📷 Photo")],
-            MessageContent::MessageSticker(_) => vec![Line::from("🎨 Sticker")],
-            MessageContent::MessageVideo(_) => vec![Line::from("🎥 Video")],
-            MessageContent::MessageAnimation(_) => vec![Line::from("🎞️ Animation")],
-            MessageContent::MessageVoiceNote(_) => vec![Line::from("🎤 Voice Note")],
-            MessageContent::MessageDocument(_) => vec![Line::from("📄 Document")],
+            MessageContent::MessageText(m) => (
+                Self::format_message_content(&m.text),
+                MessageContentType::Text,
+            ),
+            MessageContent::MessagePhoto(photo) => {
+                // Get the best available photo size (usually the last one is the largest)
+                let file_info = photo
+                    .photo
+                    .sizes
+                    .last()
+                    .map(|size| (size.photo.id, size.photo.local.path.clone()))
+                    .unwrap_or((0, String::new()));
+                (
+                    vec![Line::from("📷 Photo (press Alt+V to view)")],
+                    MessageContentType::Photo {
+                        file_id: file_info.0,
+                        file_path: file_info.1,
+                    },
+                )
+            }
+            MessageContent::MessageAudio(audio) => {
+                let file_id = audio.audio.audio.id;
+                let file_path = audio.audio.audio.local.path.clone();
+                let duration_secs = audio.audio.duration;
+                (
+                    vec![Line::from(format!(
+                        "🎵 Audio ({}s) — Alt+P play/stop",
+                        duration_secs
+                    ))],
+                    MessageContentType::Audio {
+                        file_id,
+                        file_path,
+                        duration_secs,
+                    },
+                )
+            }
+            MessageContent::MessageSticker(_) => {
+                (vec![Line::from("🎨 Sticker")], MessageContentType::Other)
+            }
+            MessageContent::MessageVideo(_) => {
+                (vec![Line::from("🎥 Video")], MessageContentType::Other)
+            }
+            MessageContent::MessageAnimation(_) => {
+                (vec![Line::from("🎞️ Animation")], MessageContentType::Other)
+            }
+            MessageContent::MessageVoiceNote(voice) => {
+                let file_id = voice.voice_note.voice.id;
+                let file_path = voice.voice_note.voice.local.path.clone();
+                let duration_secs = voice.voice_note.duration;
+                (
+                    vec![Line::from(format!(
+                        "🎤 Voice note ({}s) — Alt+P play/stop",
+                        duration_secs
+                    ))],
+                    MessageContentType::VoiceNote {
+                        file_id,
+                        file_path,
+                        duration_secs,
+                    },
+                )
+            }
+            MessageContent::MessageDocument(_) => {
+                (vec![Line::from("📄 Document")], MessageContentType::Other)
+            }
             MessageContent::MessageCall(call) => {
                 let call_type = if call.is_video {
                     "📹 Video Call"
@@ -216,27 +332,38 @@ impl MessageEntry {
                 } else {
                     String::new()
                 };
-                vec![Line::from(format!("{}{}", call_type, duration_text))]
+                (
+                    vec![Line::from(format!("{}{}", call_type, duration_text))],
+                    MessageContentType::Other,
+                )
             }
-            MessageContent::MessageVideoChatStarted(_) => vec![Line::from("📹 Video chat started")],
+            MessageContent::MessageVideoChatStarted(_) => (
+                vec![Line::from("📹 Video chat started")],
+                MessageContentType::Other,
+            ),
             MessageContent::MessageVideoChatEnded(ended) => {
                 let duration_text = if ended.duration > 0 {
                     format!(" ({}s)", ended.duration)
                 } else {
                     String::new()
                 };
-                vec![Line::from(format!("📹 Video chat ended{}", duration_text))]
+                (
+                    vec![Line::from(format!("📹 Video chat ended{}", duration_text))],
+                    MessageContentType::Other,
+                )
             }
-            MessageContent::MessageVideoChatScheduled(scheduled) => {
+            MessageContent::MessageVideoChatScheduled(scheduled) => (
                 vec![Line::from(format!(
                     "📹 Video chat scheduled for {}",
                     DateTimeEntry::convert_time(scheduled.start_date)
-                ))]
-            }
-            MessageContent::MessageInviteVideoChatParticipants(_) => {
-                vec![Line::from("📹 Invited to video chat")]
-            }
-            _ => vec![Line::from("")],
+                ))],
+                MessageContentType::Other,
+            ),
+            MessageContent::MessageInviteVideoChatParticipants(_) => (
+                vec![Line::from("📹 Invited to video chat")],
+                MessageContentType::Other,
+            ),
+            _ => (vec![Line::from("")], MessageContentType::Other),
         }
     }
 
@@ -545,13 +672,15 @@ impl MessageEntry {
 }
 impl From<&tdlib_rs::types::Message> for MessageEntry {
     fn from(message: &tdlib_rs::types::Message) -> Self {
+        let (message_content, content_type) = Self::message_content_with_type(&message.content);
         Self {
             id: message.id,
             sender_id: match &message.sender_id {
                 MessageSender::User(user) => TdMessageSender::User(user.user_id),
                 MessageSender::Chat(chat) => TdMessageSender::Chat(chat.chat_id),
             },
-            message_content: Self::message_content_lines(&message.content),
+            message_content,
+            content_type,
             reply_to: match &message.reply_to {
                 Some(reply) => match reply {
                     MessageReplyTo::Message(message) => {

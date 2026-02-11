@@ -165,6 +165,22 @@ impl Component for StatusBar {
             ));
             spans.push(Span::raw("     "));
         }
+        #[cfg(feature = "voice-message")]
+        {
+            let state = self.app_context.voice_playback_state();
+            if state.is_playing && state.message_id.is_some() {
+                let m = state.position_secs / 60;
+                let s = state.position_secs % 60;
+                let dm = state.duration_secs / 60;
+                let ds = state.duration_secs % 60;
+                // Single span "V: 0:00/0:04" so it doesn't get split when the line wraps/truncates
+                let voice_text = format!("V: {}:{:02}/{}:{:02}   ", m, s, dm, ds);
+                spans.push(Span::styled(
+                    voice_text,
+                    self.app_context.style_status_bar_size_info_numbers(),
+                ));
+            }
+        }
         spans.extend([
             Span::styled("Size: ", self.app_context.style_status_bar_size_info_text()),
             Span::styled(

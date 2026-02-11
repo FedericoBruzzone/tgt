@@ -3,11 +3,12 @@ mouse_support = true
 # `paste_support` enables paste support in the terminal.
 paste_support = true
 # `frame_rate` is the frame rate of the terminal in frames per second.
+# Lower values reduce CPU usage when idle (e.g. 30.0 or 15.0 for battery saving).
 # The suggested frame rate are:
 # - 120.0 for ultra smooth animations
 # - 60.0 for smooth animations
-# - 30.0 for normal animations
-# - 15.0 for slow animations
+# - 30.0 for normal animations (good balance for CPU)
+# - 15.0 for slow animations / lower CPU
 frame_rate = 60.0
 # `show_status_bar` enables the status bar at the bottom of the terminal.
 show_status_bar = true

@@ -82,6 +82,8 @@ pub enum Action {
     TryQuit,
     /// Render action.
     Render,
+    /// Refresh action: requests a TUI redraw (e.g. from a timer so status bar updates).
+    Refresh,
     /// Resize action with width and height.
     Resize(u16, u16),
     /// Paste action with a `String`.
@@ -228,10 +230,45 @@ pub enum Action {
     /// This action is used to hide the theme selector popup.
     HideThemeSelector,
 
+    /// ShowPhotoViewer action.
+    /// This action is used to show the photo viewer popup.
+    ShowPhotoViewer,
+    /// HidePhotoViewer action.
+    /// This action is used to hide the photo viewer popup.
+    HidePhotoViewer,
+    /// ViewPhotoMessage action with message_id.
+    /// This action is used to view a photo from a message.
+    ViewPhotoMessage(i64),
+    /// PhotoDownloaded action with file path.
+    /// This action is sent when a photo has been downloaded.
+    PhotoDownloaded(String),
+    /// Load photo from path on a background thread (decode off main thread).
+    /// Payload: (path, message_id). Run loop spawns blocking task and sends PhotoDecoded(i64).
+    LoadPhotoFromPath(String, i64),
+    /// Photo decoded on background thread; result is in app_context pending_photo slot.
+    PhotoDecoded(i64),
+    /// PhotoViewerPrevious action.
+    /// Navigate to previous message in photo viewer.
+    PhotoViewerPrevious,
+    /// PhotoViewerNext action.
+    /// Navigate to next message in photo viewer.
+    PhotoViewerNext,
+
     /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
     StatusMessage(String),
     /// PromptCopy: copy selected text in the prompt (overrides try_quit when prompt focused).
     PromptCopy,
+
+    /// User requested play/stop voice (focus component resolves selected message and sends PlayVoiceMessage).
+    ToggleVoicePlayback,
+    /// Start or stop voice/audio playback for this message (toggle: if playing this, stop; else start from beginning).
+    PlayVoiceMessage(i64),
+    /// Voice playback actually started (playback thread appended source). Used so UI only shows counter when playback really started.
+    VoicePlaybackStarted(i64),
+    /// Voice playback position update (message_id, position_secs, duration_secs). Used by playback thread.
+    VoicePlaybackPosition(i64, u64, u64),
+    /// Voice playback ended for this message.
+    VoicePlaybackEnded(i64),
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -292,6 +329,12 @@ impl FromStr for Action {
             "show_search_overlay" => Ok(Action::ShowSearchOverlay),
             "search_overlay_submit" => Ok(Action::SearchOverlaySubmit),
             "search_overlay_confirm" => Ok(Action::SearchOverlayConfirm),
+            "view_photo_message" => Ok(Action::ShowPhotoViewer),
+            "show_photo_viewer" => Ok(Action::ShowPhotoViewer),
+            "hide_photo_viewer" => Ok(Action::HidePhotoViewer),
+            "photo_viewer_previous" => Ok(Action::PhotoViewerPrevious),
+            "photo_viewer_next" => Ok(Action::PhotoViewerNext),
+            "play_voice_message" => Ok(Action::ToggleVoicePlayback),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }
