@@ -2,6 +2,8 @@ use crate::{
     action::Action,
     app_context::AppContext,
     components::component_traits::{Component, HandleFocus},
+    configs::custom::keymap_custom::ActionBinding,
+    event::Event,
     tg::message_entry::MessageContentType,
 };
 use ratatui::{
@@ -370,20 +372,38 @@ impl Component for PhotoViewer {
             }
         }
 
-        // Draw default keymap guide at the bottom (matches config/keymap.toml [photo_viewer])
+        // Draw keymap guide at the bottom (from config/keymap.toml [photo_viewer])
+        let bindings = {
+            let keymap_config = self.app_context.keymap_config();
+            let mut entries: Vec<(String, String)> = keymap_config
+                .photo_viewer
+                .iter()
+                .map(|(event, binding)| {
+                    let key_str = format!("{}", event);
+                    let desc = match binding {
+                        ActionBinding::Single { description, .. } => {
+                            description.as_ref().map(String::as_str).unwrap_or("")
+                        }
+                        ActionBinding::Multiple(_) => "Multiple keys...",
+                    };
+                    (key_str, desc.to_string())
+                })
+                .collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            entries
+        };
         let style_help = self.app_context.style_timestamp();
-        let instructions = vec![
-            Line::from(vec![
-                Span::styled("Esc", style_help),
-                Span::styled("Close", style_help),
-            ]),
-            Line::from(vec![
-                Span::styled("Up, k ", style_help),
-                Span::styled("Prev  ·  ", style_help),
-                Span::styled("Down, j ", style_help),
-                Span::styled("Next", style_help),
-            ]),
-        ];
+        let instructions: Vec<Line<'_>> = bindings
+            .into_iter()
+            .map(|(key_str, desc)| {
+                let text = if desc.is_empty() {
+                    key_str
+                } else {
+                    format!("{}  {}", key_str, desc)
+                };
+                Line::from(Span::styled(text, style_help))
+            })
+            .collect();
 
         let instructions_paragraph = Paragraph::new(instructions)
             .style(self.app_context.style_chat())
