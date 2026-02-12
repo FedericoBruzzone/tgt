@@ -642,6 +642,9 @@ pub async fn handle_app_actions(
                                 }
                                 Err(e) => {
                                     tracing::error!("Failed to download photo: {:?}", e);
+                                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                                        "Failed to download photo.".into(),
+                                    ));
                                 }
                             }
                         }
@@ -650,8 +653,8 @@ pub async fn handle_app_actions(
             }
             Action::LoadPhotoFromPath(path, message_id) => {
                 // Decode image on a blocking thread to avoid stalling the main loop
+                let photo_max_dimension = app_context.app_config().photo_max_dimension;
                 let action_tx = app_context.action_tx().clone();
-                let app_ctx = Arc::clone(&app_context);
                 let path = path.clone();
                 let msg_id = *message_id;
                 tokio::spawn(async move {
@@ -660,22 +663,31 @@ pub async fn handle_app_actions(
                     })
                     .await
                     .unwrap_or_else(|e| Err(e.to_string()));
-                    // Optionally downscale to reduce memory and protocol work (max 1920 on longer side)
+                    // Downscale when photo_max_dimension > 0 (0 = no downscaling)
                     let result = result.map(|img| {
-                        const MAX_DIM: u32 = 1920;
-                        let (w, h) = (img.width(), img.height());
-                        if w.max(h) > MAX_DIM {
-                            if w >= h {
-                                img.thumbnail(MAX_DIM, (h * MAX_DIM / w).max(1))
-                            } else {
-                                img.thumbnail((w * MAX_DIM / h).max(1), MAX_DIM)
-                            }
-                        } else {
+                        if photo_max_dimension == 0 {
                             img
+                        } else {
+                            let (w, h) = (img.width(), img.height());
+                            if w.max(h) > photo_max_dimension {
+                                if w >= h {
+                                    img.thumbnail(
+                                        photo_max_dimension,
+                                        (h * photo_max_dimension / w).max(1),
+                                    )
+                                } else {
+                                    img.thumbnail(
+                                        (w * photo_max_dimension / h).max(1),
+                                        photo_max_dimension,
+                                    )
+                                }
+                            } else {
+                                img
+                            }
                         }
                     });
-                    app_ctx.set_pending_photo_decoded(msg_id, result);
-                    let _ = action_tx.send(Action::PhotoDecoded(msg_id));
+                    let payload = crate::action::PhotoDecodedPayload(msg_id, result);
+                    let _ = action_tx.send(Action::PhotoDecoded(payload));
                 });
             }
             _ => {}

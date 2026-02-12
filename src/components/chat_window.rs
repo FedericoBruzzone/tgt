@@ -357,7 +357,7 @@ impl Component for ChatWindow {
             Action::ChatWindowEdit => self.edit_selected(),
             Action::ShowChatWindowReply => self.reply_selected(),
             Action::ShowPhotoViewer => {
-                // User pressed Alt+V to view photo from selected message
+                // User pressed keybinding to view photo from selected message
                 self.view_photo_selected();
             }
             Action::PhotoViewerPrevious => {

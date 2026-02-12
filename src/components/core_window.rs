@@ -519,6 +519,11 @@ impl Component for CoreWindow {
                     component.update(action.clone());
                 } else {
                     tracing::error!("PhotoViewer component not found!");
+                    if let Some(tx) = self.action_tx.as_ref() {
+                        let _ = tx.send(Action::StatusMessage(
+                            "Photo viewer not available.".into(),
+                        ));
+                    }
                 }
                 // Unfocus other components
                 self.components

@@ -99,8 +99,6 @@ pub struct AppContext {
     /// The currently focused UI component, used for context-aware keymap lookup in the run loop.
     /// Uses AtomicU8 for lock-free reads/writes. Encoded as: 0 = None, 1-11 = ComponentName variants.
     focused_component: AtomicU8,
-    /// Result of background photo decode; consumed by PhotoViewer on PhotoDecoded(i64).
-    pending_photo_decoded: Mutex<Option<(i64, Result<image::DynamicImage, String>)>>,
 }
 /// Implementation of the `AppContext` struct.
 impl AppContext {
@@ -141,7 +139,6 @@ impl AppContext {
             tg_context: Arc::new(tg_context),
             cli_args: Mutex::new(cli_args),
             focused_component: AtomicU8::new(0), // 0 = None
-            pending_photo_decoded: Mutex::new(None),
         })
     }
     /// Get the application configuration.
@@ -263,30 +260,6 @@ impl AppContext {
     #[inline]
     pub fn clear_render_flag(&self) -> bool {
         self.needs_render.swap(false, Ordering::SeqCst)
-    }
-
-    /// Set decoded photo from background thread; run loop calls this before sending PhotoDecoded(i64).
-    pub fn set_pending_photo_decoded(
-        &self,
-        message_id: i64,
-        result: Result<image::DynamicImage, String>,
-    ) {
-        *self.pending_photo_decoded.lock().unwrap() = Some((message_id, result));
-    }
-
-    /// Take decoded photo for PhotoViewer; returns None if message_id does not match or slot empty.
-    pub fn take_pending_photo_decoded(
-        &self,
-        message_id: i64,
-    ) -> Option<Result<image::DynamicImage, String>> {
-        let mut guard = self.pending_photo_decoded.lock().unwrap();
-        let taken = guard.take()?;
-        if taken.0 == message_id {
-            Some(taken.1)
-        } else {
-            *guard = Some(taken);
-            None
-        }
     }
 
     /// Get the Telegram context.

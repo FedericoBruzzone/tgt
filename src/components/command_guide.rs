@@ -164,7 +164,7 @@ impl CommandGuide {
             lines.push(Line::from(line));
         }
 
-        // Photo Viewer (open from Chat with Alt+V when a photo message is selected)
+        // Photo Viewer (open from Chat with keybinding when a photo message is selected)
         let photo_viewer_lines =
             self.get_keybindings_section("Photo Viewer", &keymap_config.photo_viewer);
         for line in photo_viewer_lines {
