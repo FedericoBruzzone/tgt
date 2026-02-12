@@ -5,6 +5,7 @@ use config::FileFormat;
 use serde::de::DeserializeOwned;
 use std::path::Path;
 
+pub mod config_merge;
 pub mod custom;
 pub mod raw;
 

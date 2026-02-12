@@ -1,6 +1,7 @@
 pub mod action;
 pub mod app_context;
 pub mod app_error;
+pub mod bundled_config;
 pub mod cli;
 pub mod cli_commands;
 pub mod component_name;
@@ -177,6 +178,10 @@ async fn main() -> Result<(), AppError<()>> {
         }
         return Ok(());
     }
+
+    // If user config dir is missing default files (e.g. after deleting ~/.config/tgt), copy from
+    // bundled config so we can load them. Silent; no output.
+    let _ = cli_commands::ensure_default_config_files_if_missing();
 
     if let Err(e) = tokio_main(cli_args).await {
         tracing::error!("Something went wrong: {}", e);

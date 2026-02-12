@@ -391,6 +391,31 @@ impl ConfigFile for KeymapConfig {
         true
     }
 
+    /// Load keymap by merging bundled default with user config so new keycodes are added without overwriting user bindings.
+    /// The merged config is written back to the user's keymap.toml so new keymaps from later releases appear in the file
+    /// and the user can edit them; existing user bindings are preserved.
+    fn get_config() -> Self {
+        let default_raw: KeymapRaw = crate::bundled_config::bundled_config_content("keymap.toml")
+            .and_then(|c| toml::from_str(c).ok())
+            .expect("bundled keymap.toml must be valid TOML");
+        let user_raw = Self::deserialize_custom_config::<KeymapRaw>("keymap.toml");
+        let merged = crate::configs::config_merge::merge_keymap_raw(default_raw, user_raw);
+        if !cfg!(test) {
+            let write_path = Self::search_config_file("keymap.toml")
+                .or_else(|| crate::utils::tgt_config_dir().ok().map(|d| d.join("keymap.toml")));
+            if let Some(path) = write_path {
+                if let Ok(toml) = toml::to_string_pretty(&merged) {
+                    if let Err(e) = std::fs::write(&path, toml) {
+                        tracing::warn!("Could not write merged keymap to {}: {}", path.display(), e);
+                    } else {
+                        tracing::info!("Wrote merged keymap to {}", path.display());
+                    }
+                }
+            }
+        }
+        Self::from(merged)
+    }
+
     fn merge(&mut self, other: Option<Self::Raw>) -> Self {
         match other {
             None => self.clone(),
@@ -800,6 +825,69 @@ mod tests {
         assert_eq!(
             KeymapConfig::get_type(),
             crate::configs::config_type::ConfigType::Keymap
+        );
+    }
+
+    /// After merging default with user, KeymapConfig built from merged raw contains both user binding and default-added command.
+    #[test]
+    fn test_merge_then_from_includes_user_and_missing_default() {
+        use crate::component_name::ComponentName;
+        use crate::configs::config_merge::merge_keymap_raw;
+        use std::str::FromStr;
+
+        let default_raw = KeymapRaw {
+            core_window: Some(KeymapMode {
+                keymap: vec![
+                    KeymapEntry {
+                        keys: vec!["q".to_string()],
+                        command: "try_quit".to_string(),
+                        description: None,
+                    },
+                    KeymapEntry {
+                        keys: vec!["alt+f1".to_string()],
+                        command: "show_command_guide".to_string(),
+                        description: None,
+                    },
+                ],
+            }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
+            photo_viewer: None,
+        };
+        let user_raw = KeymapRaw {
+            core_window: Some(KeymapMode {
+                keymap: vec![KeymapEntry {
+                    keys: vec!["q".to_string()],
+                    command: "try_quit".to_string(),
+                    description: None,
+                }],
+            }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
+            photo_viewer: None,
+        };
+        let merged = merge_keymap_raw(default_raw, Some(user_raw));
+        let config = KeymapConfig::from(merged);
+        let try_quit_keys = config.get_key_of_single_action(
+            ComponentName::CoreWindow,
+            Action::from_str("try_quit").unwrap(),
+        );
+        let show_guide_keys = config.get_key_of_single_action(
+            ComponentName::CoreWindow,
+            Action::from_str("show_command_guide").unwrap(),
+        );
+        assert!(!try_quit_keys.is_empty(), "user binding try_quit should be present");
+        assert!(
+            !show_guide_keys.is_empty(),
+            "default-added show_command_guide should be present after merge"
         );
     }
 }
