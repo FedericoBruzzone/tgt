@@ -520,9 +520,8 @@ impl Component for CoreWindow {
                 } else {
                     tracing::error!("PhotoViewer component not found!");
                     if let Some(tx) = self.action_tx.as_ref() {
-                        let _ = tx.send(Action::StatusMessage(
-                            "Photo viewer not available.".into(),
-                        ));
+                        let _ =
+                            tx.send(Action::StatusMessage("Photo viewer not available.".into()));
                     }
                 }
                 // Unfocus other components
