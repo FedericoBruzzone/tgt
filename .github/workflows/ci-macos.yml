@@ -42,7 +42,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
+      # This is only needed if we build against the chafa-dyn feature
+      # Chafa is an image library that is used to display images in the terminal without the need of an image protocol. It provides better image then rendering halblocks. 
+      # TGT is now built without chafa by default, but the workflows are configured to be built with chafa-dyn as well for later use, with the prebuilt releases. 
       - name: Install chafa (for ratatui-image)
         run: brew install chafa
 
@@ -152,7 +154,8 @@ jobs:
         run: |
           if [ -d "tdlib/lib" ]; then export DYLD_LIBRARY_PATH="$(pwd)/tdlib/lib"; fi
           cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
-        timeout-minutes: 2
+        # Timeout is 10 minutes to avoid the job being hanged for the default 6 hours timeout
+        timeout-minutes: 10
 
       - name: Run cargo clippy
         run: |

@@ -9,6 +9,24 @@ use {
     std::str::FromStr,
 };
 
+/// Payload for [`Action::PhotoDecoded`]: message_id and decode result.
+/// [`Eq`] compares message_id and error message only (Ok images are not compared).
+#[derive(Debug, Clone)]
+pub struct PhotoDecodedPayload(pub i64, pub Result<image::DynamicImage, String>);
+
+impl PartialEq for PhotoDecodedPayload {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+            && match (&self.1, &other.1) {
+                (Ok(_), Ok(_)) => true,
+                (Err(a), Err(b)) => a == b,
+                _ => false,
+            }
+    }
+}
+
+impl Eq for PhotoDecodedPayload {}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 /// `Modifiers` is a struct that represents the modifiers of a key event.
 /// It is used to determine the state of the modifiers when a key event is
@@ -241,10 +259,10 @@ pub enum Action {
     /// This action is sent when a photo has been downloaded.
     PhotoDownloaded(String),
     /// Load photo from path on a background thread (decode off main thread).
-    /// Payload: (path, message_id). Run loop spawns blocking task and sends PhotoDecoded(i64).
+    /// Payload: (path, message_id). Run loop spawns blocking task and sends PhotoDecoded with result.
     LoadPhotoFromPath(String, i64),
-    /// Photo decoded on background thread; result is in app_context pending_photo slot.
-    PhotoDecoded(i64),
+    /// Photo decoded on background thread; carries message_id and decode result.
+    PhotoDecoded(PhotoDecodedPayload),
     /// PhotoViewerPrevious action.
     /// Navigate to previous message in photo viewer.
     PhotoViewerPrevious,

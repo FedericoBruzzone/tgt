@@ -16,7 +16,6 @@ use std::{io, path::Path, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Loading state for the photo viewer
-#[allow(clippy::large_enum_variant)]
 enum PhotoState {
     /// No photo selected
     None,
@@ -24,7 +23,7 @@ enum PhotoState {
     Loading { message_id: i64 },
     /// Photo is loaded and ready to display (dimensions stored to avoid keeping full image)
     Loaded {
-        image_state: StatefulProtocol,
+        image_state: Box<StatefulProtocol>,
         width: u32,
         height: u32,
         /// Cached content area and image rect to avoid recalc every frame
@@ -148,7 +147,7 @@ impl PhotoViewer {
                 let (width, height) = (img.width(), img.height());
                 let image_state = self.picker.new_resize_protocol(img);
                 self.photo_state = PhotoState::Loaded {
-                    image_state,
+                    image_state: Box::new(image_state),
                     width,
                     height,
                     cached_rect: None,
@@ -203,17 +202,14 @@ impl Component for PhotoViewer {
             Action::PhotoDownloaded(file_path) => {
                 self.on_photo_downloaded(file_path);
             }
-            Action::PhotoDecoded(message_id) => {
+            Action::PhotoDecoded(payload) => {
+                let crate::action::PhotoDecodedPayload(message_id, result) = payload;
                 if let PhotoState::Loading {
                     message_id: loading_id,
                 } = self.photo_state
                 {
                     if message_id == loading_id {
-                        if let Some(result) =
-                            self.app_context.take_pending_photo_decoded(message_id)
-                        {
-                            self.apply_decoded_photo(message_id, result);
-                        }
+                        self.apply_decoded_photo(message_id, result);
                     }
                 }
             }
@@ -243,9 +239,10 @@ impl Component for PhotoViewer {
             return Ok(());
         }
 
-        // Calculate popup size (80% width, 80% height, centered)
-        let popup_width = (area.width as f32 * 0.8) as u16;
-        let popup_height = (area.height as f32 * 0.8) as u16;
+        // Calculate popup size from config (fraction of width/height, centered)
+        let size_ratio = self.app_context.app_config().photo_viewer_popup_size;
+        let popup_width = (area.width as f32 * size_ratio) as u16;
+        let popup_height = (area.height as f32 * size_ratio) as u16;
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -353,7 +350,7 @@ impl Component for PhotoViewer {
                 };
 
                 let image_widget = StatefulImage::new().resize(Resize::Fit(None));
-                frame.render_stateful_widget(image_widget, image_rect, image_state);
+                frame.render_stateful_widget(image_widget, image_rect, image_state.as_mut());
             }
             PhotoState::Error { message } => {
                 let text = vec![

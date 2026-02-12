@@ -29,4 +29,9 @@ pub struct AppRaw {
     /// Use emoji for message status icons (edited, reply, sent, seen). When false (default),
     /// use ASCII-style indicators: [mod], <--, [ ], [✓], [o o].
     pub use_emoji_icons: Option<bool>,
+    /// Max length of the longer side when displaying photos (in pixels). 0 = no downscaling.
+    /// Positive value = downscale so the longer side is at most this many pixels (e.g. 1920).
+    pub photo_max_dimension: Option<u32>,
+    /// Photo viewer popup size as a fraction of terminal width/height (0.0–1.0). e.g. 0.8 = 80%.
+    pub photo_viewer_popup_size: Option<f32>,
 }
