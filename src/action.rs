@@ -9,6 +9,24 @@ use {
     std::str::FromStr,
 };
 
+/// Payload for [`Action::PhotoDecoded`]: message_id and decode result.
+/// [`Eq`] compares message_id and error message only (Ok images are not compared).
+#[derive(Debug, Clone)]
+pub struct PhotoDecodedPayload(pub i64, pub Result<image::DynamicImage, String>);
+
+impl PartialEq for PhotoDecodedPayload {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+            && match (&self.1, &other.1) {
+                (Ok(_), Ok(_)) => true,
+                (Err(a), Err(b)) => a == b,
+                _ => false,
+            }
+    }
+}
+
+impl Eq for PhotoDecodedPayload {}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 /// `Modifiers` is a struct that represents the modifiers of a key event.
 /// It is used to determine the state of the modifiers when a key event is
@@ -228,6 +246,30 @@ pub enum Action {
     /// This action is used to hide the theme selector popup.
     HideThemeSelector,
 
+    /// ShowPhotoViewer action.
+    /// This action is used to show the photo viewer popup.
+    ShowPhotoViewer,
+    /// HidePhotoViewer action.
+    /// This action is used to hide the photo viewer popup.
+    HidePhotoViewer,
+    /// ViewPhotoMessage action with message_id.
+    /// This action is used to view a photo from a message.
+    ViewPhotoMessage(i64),
+    /// PhotoDownloaded action with file path.
+    /// This action is sent when a photo has been downloaded.
+    PhotoDownloaded(String),
+    /// Load photo from path on a background thread (decode off main thread).
+    /// Payload: (path, message_id). Run loop spawns blocking task and sends PhotoDecoded with result.
+    LoadPhotoFromPath(String, i64),
+    /// Photo decoded on background thread; carries message_id and decode result.
+    PhotoDecoded(PhotoDecodedPayload),
+    /// PhotoViewerPrevious action.
+    /// Navigate to previous message in photo viewer.
+    PhotoViewerPrevious,
+    /// PhotoViewerNext action.
+    /// Navigate to next message in photo viewer.
+    PhotoViewerNext,
+
     /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
     StatusMessage(String),
     /// PromptCopy: copy selected text in the prompt (overrides try_quit when prompt focused).
@@ -292,6 +334,11 @@ impl FromStr for Action {
             "show_search_overlay" => Ok(Action::ShowSearchOverlay),
             "search_overlay_submit" => Ok(Action::SearchOverlaySubmit),
             "search_overlay_confirm" => Ok(Action::SearchOverlayConfirm),
+            "view_photo_message" => Ok(Action::ShowPhotoViewer),
+            "show_photo_viewer" => Ok(Action::ShowPhotoViewer),
+            "hide_photo_viewer" => Ok(Action::HidePhotoViewer),
+            "photo_viewer_previous" => Ok(Action::PhotoViewerPrevious),
+            "photo_viewer_next" => Ok(Action::PhotoViewerNext),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }
     }

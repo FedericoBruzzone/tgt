@@ -41,10 +41,50 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Install needed packages
+
+      - name: Install system dependencies
         run: |
-          sudo apt update
-          sudo apt install libc++-dev libc++abi-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y software-properties-common
+          
+          CODENAME=$(lsb_release -cs)
+          if [ "$CODENAME" == "jammy" ]; then
+            sudo add-apt-repository -y ppa:hpjansson/chafa
+            sudo apt-get update -qq
+          fi
+          
+          sudo add-apt-repository -y universe
+          sudo apt-get update -qq
+          
+          # Added libglib2.0-dev: chafa.pc requires glib-2.0.pc for the chafa-dyn feature
+          # Chafa is an image library that is used to display images in the terminal without the need of an image protocol. It provides better image then rendering halblocks. 
+          # TGT is now built without chafa by default, but the workflows are configured to be built with chafa-dyn as well for later use, with the prebuilt releases. 
+          sudo apt-get install -y \
+            libc++-dev \
+            libc++abi-dev \
+            libchafa-dev \
+            libglib2.0-dev \
+            pkg-config \
+            build-essential
+
+      - name: Configure Multiarch Paths
+        run: |
+          TRIPLET=$(gcc -dumpmachine)
+          echo "ARCH_TRIPLET=$TRIPLET" >> $GITHUB_ENV
+          # Prioritize the triplet-specific path to avoid architecture mismatch
+          echo "PKG_CONFIG_PATH=/usr/lib/$TRIPLET/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> $GITHUB_ENV
+
+      - name: Diagnostic - Inspect chafa.pc
+        run: |
+          echo "--- Pkg-Config Search Path ---"
+          pkg-config --variable pc_path pkg-config
+          echo "--- GLib Check ---"
+          pkg-config --exists --print-errors glib-2.0 && pkg-config --modversion glib-2.0
+          echo "--- Chafa Check ---"
+          pkg-config --exists --print-errors chafa && pkg-config --modversion chafa
+          echo "--- Raw Chafa.pc Content ---"
+          cat $(pkg-config --variable=pcfiledir chafa)/chafa.pc || echo "Could not find chafa.pc"
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
@@ -52,67 +92,77 @@ jobs:
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
+
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
-        # sudo apt-get -y install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-14 libc++-dev libc++abi-dev
-        # CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
         run: |
-          sudo apt-get update
-          sudo apt-get -y upgrade
-          sudo apt-get install make git zlib1g-dev libssl-dev gperf php-cli cmake clang-18 libc++-18-dev libc++abi-18-dev
+          sudo apt-get install -y make git zlib1g-dev libssl-dev gperf php-cli cmake clang-18 libc++-18-dev libc++abi-18-dev
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
-          rm -rf build
-          mkdir build
-          cd build
-          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-18 CXX=/usr/bin/clang++-18 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
+          mkdir -p build && cd build
+          CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-18 CXX=/usr/bin/clang++-18 \
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
+
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
         uses: actions/cache/save@v5
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
+
       - name: Extract TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         run: |
           cp -r ./td/tdlib ./
           sudo cp ./tdlib/lib/libtdjson.so.* /usr/lib/
-      - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH
+
+      - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH for TDLib
         if: matrix.feature == 'pkg-config'
         run: |
-          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib" >> $GITHUB_ENV
+          # Prepend TDLib to path while keeping the Chafa/GLib paths we set earlier
+          echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib:${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
+
       - name: Set LOCAL_TDLIB_PATH
         if: matrix.feature == 'local-tdlib'
         run: echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
-      # - name: Cache cargo
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       target/
-      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      #     restore-keys: ${{ runner.os }}-cargo-
+
       - name: Cargo and rustc versions
         run: |
           cargo --version
           rustc --version
+
+      # With download-tdlib, tdlib-rs fetches libtdjson at build time; the build script
+      # needs it in LD_LIBRARY_PATH when it runs. Pre-build tdlib-rs so we can locate
+      # the lib and set LD_LIBRARY_PATH for the rest of the job.
+      - name: Set LD_LIBRARY_PATH for download-tdlib
+        if: matrix.feature == 'download-tdlib'
+        run: |
+          cargo build --no-default-features --features tdlib-rs/download-tdlib -p tdlib-rs 2>/dev/null || true
+          TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)
+          if [ -n "$TDLIB_LIB" ]; then
+            echo "LD_LIBRARY_PATH=$(dirname "$TDLIB_LIB"):${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
+          fi
+
       - name: Run cargo build
         run: cargo build --no-default-features --verbose --features ${{ matrix.feature }}
+
       - name: Run cargo test
         run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        # Timeout is 10 minutes to avoid the job being hanged for the default 6 hours jobs timeout
+        timeout-minutes: 10
+
       - name: Run cargo clippy
-        run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: |
+          if [ "${{ matrix.feature }}" = "download-tdlib" ]; then
+            TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)
+            if [ -n "$TDLIB_LIB" ]; then
+              export LD_LIBRARY_PATH="$(dirname "$TDLIB_LIB"):${LD_LIBRARY_PATH:-}"
+            fi
+          fi
+          cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings
+
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ runner.os }}-artifact
-      #     path: ./
-      #     overwrite: true

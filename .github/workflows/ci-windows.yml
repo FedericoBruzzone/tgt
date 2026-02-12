@@ -41,6 +41,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Chafa (for ratatui-image): MSYS2 UCRT64 has pkg-config + chafa only for x64; Windows ARM64 builds without chafa (target-specific dep)
+      - name: Install Chafa (MSYS2 UCRT64)
+        if: runner.arch == 'X64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-chafa
+      # This is only needed if we build against the chafa-dyn feature
+      # Chafa is an image library that is used to display images in the terminal without the need of an image protocol. It provides better image then rendering halblocks. 
+      # TGT is now built without chafa by default, but the workflows are configured to be built with chafa-dyn as well for later use, with the prebuilt releases. 
+      - name: Add MSYS2 UCRT64 to PATH for cargo (find pkg-config and chafa)
+        if: runner.arch == 'X64'
+        run: |
+          $msys2 = "$env:RUNNER_TEMP\msys64\ucrt64"
+          echo "$msys2\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "PKG_CONFIG_PATH=$msys2\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: pwsh
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
         id: cache-tdlib-restore
@@ -109,9 +128,17 @@ jobs:
       - name: Set PKG_CONFIG_PATH and bin
         if: matrix.feature == 'pkg-config'
         run: |
-          echo "$((Get-Item .).FullName)\pkg-config\pkg-config_0.26-1_win32\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "PKG_CONFIG_PATH=$((Get-Item .).FullName)\tdlib\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "$((Get-Item .).FullName)\tdlib\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $root = (Get-Item .).FullName
+          echo "$root\pkg-config\pkg-config_0.26-1_win32\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $tdlibPkg = Join-Path $root "tdlib\lib\pkgconfig"
+          # Use ; on Windows so "D:" is not split; include MSYS2 chafa path first when on X64
+          if ($env:RUNNER_ARCH -eq 'X64') {
+            $msys2Pkg = Join-Path $env:RUNNER_TEMP "msys64\ucrt64\lib\pkgconfig"
+            echo "PKG_CONFIG_PATH=$msys2Pkg;$tdlibPkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            echo "PKG_CONFIG_PATH=$tdlibPkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          echo (Join-Path $root "tdlib\bin") | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         shell: pwsh
 
       - name: Set LOCAL_TDLIB_PATH
@@ -138,6 +165,8 @@ jobs:
 
       - name: Run cargo test
         run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
+        # Timeout is 10 minutes to avoid the job being hanged for the default 6 hours timeout
+        timeout-minutes: 10
 
       - name: Run cargo clippy
         run: cargo clippy --no-default-features --all-targets --features ${{ matrix.feature }} -- -D warnings

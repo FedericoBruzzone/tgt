@@ -203,6 +203,7 @@ async fn handle_tui_backend_events(
                 Some(ComponentName::CommandGuide) => &keymap_config.command_guide,
                 Some(ComponentName::ThemeSelector) => &keymap_config.theme_selector,
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
+                Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
                 _ => &keymap_config.core_window,
             };
 
@@ -306,6 +307,11 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::SwitchThemeTo(_)
             | Action::ShowThemeSelector
             | Action::HideThemeSelector
+            | Action::ShowPhotoViewer
+            | Action::HidePhotoViewer
+            | Action::ViewPhotoMessage(_)
+            | Action::PhotoDownloaded(_)
+            | Action::PhotoDecoded(_)
             | Action::ToggleChatList
             | Action::IncreaseChatListSize
             | Action::DecreaseChatListSize
@@ -615,6 +621,74 @@ pub async fn handle_app_actions(
             }
             Action::ViewAllMessages => {
                 tg_backend.view_all_messages().await;
+            }
+            Action::ViewPhotoMessage(message_id) => {
+                // Get the message and check if it's a photo that needs downloading
+                if let Some(message) = app_context.tg_context().get_message(*message_id) {
+                    if let crate::tg::message_entry::MessageContentType::Photo {
+                        file_id,
+                        file_path,
+                    } = message.content_type()
+                    {
+                        // Check if file needs to be downloaded
+                        if file_path.is_empty() || !std::path::Path::new(file_path).exists() {
+                            // Download the file
+                            match tg_backend.download_file(*file_id, 32).await {
+                                Ok(downloaded_path) => {
+                                    // Notify PhotoViewer that the photo is ready (viewer will send LoadPhotoFromPath)
+                                    app_context
+                                        .action_tx()
+                                        .send(Action::PhotoDownloaded(downloaded_path))?;
+                                }
+                                Err(e) => {
+                                    tracing::error!("Failed to download photo: {:?}", e);
+                                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                                        "Failed to download photo.".into(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Action::LoadPhotoFromPath(path, message_id) => {
+                // Decode image on a blocking thread to avoid stalling the main loop
+                let photo_max_dimension = app_context.app_config().photo_max_dimension;
+                let action_tx = app_context.action_tx().clone();
+                let path = path.clone();
+                let msg_id = *message_id;
+                tokio::spawn(async move {
+                    let result = tokio::task::spawn_blocking(move || {
+                        image::open(&path).map_err(|e| e.to_string())
+                    })
+                    .await
+                    .unwrap_or_else(|e| Err(e.to_string()));
+                    // Downscale when photo_max_dimension > 0 (0 = no downscaling)
+                    let result = result.map(|img| {
+                        if photo_max_dimension == 0 {
+                            img
+                        } else {
+                            let (w, h) = (img.width(), img.height());
+                            if w.max(h) > photo_max_dimension {
+                                if w >= h {
+                                    img.thumbnail(
+                                        photo_max_dimension,
+                                        (h * photo_max_dimension / w).max(1),
+                                    )
+                                } else {
+                                    img.thumbnail(
+                                        (w * photo_max_dimension / h).max(1),
+                                        photo_max_dimension,
+                                    )
+                                }
+                            } else {
+                                img
+                            }
+                        }
+                    });
+                    let payload = crate::action::PhotoDecodedPayload(msg_id, result);
+                    let _ = action_tx.send(Action::PhotoDecoded(payload));
+                });
             }
             _ => {}
         }

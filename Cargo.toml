@@ -36,6 +36,9 @@ default = ["download-tdlib"]
 local-tdlib = ["tdlib-rs/local-tdlib"]
 download-tdlib = ["tdlib-rs/download-tdlib"]
 pkg-config = ["tdlib-rs/pkg-config"]
+# Enable chafa-based image rendering in ratatui-image (macOS, Linux x86_64, Windows x64). Not supported on Windows ARM.
+chafa-dyn = ["ratatui-image/chafa-dyn"]
+chafa-static = ["ratatui-image/chafa-static"]
 
 [package.metadata.system-deps]
 tdjson = "1.8.29"
@@ -57,7 +60,8 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
 arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.43"
-ratatui-image = "8.1.1"
+# Default: no chafa. Enable via chafa-dyn or chafa-static (not supported on Windows ARM).
+ratatui-image = { version = "10.0.4", default-features = false, features = ["crossterm", "image-defaults"] }
 image = "0.25.9"
 signal-hook = "0.4.3"
 clap = { version = "4.5.56", features = ["derive"] }

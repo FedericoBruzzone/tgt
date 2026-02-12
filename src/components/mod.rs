@@ -10,6 +10,7 @@ pub mod chat_window;
 pub mod command_guide;
 pub mod component_traits;
 pub mod core_window;
+pub mod photo_viewer;
 pub mod prompt_window;
 pub mod reply_message;
 pub mod search_overlay;
