@@ -200,6 +200,9 @@ mod tests {
         assert_eq!(state, Path::new("/home/user/.local/state/tgt"));
     }
 
+    // Tests that touch .tgt or config dirs MUST set HOME to a temp dir (and restore after).
+    // Never modify or remove the real ~/.tgt so that running tests does not affect the user's config.
+
     #[test]
     fn tgt_legacy_dir_none_when_no_dot_tgt() {
         // When HOME points to a dir without .tgt, legacy dir should be None.
@@ -227,6 +230,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let home = temp.path();
         let dot_tgt = home.join(".tgt");
+        assert!(dot_tgt.starts_with(temp.path()), "must only create .tgt under temp dir, never real HOME");
         std::fs::create_dir_all(&dot_tgt).unwrap();
         env::set_var("HOME", home);
         let result = tgt_legacy_dir();
@@ -244,6 +248,7 @@ mod tests {
         let home = temp.path();
         let dot_tgt = home.join(".tgt");
         let legacy_config = dot_tgt.join("config");
+        assert!(legacy_config.starts_with(temp.path()), "must only create under temp dir, never real HOME");
         std::fs::create_dir_all(&legacy_config).unwrap();
         env::set_var("HOME", home);
         let ordered = tgt_config_dir_paths_ordered().unwrap();

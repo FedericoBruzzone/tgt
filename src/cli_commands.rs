@@ -79,54 +79,37 @@ fn remove_dir_all(path: &Path) -> std::io::Result<()> {
     }
 }
 
-/// Copy bundled default config to user config dir. If `force` is false, only copy missing files.
-/// With `force`, overwrite existing files (no backup in this implementation).
-pub fn run_init_config(force: bool) -> std::io::Result<()> {
-    // CARGO_MANIFEST_DIR is set at compile time by Cargo, so the path is baked into the binary.
-    let manifest_dir = option_env!("CARGO_MANIFEST_DIR").unwrap_or(".");
-    let config_source = Path::new(manifest_dir).join("config");
-    if !config_source.exists() {
-        eprintln!("Default config source not found: {}", config_source.display());
-        std::process::exit(1);
-    }
-
+/// Copy default config into user config dir from the embedded bundle (always available, e.g. after
+/// `cargo install`). If `overwrite_existing` is false, only write when the destination is missing.
+fn copy_bundled_config_to_user(overwrite_existing: bool, verbose: bool) -> std::io::Result<()> {
     let config_dest = crate::utils::tgt_config_dir()?;
-    std::fs::create_dir_all(&config_dest)?;
-
-    // Copy top-level config files
-    for entry in std::fs::read_dir(&config_source)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let name = path.file_name().unwrap();
-        let dest = config_dest.join(name);
-        if force || !dest.exists() {
-            std::fs::copy(&path, &dest)?;
-            println!("Created/updated: {}", dest.display());
-        }
-    }
-
-    // Copy themes
-    let themes_src = config_source.join("themes");
-    let themes_dest = config_dest.join("themes");
-    if themes_src.exists() {
-        std::fs::create_dir_all(&themes_dest)?;
-        for entry in std::fs::read_dir(&themes_src)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                let name = path.file_name().unwrap();
-                let dest = themes_dest.join(name);
-                if force || !dest.exists() {
-                    std::fs::copy(&path, &dest)?;
-                    println!("Created/updated theme: {}", dest.display());
-                }
+    for (rel_path, content) in crate::bundled_config::bundled_config_files() {
+        let dest = config_dest.join(rel_path);
+        if overwrite_existing || !dest.exists() {
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&dest, content)?;
+            if verbose {
+                println!("Created/updated: {}", dest.display());
             }
         }
     }
-
-    println!("Config initialized at: {}", config_dest.display());
+    if verbose {
+        println!("Config initialized at: {}", config_dest.display());
+    }
     Ok(())
+}
+
+/// Ensure default config files exist in the user config dir (e.g. XDG). If any are missing,
+/// copy them from the bundled config so the app can start. Silent; no output. Call at startup
+/// before loading configs so that after deleting ~/.config/tgt we still get a working config.
+pub fn ensure_default_config_files_if_missing() -> std::io::Result<()> {
+    copy_bundled_config_to_user(false, false)
+}
+
+/// Copy default config to user config dir (from embedded bundle). If `force` is false, only copy
+/// missing files. With `force`, overwrite existing files (no backup in this implementation).
+pub fn run_init_config(force: bool) -> std::io::Result<()> {
+    copy_bundled_config_to_user(force, true)
 }
