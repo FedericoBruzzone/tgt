@@ -3,7 +3,6 @@ use crate::{
     app_context::AppContext,
     components::component_traits::{Component, HandleFocus},
     configs::custom::keymap_custom::ActionBinding,
-    event::Event,
     tg::message_entry::MessageContentType,
 };
 use ratatui::{
@@ -141,7 +140,7 @@ impl PhotoViewer {
     /// Apply decoded image from background (called when receiving PhotoDecoded).
     fn apply_decoded_photo(
         &mut self,
-        message_id: i64,
+        _message_id: i64,
         result: Result<image::DynamicImage, String>,
     ) {
         match result {
@@ -159,7 +158,6 @@ impl PhotoViewer {
                 self.photo_state = PhotoState::Error { message: e };
             }
         }
-        let _ = message_id;
     }
 
     /// Update photo state when download completes: request async decode (no blocking).
