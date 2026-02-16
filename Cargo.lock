@@ -4466,12 +4466,8 @@ dependencies = [
  "ogg",
  "ratatui",
  "ratatui-image",
-<<<<<<< voice-message-implementation
- "reqwest 0.13.1",
- "rodio",
-=======
  "reqwest 0.13.2",
->>>>>>> main
+ "rodio",
  "serde",
  "signal-hook 0.4.3",
  "tdlib-rs",
