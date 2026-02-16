@@ -61,7 +61,7 @@ tracing-appender = "0.2"
 arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.43"
 # Default: no chafa. Enable via chafa-dyn or chafa-static (not supported on Windows ARM).
-ratatui-image = { version = "10.0.4", default-features = false, features = ["crossterm", "image-defaults"] }
+ratatui-image = { version = "10.0.5", default-features = false, features = ["crossterm", "image-defaults"] }
 image = "0.25.9"
 signal-hook = "0.4.3"
 clap = { version = "4.5.58", features = ["derive"] }
