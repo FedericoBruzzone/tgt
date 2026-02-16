@@ -51,7 +51,7 @@ futures = "0.3.32"
 lazy_static = "1.5.0"
 ratatui = "0.30.0"
 serde = "1.0.228"
-toml = "0.9"
+toml = "1.0"
 tdlib-rs = "1.2.0"
 tokio = { version = "1.49.0", features = ["full"] }
 tracing = "0.1.44"
