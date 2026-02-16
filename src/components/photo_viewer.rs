@@ -266,12 +266,34 @@ impl Component for PhotoViewer {
         let inner_area = block.inner(popup_area);
         frame.render_widget(block, popup_area);
 
+        // Build keymap bindings list once (for layout height and for display)
+        let bindings = {
+            let keymap_config = self.app_context.keymap_config();
+            let mut entries: Vec<(String, String)> = keymap_config
+                .photo_viewer
+                .iter()
+                .map(|(event, binding)| {
+                    let key_str = format!("{}", event);
+                    let desc = match binding {
+                        ActionBinding::Single { description, .. } => {
+                            description.as_ref().map(String::as_str).unwrap_or("")
+                        }
+                        ActionBinding::Multiple(_) => "Multiple keys...",
+                    };
+                    (key_str, desc.to_string())
+                })
+                .collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            entries
+        };
+        let instructions_height = bindings.len().clamp(1, 8) as u16;
+
         // Split inner area: main content area + instructions at bottom
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(3),    // Main content area
-                Constraint::Length(2), // Default keymap guide
+                Constraint::Min(3),                      // Main content area
+                Constraint::Length(instructions_height), // Keymap guide (all bindings from config)
             ])
             .split(inner_area);
 
@@ -371,25 +393,6 @@ impl Component for PhotoViewer {
         }
 
         // Draw keymap guide at the bottom (from config/keymap.toml [photo_viewer])
-        let bindings = {
-            let keymap_config = self.app_context.keymap_config();
-            let mut entries: Vec<(String, String)> = keymap_config
-                .photo_viewer
-                .iter()
-                .map(|(event, binding)| {
-                    let key_str = format!("{}", event);
-                    let desc = match binding {
-                        ActionBinding::Single { description, .. } => {
-                            description.as_ref().map(String::as_str).unwrap_or("")
-                        }
-                        ActionBinding::Multiple(_) => "Multiple keys...",
-                    };
-                    (key_str, desc.to_string())
-                })
-                .collect();
-            entries.sort_by(|a, b| a.0.cmp(&b.0));
-            entries
-        };
         let style_help = self.app_context.style_timestamp();
         let instructions: Vec<Line<'_>> = bindings
             .into_iter()
