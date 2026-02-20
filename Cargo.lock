@@ -234,25 +234,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "audiopus"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3743519567e9135cf6f9f1a509851cb0c8e4cb9d66feb286668afb1923bec458"
-dependencies = [
- "audiopus_sys",
-]
-
-[[package]]
-name = "audiopus_sys"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "927791de46f70facea982dbfaf19719a41ce6064443403be631a85de6a58fff9"
-dependencies = [
- "log",
- "pkg-config",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2724,6 +2705,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
+name = "opus"
+version = "0.3.0"
+source = "git+https://github.com/DCNick3/opus-rs.git?branch=unsafe-libopus#a3de7e71b35ab0a80be38c0d2420b18f0bd41411"
+dependencies = [
+ "cfg-if",
+ "unsafe-libopus",
+]
+
+[[package]]
 name = "ordered-float"
 version = "4.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4453,7 +4443,6 @@ name = "tgt"
 version = "1.0.0"
 dependencies = [
  "arboard",
- "audiopus",
  "chrono",
  "clap",
  "config",
@@ -4464,6 +4453,7 @@ dependencies = [
  "lazy_static",
  "nucleo-matcher",
  "ogg",
+ "opus",
  "ratatui",
  "ratatui-image",
  "reqwest 0.13.2",
@@ -4959,6 +4949,12 @@ name = "unicode-width"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
+
+[[package]]
+name = "unsafe-libopus"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fb35e7378283bedf293ae94ec89dea4e2cf4c513be303a77ee93a5a3cba23c4"
 
 [[package]]
 name = "untrusted"
