@@ -1,5 +1,5 @@
 //! OGG Opus decoding for Telegram voice notes.
-//! Uses `ogg` (container) and `opus` (pure Rust codec via unsafe-libopus); implements rodio's `Source`.
+//! Uses `ogg` (container) and `opus` (libopus via audiopus_sys); implements rodio's `Source`.
 
 use opus::{Channels, Decoder};
 use std::io::{Read, Seek};

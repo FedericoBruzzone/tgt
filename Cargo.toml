@@ -32,15 +32,16 @@ categories = []
 
 [features]
 # By deafult you need to set the `LOCAL_TDLIB_PATH` environment variable to the path of the TDLib library. See CONTRIBUTING.md for more information.
-default = ["download-tdlib", "voice-message"]
+default = ["download-tdlib", "voice-message", "rodio"]
 local-tdlib = ["tdlib-rs/local-tdlib"]
 download-tdlib = ["tdlib-rs/download-tdlib"]
 pkg-config = ["tdlib-rs/pkg-config"]
 # Enable chafa-based image rendering in ratatui-image (macOS, Linux x86_64, Windows x64). Not supported on Windows ARM.
 chafa-dyn = ["ratatui-image/chafa-dyn"]
 chafa-static = ["ratatui-image/chafa-static"]
-# Voice message and audio file playback (rodio). On Linux ARM, ALSA/cpal may be unavailable; disable with --no-default-features.
-voice-message = ["rodio", "ogg", "opus"]
+# Audio playback (MP3, WAV, etc.) via rodio. Voice notes (OGG Opus) also need voice-message.
+# voice-message = OGG/Opus only (Telegram voice notes); requires CMake. Rodio stays enabled for other formats.
+voice-message = ["ogg", "opus"]
 
 [package.metadata.system-deps]
 tdjson = "1.8.29"
@@ -73,8 +74,8 @@ unicode-width = "0.2.0"
 rodio = { version = "0.21", optional = true, default-features = true }
 # OGG Opus for Telegram voice notes (we implement the rodio Source in ogg_opus.rs).
 ogg = { version = "0.8", optional = true }
-# Pure Rust Opus (unsafe-libopus backend = no C compiler, CMake, or system libopus).
-opus = { git = "https://github.com/DCNick3/opus-rs.git", branch = "unsafe-libopus", default-features = false, features = ["unsafe-libopus-backend"], optional = true }
+# Opus codec for Telegram voice notes (via audiopus_sys; requires CMake when building with voice-message).
+opus = { version = "0.3", optional = true }
 
 [build-dependencies]
 dirs = "6.0.0"

@@ -130,6 +130,11 @@ impl MessageEntry {
         }
     }
 
+    /// True if this message is a Telegram voice note (OGG Opus). False for audio files (MP3, etc.) and other content.
+    pub fn is_voice_note(&self) -> bool {
+        matches!(self.content_type(), MessageContentType::VoiceNote { .. })
+    }
+
     /// If this message is voice or audio, returns (file_id, file_path, duration_secs).
     pub fn voice_audio_file_info(&self) -> Option<(i32, String, i32)> {
         match self.content_type() {

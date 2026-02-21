@@ -86,38 +86,78 @@ fn run_playback_loop(
                     current_message_id = None;
                 } else if let Ok(file) = std::fs::File::open(&path) {
                     let reader = BufReader::new(file);
-                    // Try OGG Opus first (Telegram voice notes); then rodio Decoder (MP3, etc.)
-                    let appended = match crate::ogg_opus::OpusSourceOgg::new(reader) {
-                        Ok(opus_source) => {
-                            playback_start = std::time::Instant::now();
-                            sink.append(opus_source);
-                            sink.play();
-                            tracing::info!(
-                                "Voice: playing OGG Opus, sink.empty()={}",
-                                sink.empty()
-                            );
-                            let _ = action_tx.send(Action::VoicePlaybackStarted(message_id));
-                            let _ = action_tx.send(Action::VoicePlaybackPosition(
-                                message_id,
-                                0,
-                                duration_secs,
-                            ));
-                            true
-                        }
-                        Err(e) => {
-                            tracing::debug!("Not OGG Opus ({:?}), trying rodio Decoder", e);
-                            let file = match std::fs::File::open(&path) {
-                                Ok(f) => f,
-                                Err(_) => {
-                                    let _ = action_tx.send(Action::StatusMessage(
-                                        "Voice: re-open failed".to_string(),
+                    // With voice-message: try OGG Opus first (Telegram voice notes), then rodio Decoder. Without: only rodio (MP3, WAV, etc.).
+                    let appended = {
+                        #[cfg(feature = "voice-message")]
+                        {
+                            match crate::ogg_opus::OpusSourceOgg::new(reader) {
+                                Ok(opus_source) => {
+                                    playback_start = std::time::Instant::now();
+                                    sink.append(opus_source);
+                                    sink.play();
+                                    tracing::info!(
+                                        "Voice: playing OGG Opus, sink.empty()={}",
+                                        sink.empty()
+                                    );
+                                    let _ =
+                                        action_tx.send(Action::VoicePlaybackStarted(message_id));
+                                    let _ = action_tx.send(Action::VoicePlaybackPosition(
+                                        message_id,
+                                        0,
+                                        duration_secs,
                                     ));
-                                    let _ = action_tx.send(Action::VoicePlaybackEnded(message_id));
-                                    current_message_id = None;
-                                    continue;
+                                    true
                                 }
-                            };
-                            let reader = BufReader::new(file);
+                                Err(e) => {
+                                    tracing::debug!("Not OGG Opus ({:?}), trying rodio Decoder", e);
+                                    let file = match std::fs::File::open(&path) {
+                                        Ok(f) => f,
+                                        Err(_) => {
+                                            let _ = action_tx.send(Action::StatusMessage(
+                                                "Voice: re-open failed".to_string(),
+                                            ));
+                                            let _ = action_tx
+                                                .send(Action::VoicePlaybackEnded(message_id));
+                                            current_message_id = None;
+                                            continue;
+                                        }
+                                    };
+                                    let reader = BufReader::new(file);
+                                    match rodio::Decoder::try_from(reader) {
+                                        Ok(source) => {
+                                            playback_start = std::time::Instant::now();
+                                            sink.append(source);
+                                            sink.play();
+                                            tracing::info!(
+                                                "Voice: playing (rodio decoder), sink.empty()={}",
+                                                sink.empty()
+                                            );
+                                            let _ = action_tx
+                                                .send(Action::VoicePlaybackStarted(message_id));
+                                            let _ = action_tx.send(Action::VoicePlaybackPosition(
+                                                message_id,
+                                                0,
+                                                duration_secs,
+                                            ));
+                                            true
+                                        }
+                                        Err(dec_err) => {
+                                            tracing::error!(
+                                                "Voice decode failed: {} {:?}",
+                                                path,
+                                                dec_err
+                                            );
+                                            let _ = action_tx.send(Action::StatusMessage(
+                                                "Voice: decode failed (not OGG Opus?)".to_string(),
+                                            ));
+                                            false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        #[cfg(not(feature = "voice-message"))]
+                        {
                             match rodio::Decoder::try_from(reader) {
                                 Ok(source) => {
                                     playback_start = std::time::Instant::now();
@@ -139,7 +179,7 @@ fn run_playback_loop(
                                 Err(dec_err) => {
                                     tracing::error!("Voice decode failed: {} {:?}", path, dec_err);
                                     let _ = action_tx.send(Action::StatusMessage(
-                                        "Voice: decode failed (not OGG Opus?)".to_string(),
+                                        "Voice: decode failed".to_string(),
                                     ));
                                     false
                                 }

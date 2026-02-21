@@ -18,7 +18,7 @@ pub mod tg;
 
 #[cfg(feature = "voice-message")]
 pub mod ogg_opus;
-#[cfg(feature = "voice-message")]
+#[cfg(feature = "rodio")]
 pub mod voice_playback;
 
 use crate::app_context::AppContext;

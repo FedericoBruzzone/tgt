@@ -62,14 +62,14 @@ pub async fn run_app(
 
     // Voice wake: playback thread signals so status bar position updates immediately.
     let (voice_wake_tx, mut voice_wake_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
-    #[cfg(feature = "voice-message")]
+    #[cfg(feature = "rodio")]
     {
         let atx = app_context.action_tx().clone();
         if let Some(tx) = crate::voice_playback::spawn_playback_thread(atx, voice_wake_tx) {
             app_context.set_voice_playback_tx(tx);
         }
     }
-    #[cfg(not(feature = "voice-message"))]
+    #[cfg(not(feature = "rodio"))]
     let _voice_wake_tx = voice_wake_tx;
 
     // Notify ChatList to populate visible_chats from initial load (it only rebuilds on LoadChats/ChatHistoryAppended/Resize).
@@ -336,7 +336,6 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::ReplyMessage(_, _)
             | Action::ShowCommandGuide
             | Action::HideCommandGuide
-            | Action::StatusMessage(_)
             | Action::UpdateArea(_)
             | Action::GetChatHistoryNewer
             | Action::ChatHistoryAppended
@@ -667,79 +666,99 @@ pub async fn handle_app_actions(
                     }
                 }
             }
-            #[cfg(feature = "voice-message")]
+            #[cfg(not(feature = "rodio"))]
+            Action::PlayVoiceMessage(_) => {
+                let _ = app_context.action_tx().send(Action::StatusMessage(
+                    "Audio playback is disabled. Build with default features.".into(),
+                ));
+            }
+            #[cfg(feature = "rodio")]
             Action::PlayVoiceMessage(message_id) => {
-                if let Some(message) = app_context.tg_context().get_message(*message_id) {
-                    if let Some((file_id, file_path, duration_secs)) =
-                        message.voice_audio_file_info()
-                    {
-                        let path = if file_path.is_empty()
-                            || !std::path::Path::new(&file_path).exists()
+                let message_opt = app_context.tg_context().get_message(*message_id);
+                let skip_voice_disabled = cfg!(not(feature = "voice-message"))
+                    && message_opt.as_ref().is_none_or(|m| m.is_voice_note());
+                if skip_voice_disabled {
+                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                        "Voice messages are disabled. Build with the voice-message feature (requires CMake).".into(),
+                    ));
+                    app_context.mark_dirty();
+                }
+                if !skip_voice_disabled {
+                    if let Some(message) = message_opt {
+                        if let Some((file_id, file_path, duration_secs)) =
+                            message.voice_audio_file_info()
                         {
-                            match tg_backend.download_file(file_id, 32).await {
-                                Ok(downloaded) => {
-                                    if let Some(entry) = app_context
-                                        .tg_context()
-                                        .open_chat_messages()
-                                        .get_message_mut(*message_id)
-                                    {
-                                        entry.set_audio_file_path(downloaded.clone());
+                            let path = if file_path.is_empty()
+                                || !std::path::Path::new(&file_path).exists()
+                            {
+                                match tg_backend.download_file(file_id, 32).await {
+                                    Ok(downloaded) => {
+                                        if let Some(entry) = app_context
+                                            .tg_context()
+                                            .open_chat_messages()
+                                            .get_message_mut(*message_id)
+                                        {
+                                            entry.set_audio_file_path(downloaded.clone());
+                                        }
+                                        downloaded
                                     }
-                                    downloaded
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "Failed to download voice/audio file: {:?}",
+                                            e
+                                        );
+                                        continue;
+                                    }
                                 }
-                                Err(e) => {
-                                    tracing::error!("Failed to download voice/audio file: {:?}", e);
-                                    continue;
-                                }
-                            }
-                        } else {
-                            file_path
-                        };
-                        let state = app_context.voice_playback_state();
-                        let is_playing_this =
-                            state.message_id == Some(*message_id) && state.is_playing;
-                        drop(state);
-                        if is_playing_this {
-                            app_context.voice_playback_send(
-                                crate::voice_playback::VoicePlaybackCommand::Stop,
-                            );
-                            let mut s = app_context.voice_playback_state();
-                            s.is_playing = false;
-                            s.message_id = None;
-                        } else {
-                            app_context.voice_playback_send(
-                                crate::voice_playback::VoicePlaybackCommand::Stop,
-                            );
-                            let sent = app_context.voice_playback_send(
-                                crate::voice_playback::VoicePlaybackCommand::Play {
-                                    path: path.clone(),
-                                    duration_secs: duration_secs.max(0) as u64,
-                                    message_id: *message_id,
-                                },
-                            );
-                            if !sent {
-                                let _ = app_context.action_tx().send(Action::StatusMessage(
-                                    "Voice: playback unavailable".to_string(),
-                                ));
                             } else {
+                                file_path
+                            };
+                            let state = app_context.voice_playback_state();
+                            let is_playing_this =
+                                state.message_id == Some(*message_id) && state.is_playing;
+                            drop(state);
+                            if is_playing_this {
+                                app_context.voice_playback_send(
+                                    crate::voice_playback::VoicePlaybackCommand::Stop,
+                                );
                                 let mut s = app_context.voice_playback_state();
-                                s.message_id = Some(*message_id);
-                                s.position_secs = 0;
-                                s.duration_secs = duration_secs.max(0) as u64;
                                 s.is_playing = false;
+                                s.message_id = None;
+                            } else {
+                                app_context.voice_playback_send(
+                                    crate::voice_playback::VoicePlaybackCommand::Stop,
+                                );
+                                let sent = app_context.voice_playback_send(
+                                    crate::voice_playback::VoicePlaybackCommand::Play {
+                                        path: path.clone(),
+                                        duration_secs: duration_secs.max(0) as u64,
+                                        message_id: *message_id,
+                                    },
+                                );
+                                if !sent {
+                                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                                        "Voice: playback unavailable".to_string(),
+                                    ));
+                                } else {
+                                    let mut s = app_context.voice_playback_state();
+                                    s.message_id = Some(*message_id);
+                                    s.position_secs = 0;
+                                    s.duration_secs = duration_secs.max(0) as u64;
+                                    s.is_playing = false;
+                                }
                             }
                         }
                     }
                 }
             }
-            #[cfg(feature = "voice-message")]
+            #[cfg(feature = "rodio")]
             Action::VoicePlaybackStarted(msg_id) => {
                 let mut state = app_context.voice_playback_state();
                 if state.message_id == Some(*msg_id) {
                     state.is_playing = true;
                 }
             }
-            #[cfg(feature = "voice-message")]
+            #[cfg(feature = "rodio")]
             Action::VoicePlaybackPosition(msg_id, pos, dur) => {
                 let mut state = app_context.voice_playback_state();
                 state.message_id = Some(*msg_id);
@@ -747,7 +766,7 @@ pub async fn handle_app_actions(
                 state.duration_secs = *dur;
                 state.is_playing = true;
             }
-            #[cfg(feature = "voice-message")]
+            #[cfg(feature = "rodio")]
             Action::VoicePlaybackEnded(msg_id) => {
                 let mut state = app_context.voice_playback_state();
                 if state.message_id == Some(*msg_id) {

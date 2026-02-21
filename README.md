@@ -72,12 +72,22 @@ Build features can be combined (e.g. `cargo build --release --features download-
 
 | Feature | Description |
 |--------|-------------|
-| `default` | Enables `download-tdlib` so you don't need to set `LOCAL_TDLIB_PATH`. |
+| `default` | Enables `download-tdlib` and `voice-message`. |
 | `download-tdlib` | Download and use TDLib automatically (recommended for most users). |
 | `local-tdlib` | Use TDLib from path in `LOCAL_TDLIB_PATH`. |
 | `pkg-config` | Find TDLib via pkg-config. |
+| `voice-message` | Play Telegram voice notes (OGG Opus) and other audio (e.g. MP3). **Requires CMake** to build the Opus dependency. Enabled by default; use `--no-default-features` and then add back only the features you need (e.g. `--features download-tdlib`) to disable voice. |
 | `chafa-dyn` | Enable [chafa](https://github.com/hpjansson/chafa)-based image rendering in the photo viewer (dynamic linking). Requires the chafa library installed on the system. Not supported on Windows ARM. |
 | `chafa-static` | Same as `chafa-dyn` but links chafa statically. Not supported on Windows ARM. |
+
+**Voice messages**  
+If you build with the default features (or with `voice-message` enabled), you must have **CMake** installed so the Opus library can be built. Other audio formats (e.g. MP3) use rodio only; only Telegram voice notes (Opus) need this. If you build with `--no-default-features` and do not enable `voice-message`, voice playback is disabled and the app will show a message when you try to play a voice note.
+
+**Installation methods for CMake (when using voice-message)**
+
+- **macOS** — Homebrew: `brew install cmake`
+- **Linux** — use your package manager, e.g. `sudo apt install cmake` (Debian/Ubuntu), `sudo dnf install cmake` (Fedora), `sudo pacman -S cmake` (Arch)
+- **Windows** — [CMake installer](https://cmake.org/download/) or e.g. `winget install Kitware.CMake`
 
 **Chafa (image rendering)**  
 The `chafa-dyn` and `chafa-static` features use the [chafa](https://github.com/hpjansson/chafa) library to display images in the terminal. You must have chafa installed to use these features.
