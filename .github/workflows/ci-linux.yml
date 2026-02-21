@@ -56,7 +56,9 @@ jobs:
           sudo add-apt-repository -y universe
           sudo apt-get update -qq
           
-          # Added libglib2.0-dev: chafa.pc requires glib-2.0.pc
+          # Added libglib2.0-dev: chafa.pc requires glib-2.0.pc for the chafa-dyn feature
+          # Chafa is an image library that is used to display images in the terminal without the need of an image protocol. It provides better image then rendering halblocks. 
+          # TGT is now built without chafa by default, but the workflows are configured to be built with chafa-dyn as well for later use, with the prebuilt releases. 
           sudo apt-get install -y \
             libc++-dev \
             libc++abi-dev \
@@ -149,7 +151,8 @@ jobs:
 
       - name: Run cargo test
         run: cargo test --no-default-features --verbose --features ${{ matrix.feature }} -- --nocapture --test-threads=1
-        timeout-minutes: 5
+        # Timeout is 10 minutes to avoid the job being hanged for the default 6 hours jobs timeout
+        timeout-minutes: 10
 
       - name: Run cargo clippy
         run: |

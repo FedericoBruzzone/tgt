@@ -102,10 +102,10 @@ pub struct AppContext {
     /// Result of background photo decode; consumed by PhotoViewer on PhotoDecoded(i64).
     pending_photo_decoded: Mutex<Option<(i64, Result<image::DynamicImage, String>)>>,
 
-    #[cfg(feature = "voice-message")]
+    #[cfg(feature = "rodio")]
     /// Current voice/audio playback state (message_id, position, duration). Updated by playback thread.
     voice_playback_state: Mutex<crate::voice_playback::VoicePlaybackState>,
-    #[cfg(feature = "voice-message")]
+    #[cfg(feature = "rodio")]
     /// Sender to the voice playback thread; None if audio output unavailable (e.g. Linux ARM).
     voice_playback_tx:
         Mutex<Option<std::sync::mpsc::Sender<crate::voice_playback::VoicePlaybackCommand>>>,
@@ -150,9 +150,9 @@ impl AppContext {
             cli_args: Mutex::new(cli_args),
             focused_component: AtomicU8::new(0), // 0 = None
             pending_photo_decoded: Mutex::new(None),
-            #[cfg(feature = "voice-message")]
+            #[cfg(feature = "rodio")]
             voice_playback_state: Mutex::new(crate::voice_playback::VoicePlaybackState::default()),
-            #[cfg(feature = "voice-message")]
+            #[cfg(feature = "rodio")]
             voice_playback_tx: Mutex::new(None),
         })
     }
@@ -301,7 +301,7 @@ impl AppContext {
         }
     }
 
-    #[cfg(feature = "voice-message")]
+    #[cfg(feature = "rodio")]
     /// Voice playback state (for status bar counter). Lock and read.
     pub fn voice_playback_state(
         &self,
@@ -309,7 +309,7 @@ impl AppContext {
         self.voice_playback_state.lock().unwrap()
     }
 
-    #[cfg(feature = "voice-message")]
+    #[cfg(feature = "rodio")]
     /// Set the command sender for the voice playback thread (called from run when thread is spawned).
     pub fn set_voice_playback_tx(
         &self,
@@ -318,7 +318,7 @@ impl AppContext {
         *self.voice_playback_tx.lock().unwrap() = Some(tx);
     }
 
-    #[cfg(feature = "voice-message")]
+    #[cfg(feature = "rodio")]
     /// Send a command to the voice playback thread. Returns false if channel disconnected (thread exited).
     pub fn voice_playback_send(&self, cmd: crate::voice_playback::VoicePlaybackCommand) -> bool {
         if let Some(ref tx) = *self.voice_playback_tx.lock().unwrap() {

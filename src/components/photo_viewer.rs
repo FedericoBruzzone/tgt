@@ -2,6 +2,7 @@ use crate::{
     action::Action,
     app_context::AppContext,
     components::component_traits::{Component, HandleFocus},
+    configs::custom::keymap_custom::ActionBinding,
     tg::message_entry::MessageContentType,
 };
 use ratatui::{
@@ -16,7 +17,6 @@ use std::{io, path::Path, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Loading state for the photo viewer
-#[allow(clippy::large_enum_variant)]
 enum PhotoState {
     /// No photo selected
     None,
@@ -24,7 +24,7 @@ enum PhotoState {
     Loading { message_id: i64 },
     /// Photo is loaded and ready to display (dimensions stored to avoid keeping full image)
     Loaded {
-        image_state: StatefulProtocol,
+        image_state: Box<StatefulProtocol>,
         width: u32,
         height: u32,
         /// Cached content area and image rect to avoid recalc every frame
@@ -140,7 +140,7 @@ impl PhotoViewer {
     /// Apply decoded image from background (called when receiving PhotoDecoded).
     fn apply_decoded_photo(
         &mut self,
-        message_id: i64,
+        _message_id: i64,
         result: Result<image::DynamicImage, String>,
     ) {
         match result {
@@ -148,7 +148,7 @@ impl PhotoViewer {
                 let (width, height) = (img.width(), img.height());
                 let image_state = self.picker.new_resize_protocol(img);
                 self.photo_state = PhotoState::Loaded {
-                    image_state,
+                    image_state: Box::new(image_state),
                     width,
                     height,
                     cached_rect: None,
@@ -158,7 +158,6 @@ impl PhotoViewer {
                 self.photo_state = PhotoState::Error { message: e };
             }
         }
-        let _ = message_id;
     }
 
     /// Update photo state when download completes: request async decode (no blocking).
@@ -203,17 +202,14 @@ impl Component for PhotoViewer {
             Action::PhotoDownloaded(file_path) => {
                 self.on_photo_downloaded(file_path);
             }
-            Action::PhotoDecoded(message_id) => {
+            Action::PhotoDecoded(payload) => {
+                let crate::action::PhotoDecodedPayload(message_id, result) = payload;
                 if let PhotoState::Loading {
                     message_id: loading_id,
                 } = self.photo_state
                 {
                     if message_id == loading_id {
-                        if let Some(result) =
-                            self.app_context.take_pending_photo_decoded(message_id)
-                        {
-                            self.apply_decoded_photo(message_id, result);
-                        }
+                        self.apply_decoded_photo(message_id, result);
                     }
                 }
             }
@@ -243,9 +239,10 @@ impl Component for PhotoViewer {
             return Ok(());
         }
 
-        // Calculate popup size (80% width, 80% height, centered)
-        let popup_width = (area.width as f32 * 0.8) as u16;
-        let popup_height = (area.height as f32 * 0.8) as u16;
+        // Calculate popup size from config (fraction of width/height, centered)
+        let size_ratio = self.app_context.app_config().photo_viewer_popup_size;
+        let popup_width = (area.width as f32 * size_ratio) as u16;
+        let popup_height = (area.height as f32 * size_ratio) as u16;
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -269,12 +266,34 @@ impl Component for PhotoViewer {
         let inner_area = block.inner(popup_area);
         frame.render_widget(block, popup_area);
 
+        // Build keymap bindings list once (for layout height and for display)
+        let bindings = {
+            let keymap_config = self.app_context.keymap_config();
+            let mut entries: Vec<(String, String)> = keymap_config
+                .photo_viewer
+                .iter()
+                .map(|(event, binding)| {
+                    let key_str = format!("{}", event);
+                    let desc = match binding {
+                        ActionBinding::Single { description, .. } => {
+                            description.as_ref().map(String::as_str).unwrap_or("")
+                        }
+                        ActionBinding::Multiple(_) => "Multiple keys...",
+                    };
+                    (key_str, desc.to_string())
+                })
+                .collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            entries
+        };
+        let instructions_height = bindings.len().clamp(1, 8) as u16;
+
         // Split inner area: main content area + instructions at bottom
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(3),    // Main content area
-                Constraint::Length(2), // Default keymap guide
+                Constraint::Min(3),                      // Main content area
+                Constraint::Length(instructions_height), // Keymap guide (all bindings from config)
             ])
             .split(inner_area);
 
@@ -353,7 +372,7 @@ impl Component for PhotoViewer {
                 };
 
                 let image_widget = StatefulImage::new().resize(Resize::Fit(None));
-                frame.render_stateful_widget(image_widget, image_rect, image_state);
+                frame.render_stateful_widget(image_widget, image_rect, image_state.as_mut());
             }
             PhotoState::Error { message } => {
                 let text = vec![
@@ -373,20 +392,19 @@ impl Component for PhotoViewer {
             }
         }
 
-        // Draw default keymap guide at the bottom (matches config/keymap.toml [photo_viewer])
+        // Draw keymap guide at the bottom (from config/keymap.toml [photo_viewer])
         let style_help = self.app_context.style_timestamp();
-        let instructions = vec![
-            Line::from(vec![
-                Span::styled("Esc", style_help),
-                Span::styled("Close", style_help),
-            ]),
-            Line::from(vec![
-                Span::styled("Up, k ", style_help),
-                Span::styled("Prev  ·  ", style_help),
-                Span::styled("Down, j ", style_help),
-                Span::styled("Next", style_help),
-            ]),
-        ];
+        let instructions: Vec<Line<'_>> = bindings
+            .into_iter()
+            .map(|(key_str, desc)| {
+                let text = if desc.is_empty() {
+                    key_str
+                } else {
+                    format!("{}  {}", key_str, desc)
+                };
+                Line::from(Span::styled(text, style_help))
+            })
+            .collect();
 
         let instructions_paragraph = Paragraph::new(instructions)
             .style(self.app_context.style_chat())

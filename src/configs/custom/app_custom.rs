@@ -28,6 +28,10 @@ pub struct AppConfig {
     /// Use emoji for message status icons (edited, reply, sent, seen). When false (default),
     /// use ASCII-style indicators: [mod], <--, [✓], [o o].
     pub use_emoji_icons: bool,
+    /// Max length of the longer side when displaying photos (pixels). 0 = no downscaling.
+    pub photo_max_dimension: u32,
+    /// Photo viewer popup size as a fraction of terminal width/height (0.0–1.0). e.g. 0.8 = 80%.
+    pub photo_viewer_popup_size: f32,
 }
 /// The application configuration implementation.
 impl AppConfig {
@@ -160,6 +164,12 @@ impl ConfigFile for AppConfig {
                 if let Some(use_emoji_icons) = other.use_emoji_icons {
                     self.use_emoji_icons = use_emoji_icons;
                 }
+                if let Some(photo_max_dimension) = other.photo_max_dimension {
+                    self.photo_max_dimension = photo_max_dimension;
+                }
+                if let Some(photo_viewer_popup_size) = other.photo_viewer_popup_size {
+                    self.photo_viewer_popup_size = photo_viewer_popup_size;
+                }
                 self.clone()
             }
         }
@@ -186,6 +196,11 @@ impl From<AppRaw> for AppConfig {
             take_api_id_from_telegram_config: raw.take_api_id_from_telegram_config.unwrap(),
             take_api_hash_from_telegram_config: raw.take_api_hash_from_telegram_config.unwrap(),
             use_emoji_icons: raw.use_emoji_icons.unwrap_or(false),
+            photo_max_dimension: raw.photo_max_dimension.unwrap_or(1920),
+            photo_viewer_popup_size: raw
+                .photo_viewer_popup_size
+                .map(|v| v.clamp(0.01, 1.0))
+                .unwrap_or(0.8),
         }
     }
 }
@@ -205,6 +220,8 @@ impl From<AppConfig> for AppRaw {
             take_api_id_from_telegram_config: Some(config.take_api_id_from_telegram_config),
             take_api_hash_from_telegram_config: Some(config.take_api_hash_from_telegram_config),
             use_emoji_icons: Some(config.use_emoji_icons),
+            photo_max_dimension: Some(config.photo_max_dimension),
+            photo_viewer_popup_size: Some(config.photo_viewer_popup_size),
         }
     }
 }
@@ -248,6 +265,8 @@ mod tests {
             take_api_id_from_telegram_config: Some(true),
             take_api_hash_from_telegram_config: Some(true),
             use_emoji_icons: None,
+            photo_max_dimension: None,
+            photo_viewer_popup_size: None,
         };
         let app_config = AppConfig::from(app_raw);
         assert!(app_config.mouse_support);
@@ -257,6 +276,8 @@ mod tests {
         assert!(app_config.show_title_bar);
         assert!(app_config.theme_enable);
         assert_eq!(app_config.theme_filename, "test");
+        assert_eq!(app_config.photo_max_dimension, 1920);
+        assert_eq!(app_config.photo_viewer_popup_size, 0.8);
     }
 
     #[test]
@@ -272,6 +293,8 @@ mod tests {
             take_api_id_from_telegram_config: Some(true),
             take_api_hash_from_telegram_config: Some(true),
             use_emoji_icons: None,
+            photo_max_dimension: None,
+            photo_viewer_popup_size: None,
         });
         let app_raw = AppRaw {
             mouse_support: Some(false),
@@ -284,6 +307,8 @@ mod tests {
             take_api_id_from_telegram_config: None,
             take_api_hash_from_telegram_config: None,
             use_emoji_icons: None,
+            photo_max_dimension: None,
+            photo_viewer_popup_size: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(!app_config.mouse_support);
@@ -314,6 +339,8 @@ mod tests {
             take_api_id_from_telegram_config: None,
             take_api_hash_from_telegram_config: None,
             use_emoji_icons: None,
+            photo_max_dimension: None,
+            photo_viewer_popup_size: None,
         };
         app_config = app_config.merge(Some(app_raw));
         assert!(app_config.mouse_support);
@@ -470,6 +497,8 @@ mod tests {
             take_api_id_from_telegram_config: false,
             take_api_hash_from_telegram_config: false,
             use_emoji_icons: false,
+            photo_max_dimension: 0,
+            photo_viewer_popup_size: 0.5,
         };
 
         let result = app_config.save();
@@ -486,6 +515,8 @@ mod tests {
         assert!(saved_content.contains("theme_filename"));
         assert!(saved_content.contains("take_api_id_from_telegram_config"));
         assert!(saved_content.contains("take_api_hash_from_telegram_config"));
+        assert!(saved_content.contains("photo_max_dimension"));
+        assert!(saved_content.contains("photo_viewer_popup_size"));
 
         // Clean up - restore original value
         match original_value {

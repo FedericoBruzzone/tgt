@@ -28,3 +28,9 @@ take_api_hash_from_telegram_config = true
 # `use_emoji_icons` uses emoji for message status (edited, reply, sent, seen). When false (default),
 # uses ASCII-style indicators: [mod] edited, <-- reply, [✓] seen, [o o] viewed, [ ] sent.
 use_emoji_icons = false
+# `photo_max_dimension` is the max length of the longer side when displaying photos (pixels).
+# 0 = no downscaling (full resolution). Positive value = downscale so the longer side is at most this (e.g. 1920).
+photo_max_dimension = 1920
+# `photo_viewer_popup_size` is the photo viewer popup size as a fraction of terminal width/height (0.0–1.0).
+# e.g. 0.8 = 80% of width and height, 0.5 = half. Clamped to 0.01–1.0.
+photo_viewer_popup_size = 0.8
