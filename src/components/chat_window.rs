@@ -253,6 +253,19 @@ impl ChatWindow {
         }
     }
 
+    /// Toggle voice/audio playback for the selected message (Alt+P: start from beginning or stop).
+    fn play_voice_selected(&self) {
+        if let Some(selected) = self.message_list_state.selected() {
+            let entry = &self.message_list[selected];
+            if entry.voice_audio_file_info().is_some() {
+                let message_id = entry.id();
+                if let Some(tx) = self.action_tx.as_ref() {
+                    let _ = tx.send(Action::PlayVoiceMessage(message_id));
+                }
+            }
+        }
+    }
+
     /// Navigate to previous message and view its photo (up = towards newer messages).
     fn view_photo_previous(&mut self) {
         // Reuse the existing navigation logic with lazy loading
@@ -359,6 +372,9 @@ impl Component for ChatWindow {
             Action::ShowPhotoViewer => {
                 // User pressed keybinding to view photo from selected message
                 self.view_photo_selected();
+            }
+            Action::ToggleVoicePlayback => {
+                self.play_voice_selected();
             }
             Action::PhotoViewerPrevious => {
                 // Navigate to previous message and view its photo

@@ -16,6 +16,11 @@ pub mod configs;
 pub mod run;
 pub mod tg;
 
+#[cfg(feature = "voice-message")]
+pub mod ogg_opus;
+#[cfg(feature = "rodio")]
+pub mod voice_playback;
+
 use crate::app_context::AppContext;
 use crate::app_error::AppError;
 use crate::configs::{

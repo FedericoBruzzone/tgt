@@ -32,7 +32,9 @@ pub async fn run_app(
     // Clear the terminal and move the cursor to the top left corner
     io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
 
-    tg_backend.start();
+    // Wake channel for TG: when a new message (or other UI event) is pushed, we wake the main loop immediately.
+    let (tg_wake_tx, mut tg_wake_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+    tg_backend.start(tg_wake_tx);
     tg_backend.set_logging().await;
     tg_backend.handle_authorization_state().await;
     tg_backend.use_quick_ack().await;
@@ -57,15 +59,56 @@ pub async fn run_app(
     tui_backend.enter()?;
     tui.register_action_handler(app_context.action_tx().clone())?;
     app_context.mark_dirty();
+
+    // Voice wake: playback thread signals so status bar position updates immediately.
+    let (voice_wake_tx, mut voice_wake_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+    #[cfg(feature = "rodio")]
+    {
+        let atx = app_context.action_tx().clone();
+        if let Some(tx) = crate::voice_playback::spawn_playback_thread(atx, voice_wake_tx) {
+            app_context.set_voice_playback_tx(tx);
+        }
+    }
+    #[cfg(not(feature = "rodio"))]
+    let _voice_wake_tx = voice_wake_tx;
+
     // Notify ChatList to populate visible_chats from initial load (it only rebuilds on LoadChats/ChatHistoryAppended/Resize).
     let _ = app_context
         .action_tx()
         .send(Action::LoadChats(ChatList::Main.into(), 30));
 
-    // Main loop
+    // Refresh task: ~60 FPS. We no longer block on TUI/TG in the select, so this won't spin; wake + drain keeps UI responsive.
+    const REFRESH_MS: u64 = 16; // 1000/60 ≈ 60 FPS
+    let (wake_tx, mut wake_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+    let refresh_tx = app_context.action_tx().clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(REFRESH_MS));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            if refresh_tx.send(Action::Refresh).is_err() {
+                break;
+            }
+            let _ = wake_tx.send(());
+        }
+    });
+
+    // Main loop: one blocking wait (sleep | refresh wake | TG wake), then drain TUI and TG; no select on backends so no spin.
     while tg_backend.have_authorization {
-        handle_tui_backend_events(Arc::clone(&app_context), tui, tui_backend).await?;
-        handle_tg_backend_events(Arc::clone(&app_context), tg_backend).await?;
+        let wait_ms = REFRESH_MS;
+
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(wait_ms)) => {}
+            _ = wake_rx.recv() => {}
+            _ = tg_wake_rx.recv() => {}
+            _ = voice_wake_rx.recv() => {}
+        }
+        while let Some(ev) = tui_backend.try_next() {
+            handle_tui_backend_one_event(Arc::clone(&app_context), tui, tui_backend, ev).await?;
+        }
+        while let Some(ev) = tg_backend.next().await {
+            handle_tg_backend_one_event(Arc::clone(&app_context), tg_backend, ev).await?;
+        }
         handle_app_actions(Arc::clone(&app_context), tui, tui_backend, tg_backend).await?;
 
         if app_context.quit_acquire() {
@@ -77,108 +120,82 @@ pub async fn run_app(
 
     Ok(())
 }
-/// Handle incoming events from the Telegram backend and produce actions if
-/// necessary.
-///
-/// # Arguments
-/// * `app_context` - An Arc wrapped AppContext struct.
-/// * `tg_backend` - A mutable reference to the TgBackend struct.
-///
-/// # Returns
-/// * `Result<(), AppError>` - An Ok result or an error.
-async fn handle_tg_backend_events(
+/// Handle a single Telegram backend event.
+async fn handle_tg_backend_one_event(
     app_context: Arc<AppContext>,
-    tg_backend: &mut TgBackend,
+    _tg_backend: &mut TgBackend,
+    event: Event,
 ) -> Result<(), AppError<Action>> {
-    if let Some(event) = tg_backend.next().await {
-        match event {
-            Event::LoadChats(chat_list, limit) => {
-                app_context
-                    .action_tx()
-                    .send(Action::LoadChats(chat_list, limit))?;
-            }
-            Event::SendMessage(message, reply_to) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessage(message, reply_to))?;
-            }
-            Event::SendMessageEdited(message_id, message) => {
-                app_context
-                    .action_tx()
-                    .send(Action::SendMessageEdited(message_id, message))?;
-            }
-            Event::GetChatHistory => {
-                app_context.action_tx().send(Action::GetChatHistory)?;
-            }
-            Event::GetChatHistoryNewer => {
-                app_context.action_tx().send(Action::GetChatHistoryNewer)?;
-            }
-            Event::DeleteMessages(message_ids, revoke) => {
-                app_context
-                    .action_tx()
-                    .send(Action::DeleteMessages(message_ids, revoke))?;
-            }
-            Event::EditMessage(message_id, message) => {
-                // It is important to focus the prompt before editing the message.
-                // Because the actions are sent to the focused component.
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-
-                app_context
-                    .action_tx()
-                    .send(Action::EditMessage(message_id, message))?;
-            }
-            Event::ReplyMessage(message_id, message) => {
-                // Reply flow is now handled by ChatWindow sending FocusComponent(Prompt) + ReplyMessage
-                // directly to action_tx when user presses R. This branch is kept for any other caller.
-                app_context
-                    .action_tx()
-                    .send(Action::FocusComponent(Prompt))?;
-                app_context
-                    .action_tx()
-                    .send(Action::ReplyMessage(message_id, message))?;
-            }
-            Event::ViewAllMessages => {
-                app_context.action_tx().send(Action::ViewAllMessages)?;
-            }
-            Event::ChatMessageAdded(message_id) => {
-                app_context
-                    .tg_context()
-                    .set_jump_target_message_id_i64(message_id);
-                app_context.action_tx().send(Action::ChatHistoryAppended)?;
-            }
-            _ => {}
+    match event {
+        Event::LoadChats(chat_list, limit) => {
+            app_context
+                .action_tx()
+                .send(Action::LoadChats(chat_list, limit))?;
         }
+        Event::SendMessage(message, reply_to) => {
+            app_context
+                .action_tx()
+                .send(Action::SendMessage(message, reply_to))?;
+        }
+        Event::SendMessageEdited(message_id, message) => {
+            app_context
+                .action_tx()
+                .send(Action::SendMessageEdited(message_id, message))?;
+        }
+        Event::GetChatHistory => {
+            app_context.action_tx().send(Action::GetChatHistory)?;
+        }
+        Event::GetChatHistoryNewer => {
+            app_context.action_tx().send(Action::GetChatHistoryNewer)?;
+        }
+        Event::DeleteMessages(message_ids, revoke) => {
+            app_context
+                .action_tx()
+                .send(Action::DeleteMessages(message_ids, revoke))?;
+        }
+        Event::EditMessage(message_id, message) => {
+            // It is important to focus the prompt before editing the message.
+            // Because the actions are sent to the focused component.
+            app_context
+                .action_tx()
+                .send(Action::FocusComponent(Prompt))?;
+
+            app_context
+                .action_tx()
+                .send(Action::EditMessage(message_id, message))?;
+        }
+        Event::ReplyMessage(message_id, message) => {
+            // Reply flow is now handled by ChatWindow sending FocusComponent(Prompt) + ReplyMessage
+            // directly to action_tx when user presses R. This branch is kept for any other caller.
+            app_context
+                .action_tx()
+                .send(Action::FocusComponent(Prompt))?;
+            app_context
+                .action_tx()
+                .send(Action::ReplyMessage(message_id, message))?;
+        }
+        Event::ViewAllMessages => {
+            app_context.action_tx().send(Action::ViewAllMessages)?;
+        }
+        Event::ChatMessageAdded(message_id) => {
+            app_context
+                .tg_context()
+                .set_jump_target_message_id_i64(message_id);
+            app_context.action_tx().send(Action::ChatHistoryAppended)?;
+        }
+        _ => {}
     }
     Ok(())
 }
 
 #[allow(clippy::await_holding_lock)]
-/// Handle incoming events from the TUI backend and produce actions if
-/// necessary.
-///
-/// # Arguments
-/// * `app_context` - An Arc wrapped AppContext struct.
-/// * `tui` - A mutable reference to the Tui struct.
-/// * `tui_backend` - A mutable reference to the TuiBackend struct.
-///
-/// # Returns
-/// * `Result<(), AppError>` - An Ok result or an error.
-async fn handle_tui_backend_events(
+/// Handle a single TUI backend event.
+async fn handle_tui_backend_one_event(
     app_context: Arc<AppContext>,
     tui: &mut Tui,
     tui_backend: &mut TuiBackend,
+    event: Event,
 ) -> Result<(), AppError<Action>> {
-    // Short timeout so we can process ChatHistoryAppended (and other actions) when
-    // the background history task completes, without requiring a key press.
-    let poll = tokio::time::timeout(Duration::from_millis(150), tui_backend.next()).await;
-    let Some(event) = (match poll {
-        Ok(Some(ev)) => Some(ev),
-        Ok(None) | Err(_) => None,
-    }) else {
-        return Ok(());
-    };
     match event {
         Event::Render => app_context.mark_dirty(),
         Event::Resize(width, height) => {
@@ -192,10 +209,6 @@ async fn handle_tui_backend_events(
             let keymap_config = app_context.keymap_config();
             let key_event = Event::Key(key, modifiers);
 
-            // Check if key is explicitly bound in the component-specific keymap (not merged).
-            // If not explicitly bound in component keymap, skip keymap lookup to allow typing.
-            // This allows users to type keys that are only bound in core_window by not
-            // binding them in the component-specific keymap.
             let component_keymap = match focused {
                 Some(ComponentName::ChatList) => &keymap_config.chat_list,
                 Some(ComponentName::Chat) => &keymap_config.chat,
@@ -207,13 +220,10 @@ async fn handle_tui_backend_events(
                 _ => &keymap_config.core_window,
             };
 
-            // Only check merged keymap if key is explicitly bound in component-specific keymap
-            // or if no component is focused (use core_window)
             let should_check_keymap =
                 focused.is_none() || component_keymap.contains_key(&key_event);
 
             if should_check_keymap {
-                // Check if key is bound in the merged keymap for the focused component
                 let keymap = keymap_config.get_map_of(focused);
                 if let Some(action_binding) = keymap.get(&key_event) {
                     match action_binding {
@@ -233,8 +243,6 @@ async fn handle_tui_backend_events(
                     }
                 }
             }
-            // Key not bound in keymap (or not explicitly bound in component keymap): pass through to components
-            // This allows components to handle keys directly (e.g. typing characters in prompt)
             app_context
                 .action_tx()
                 .send(Action::from_key_event(key, modifiers))?;
@@ -245,13 +253,13 @@ async fn handle_tui_backend_events(
         _ => {}
     }
 
-    // Note that sending the event to the tui it will send the event
-    // directly to the `CoreWindow` component.
     if let Some(action) = tui.handle_events(Some(event.clone()))? {
         app_context.action_tx().send(action)?
     }
     Ok(())
 }
+
+#[allow(clippy::await_holding_lock)]
 /// Consume events until a single action is produced.
 /// This function is used to consume events until a single action is produced
 /// from a map of events to actions.
@@ -312,6 +320,11 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::ViewPhotoMessage(_)
             | Action::PhotoDownloaded(_)
             | Action::PhotoDecoded(_)
+            | Action::ToggleVoicePlayback
+            | Action::VoicePlaybackStarted(_)
+            | Action::VoicePlaybackPosition(_, _, _)
+            | Action::VoicePlaybackEnded(_)
+            | Action::Refresh
             | Action::ToggleChatList
             | Action::IncreaseChatListSize
             | Action::DecreaseChatListSize
@@ -323,7 +336,6 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::ReplyMessage(_, _)
             | Action::ShowCommandGuide
             | Action::HideCommandGuide
-            | Action::StatusMessage(_)
             | Action::UpdateArea(_)
             | Action::GetChatHistoryNewer
             | Action::ChatHistoryAppended
@@ -351,6 +363,9 @@ pub async fn handle_app_actions(
         match &action {
             Action::Render => {
                 // Actual draw happens at end of loop when should_render()
+            }
+            Action::Refresh => {
+                app_context.mark_dirty();
             }
             Action::Resize(width, height) => {
                 tui_backend
@@ -649,6 +664,113 @@ pub async fn handle_app_actions(
                             }
                         }
                     }
+                }
+            }
+            #[cfg(not(feature = "rodio"))]
+            Action::PlayVoiceMessage(_) => {
+                let _ = app_context.action_tx().send(Action::StatusMessage(
+                    "Audio playback is disabled. Build with default features.".into(),
+                ));
+            }
+            #[cfg(feature = "rodio")]
+            Action::PlayVoiceMessage(message_id) => {
+                let message_opt = app_context.tg_context().get_message(*message_id);
+                let skip_voice_disabled = cfg!(not(feature = "voice-message"))
+                    && message_opt.as_ref().is_none_or(|m| m.is_voice_note());
+                if skip_voice_disabled {
+                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                        "Voice messages are disabled. Build with the voice-message feature (requires CMake).".into(),
+                    ));
+                    app_context.mark_dirty();
+                }
+                if !skip_voice_disabled {
+                    if let Some(message) = message_opt {
+                        if let Some((file_id, file_path, duration_secs)) =
+                            message.voice_audio_file_info()
+                        {
+                            let path = if file_path.is_empty()
+                                || !std::path::Path::new(&file_path).exists()
+                            {
+                                match tg_backend.download_file(file_id, 32).await {
+                                    Ok(downloaded) => {
+                                        if let Some(entry) = app_context
+                                            .tg_context()
+                                            .open_chat_messages()
+                                            .get_message_mut(*message_id)
+                                        {
+                                            entry.set_audio_file_path(downloaded.clone());
+                                        }
+                                        downloaded
+                                    }
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "Failed to download voice/audio file: {:?}",
+                                            e
+                                        );
+                                        continue;
+                                    }
+                                }
+                            } else {
+                                file_path
+                            };
+                            let state = app_context.voice_playback_state();
+                            let is_playing_this =
+                                state.message_id == Some(*message_id) && state.is_playing;
+                            drop(state);
+                            if is_playing_this {
+                                app_context.voice_playback_send(
+                                    crate::voice_playback::VoicePlaybackCommand::Stop,
+                                );
+                                let mut s = app_context.voice_playback_state();
+                                s.is_playing = false;
+                                s.message_id = None;
+                            } else {
+                                app_context.voice_playback_send(
+                                    crate::voice_playback::VoicePlaybackCommand::Stop,
+                                );
+                                let sent = app_context.voice_playback_send(
+                                    crate::voice_playback::VoicePlaybackCommand::Play {
+                                        path: path.clone(),
+                                        duration_secs: duration_secs.max(0) as u64,
+                                        message_id: *message_id,
+                                    },
+                                );
+                                if !sent {
+                                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                                        "Voice: playback unavailable".to_string(),
+                                    ));
+                                } else {
+                                    let mut s = app_context.voice_playback_state();
+                                    s.message_id = Some(*message_id);
+                                    s.position_secs = 0;
+                                    s.duration_secs = duration_secs.max(0) as u64;
+                                    s.is_playing = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            #[cfg(feature = "rodio")]
+            Action::VoicePlaybackStarted(msg_id) => {
+                let mut state = app_context.voice_playback_state();
+                if state.message_id == Some(*msg_id) {
+                    state.is_playing = true;
+                }
+            }
+            #[cfg(feature = "rodio")]
+            Action::VoicePlaybackPosition(msg_id, pos, dur) => {
+                let mut state = app_context.voice_playback_state();
+                state.message_id = Some(*msg_id);
+                state.position_secs = *pos;
+                state.duration_secs = *dur;
+                state.is_playing = true;
+            }
+            #[cfg(feature = "rodio")]
+            Action::VoicePlaybackEnded(msg_id) => {
+                let mut state = app_context.voice_playback_state();
+                if state.message_id == Some(*msg_id) {
+                    state.is_playing = false;
                 }
             }
             Action::LoadPhotoFromPath(path, message_id) => {

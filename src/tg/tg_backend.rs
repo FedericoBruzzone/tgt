@@ -661,7 +661,8 @@ impl TgBackend {
         self.event_rx.try_recv().ok()
     }
 
-    pub fn start(&mut self) {
+    /// Start the TDLib update loop. `wake_tx` is signalled when a UI event is sent so the main loop can wake immediately (e.g. new message).
+    pub fn start(&mut self, wake_tx: UnboundedSender<()>) {
         let auth_tx = self.auth_tx.clone();
         let can_quit = self.can_quit.clone();
         let tg_context = self.app_context.tg_context();
@@ -738,6 +739,7 @@ impl TgBackend {
                                     >= rate_limit_ms
                                 {
                                     let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    let _ = wake_tx.send(());
                                     last_chat_list_update = now;
                                     needs_chat_list_update = false;
                                 } else {
@@ -754,6 +756,7 @@ impl TgBackend {
                                             >= rate_limit_ms
                                         {
                                             let _ = action_tx.send(Action::ChatHistoryAppended);
+                                            let _ = wake_tx.send(());
                                             last_chat_list_update = now;
                                             needs_chat_list_update = false;
                                         } else {
@@ -792,6 +795,7 @@ impl TgBackend {
                                             >= rate_limit_ms
                                         {
                                             let _ = action_tx.send(Action::ChatHistoryAppended);
+                                            let _ = wake_tx.send(());
                                             last_chat_list_update = now;
                                             needs_chat_list_update = false;
                                         } else {
@@ -839,6 +843,7 @@ impl TgBackend {
                                                 >= rate_limit_ms
                                             {
                                                 let _ = action_tx.send(Action::ChatHistoryAppended);
+                                                let _ = wake_tx.send(());
                                                 last_chat_list_update = now;
                                                 needs_chat_list_update = false;
                                             } else {
@@ -861,6 +866,7 @@ impl TgBackend {
                                             >= rate_limit_ms
                                         {
                                             let _ = action_tx.send(Action::ChatHistoryAppended);
+                                            let _ = wake_tx.send(());
                                             last_chat_list_update = now;
                                             needs_chat_list_update = false;
                                         } else {
@@ -881,6 +887,7 @@ impl TgBackend {
                                             >= rate_limit_ms
                                         {
                                             let _ = action_tx.send(Action::ChatHistoryAppended);
+                                            let _ = wake_tx.send(());
                                             last_chat_list_update = now;
                                             needs_chat_list_update = false;
                                         } else {
@@ -1025,6 +1032,7 @@ impl TgBackend {
                                             >= rate_limit_ms
                                         {
                                             let _ = action_tx.send(Action::ChatHistoryAppended);
+                                            let _ = wake_tx.send(());
                                             last_chat_list_update = now;
                                             needs_chat_list_update = false;
                                         } else {
@@ -1090,6 +1098,9 @@ impl TgBackend {
                                         let _ = tx.send(Event::ChatMessageAdded(message.id));
                                         // Auto-mark new messages as read when chat is open
                                         let _ = tx.send(Event::ViewAllMessages);
+                                        let _ = wake_tx.send(());
+                                        // Yield so the main loop can run and process the events before we block in receive() again.
+                                        tokio::task::yield_now().await;
                                     }
                                 }
                             }
@@ -1121,6 +1132,7 @@ impl TgBackend {
                                         "TDLib DeleteMessages from_cache=true: ignoring (cache eviction, not server delete); re-fetching history"
                                     );
                                         let _ = action_tx.send(Action::GetChatHistory);
+                                        let _ = wake_tx.send(());
                                         continue;
                                     }
                                     let ids = &update_delete_messages.message_ids;
@@ -1152,6 +1164,7 @@ impl TgBackend {
                                         >= rate_limit_ms
                                     {
                                         let _ = action_tx.send(Action::ChatHistoryAppended);
+                                        let _ = wake_tx.send(());
                                         last_chat_list_update = now;
                                         needs_chat_list_update = false;
                                     } else {
@@ -1176,6 +1189,7 @@ impl TgBackend {
                                 >= rate_limit_ms
                             {
                                 let _ = action_tx.send(Action::ChatHistoryAppended);
+                                let _ = wake_tx.send(());
                                 last_chat_list_update = now;
                                 needs_chat_list_update = false;
                             }
@@ -1192,6 +1206,7 @@ impl TgBackend {
                                 >= rate_limit_ms
                             {
                                 let _ = action_tx.send(Action::ChatHistoryAppended);
+                                let _ = wake_tx.send(());
                                 last_chat_list_update = now;
                                 needs_chat_list_update = false;
                             }
