@@ -66,7 +66,7 @@ image = "0.25.9"
 signal-hook = "0.4.3"
 clap = { version = "4.5.60", features = ["derive"] }
 nucleo-matcher = "0.3.1"
-unicode-width = "0.2.0"
+unicode-width = "0.2.2"
 
 [build-dependencies]
 dirs = "6.0.0"
