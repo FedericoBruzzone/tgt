@@ -41,7 +41,7 @@ chafa-dyn = ["ratatui-image/chafa-dyn"]
 chafa-static = ["ratatui-image/chafa-static"]
 # Audio playback (MP3, WAV, etc.) via rodio. Voice notes (OGG Opus) also need voice-message.
 # voice-message = OGG/Opus only (Telegram voice notes); requires CMake. Rodio stays enabled for other formats.
-voice-message = ["ogg", "opus"]
+voice-message = ["ogg", "audiopus"]
 
 [package.metadata.system-deps]
 tdjson = "1.8.29"
@@ -75,7 +75,7 @@ rodio = { version = "0.21", optional = true, default-features = true }
 # OGG Opus for Telegram voice notes (we implement the rodio Source in ogg_opus.rs).
 ogg = { version = "0.8", optional = true }
 # Opus codec for Telegram voice notes (via audiopus_sys; requires CMake when building with voice-message).
-opus = { version = "0.3", optional = true }
+audiopus = { version = "0.2", optional = true }
 
 [build-dependencies]
 dirs = "6.0.0"

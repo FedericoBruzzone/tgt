@@ -234,12 +234,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "audiopus_sys"
-version = "0.2.2"
+name = "audiopus"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62314a1546a2064e033665d658e88c620a62904be945f8147e6b16c3db9f8651"
+checksum = "3743519567e9135cf6f9f1a509851cb0c8e4cb9d66feb286668afb1923bec458"
 dependencies = [
- "cmake",
+ "audiopus_sys",
+]
+
+[[package]]
+name = "audiopus_sys"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "927791de46f70facea982dbfaf19719a41ce6064443403be631a85de6a58fff9"
+dependencies = [
  "log",
  "pkg-config",
 ]
@@ -2716,15 +2724,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
-name = "opus"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d3809943dff6fbad5f0484449ea26bdb9cb7d8efdf26ed50d3c7f227f69eb5c"
-dependencies = [
- "audiopus_sys",
-]
-
-[[package]]
 name = "ordered-float"
 version = "4.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4453,6 +4452,7 @@ name = "tgt"
 version = "1.0.0"
 dependencies = [
  "arboard",
+ "audiopus",
  "chrono",
  "clap",
  "config",
@@ -4463,7 +4463,6 @@ dependencies = [
  "lazy_static",
  "nucleo-matcher",
  "ogg",
- "opus",
  "ratatui",
  "ratatui-image",
  "reqwest 0.13.2",

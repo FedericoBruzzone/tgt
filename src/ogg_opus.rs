@@ -1,7 +1,7 @@
 //! OGG Opus decoding for Telegram voice notes.
-//! Uses `ogg` (container) and `opus` (libopus via audiopus_sys); implements rodio's `Source`.
+//! Uses `ogg` (container) and `audiopus` (codec); implements rodio's `Source`.
 
-use opus::{Channels, Decoder};
+use audiopus::{coder::Decoder, Channels};
 use std::io::{Read, Seek};
 use std::time::Duration;
 
@@ -56,9 +56,8 @@ where
         let channel_count = id_header[9];
         let _comment_header = packet_reader.read_packet_expected()?.data;
 
-        const SAMPLE_RATE: u32 = 48_000;
         let decoder = Decoder::new(
-            SAMPLE_RATE,
+            audiopus::SampleRate::Hz48000,
             if channel_count == 1 {
                 Channels::Mono
             } else {
@@ -110,7 +109,7 @@ where
         let num_samples = (sample_rate as f32 / (1000.0 / frame_size_ms)) as usize * channels;
         let mut out = vec![0.0f32; num_samples];
         self.decoder
-            .decode_float(&packet.data, &mut out, false)
+            .decode_float(Some(&packet.data), &mut out, false)
             .ok()?;
         Some(out)
     }
