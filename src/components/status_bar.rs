@@ -11,6 +11,7 @@ use {
         widgets::{Block, Borders, Paragraph, Wrap},
     },
     std::sync::Arc,
+    std::time::Instant,
     tokio::sync::mpsc::UnboundedSender,
 };
 
@@ -29,9 +30,14 @@ pub struct StatusBar {
     terminal_area: Rect,
     /// The last key pressed.
     last_key: Event,
-    /// Optional short status message (e.g. "Message yanked"); cleared on next key press.
+    /// Optional short status message; cleared after STATUS_MESSAGE_DURATION or on next key press.
     status_message: Option<String>,
+    /// When the status message was set (for 5s auto-clear).
+    status_message_set_at: Option<Instant>,
 }
+
+/// How long a status message is shown before reverting to "Open chat" on line 2.
+const STATUS_MESSAGE_DURATION_SECS: u64 = 5;
 /// Implementation of `StatusBar` struct.
 impl StatusBar {
     /// Create a new instance of the `StatusBar` struct.
@@ -48,6 +54,7 @@ impl StatusBar {
         let last_key = Event::Unknown;
         let focused = false;
         let status_message = None;
+        let status_message_set_at = None;
 
         StatusBar {
             app_context,
@@ -57,6 +64,7 @@ impl StatusBar {
             last_key,
             focused,
             status_message,
+            status_message_set_at,
         }
     }
     /// Set the name of the `StatusBar`.
@@ -100,9 +108,11 @@ impl Component for StatusBar {
             Action::Key(key, modifiers) => {
                 self.last_key = Event::Key(key, modifiers.into());
                 self.status_message = None;
+                self.status_message_set_at = None;
             }
             Action::StatusMessage(msg) => {
                 self.status_message = Some(msg);
+                self.status_message_set_at = Some(Instant::now());
             }
             _ => {}
         }
@@ -140,15 +150,6 @@ impl Component for StatusBar {
             ),
             Span::raw("     "),
             Span::styled(
-                "Open chat: ",
-                self.app_context.style_status_bar_open_chat_text(),
-            ),
-            Span::styled(
-                selected_chat,
-                self.app_context.style_status_bar_open_chat_name(),
-            ),
-            Span::raw("     "),
-            Span::styled(
                 "Key pressed: ",
                 self.app_context.style_status_bar_press_key_text(),
             ),
@@ -158,13 +159,6 @@ impl Component for StatusBar {
             ),
             Span::raw("     "),
         ];
-        if let Some(ref msg) = self.status_message {
-            spans.push(Span::styled(
-                msg.as_str(),
-                self.app_context.style_status_bar_message_quit_key(),
-            ));
-            spans.push(Span::raw("     "));
-        }
         spans.extend([
             Span::styled("Size: ", self.app_context.style_status_bar_size_info_text()),
             Span::styled(
@@ -177,7 +171,58 @@ impl Component for StatusBar {
                 self.app_context.style_status_bar_size_info_numbers(),
             ),
         ]);
-        let text = vec![Line::from(spans)];
+        // Expire status message after 5 seconds so line 2 reverts to "Open chat".
+        if let Some(set_at) = self.status_message_set_at {
+            if set_at.elapsed() >= std::time::Duration::from_secs(STATUS_MESSAGE_DURATION_SECS) {
+                self.status_message = None;
+                self.status_message_set_at = None;
+            }
+        }
+        // Line 1: key hints, key pressed, size. Line 2: voice playback (while playing) else status message (for 5s) else "Open chat" (default).
+        let line1 = Line::from(spans);
+        let line2_spans: Vec<Span<'_>> = {
+            #[cfg(feature = "rodio")]
+            let show_voice = {
+                let state = self.app_context.voice_playback_state();
+                state.is_playing && state.message_id.is_some()
+            };
+            #[cfg(not(feature = "rodio"))]
+            let show_voice = false;
+            if show_voice {
+                #[cfg(feature = "rodio")]
+                {
+                    let state = self.app_context.voice_playback_state();
+                    let m = state.position_secs / 60;
+                    let s = state.position_secs % 60;
+                    let dm = state.duration_secs / 60;
+                    let ds = state.duration_secs % 60;
+                    vec![Span::styled(
+                        format!("V: {}:{:02}/{}:{:02}", m, s, dm, ds),
+                        self.app_context.style_status_bar_size_info_numbers(),
+                    )]
+                }
+                #[cfg(not(feature = "rodio"))]
+                vec![]
+            } else if let Some(ref msg) = self.status_message {
+                vec![Span::styled(
+                    msg.as_str(),
+                    self.app_context.style_status_bar_message_quit_key(),
+                )]
+            } else {
+                vec![
+                    Span::styled(
+                        "Open chat: ",
+                        self.app_context.style_status_bar_open_chat_text(),
+                    ),
+                    Span::styled(
+                        selected_chat,
+                        self.app_context.style_status_bar_open_chat_name(),
+                    ),
+                ]
+            }
+        };
+        let mut text = vec![line1];
+        text.push(Line::from(line2_spans));
 
         let paragraph = Paragraph::new(text)
             .block(Block::new().title(self.name.as_str()).borders(Borders::ALL))

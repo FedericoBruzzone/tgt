@@ -211,6 +211,10 @@ impl TuiBackend {
     pub async fn next(&mut self) -> Option<Event> {
         self.event_rx.recv().await
     }
+    /// Non-blocking receive: returns an event if one is queued, otherwise `None`.
+    pub fn try_next(&mut self) -> Option<Event> {
+        self.event_rx.try_recv().ok()
+    }
     /// Start processing events asynchronously.
     /// This will spawn a new task that will process events.
     /// The task will listen for events from the terminal and send them to the

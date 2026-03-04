@@ -148,7 +148,7 @@ impl Tui {
                 Constraint::Min(SMALL_AREA_HEIGHT),
                 Constraint::Length(if self.app_context.app_config().show_status_bar {
                     if area.height > SMALL_AREA_HEIGHT + 5 {
-                        3
+                        4
                     } else {
                         0
                     }

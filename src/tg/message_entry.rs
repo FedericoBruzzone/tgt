@@ -37,7 +37,22 @@ impl DateTimeEntry {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MessageContentType {
     Text,
-    Photo { file_id: i32, file_path: String },
+    Photo {
+        file_id: i32,
+        file_path: String,
+    },
+    /// Voice note or voice message (file_id for download, file_path when local, duration in seconds).
+    VoiceNote {
+        file_id: i32,
+        file_path: String,
+        duration_secs: i32,
+    },
+    /// Audio file message (file_id, file_path, duration in seconds).
+    Audio {
+        file_id: i32,
+        file_path: String,
+        duration_secs: i32,
+    },
     Other,
 }
 
@@ -102,6 +117,39 @@ impl MessageEntry {
 
     pub fn set_is_edited(&mut self, is_edited: bool) {
         self.is_edited = is_edited;
+    }
+
+    /// Update the local file path for VoiceNote or Audio content (e.g. after download).
+    pub fn set_audio_file_path(&mut self, path: String) {
+        match &mut self.content_type {
+            MessageContentType::VoiceNote { file_path, .. }
+            | MessageContentType::Audio { file_path, .. } => {
+                *file_path = path;
+            }
+            _ => {}
+        }
+    }
+
+    /// True if this message is a Telegram voice note (OGG Opus). False for audio files (MP3, etc.) and other content.
+    pub fn is_voice_note(&self) -> bool {
+        matches!(self.content_type(), MessageContentType::VoiceNote { .. })
+    }
+
+    /// If this message is voice or audio, returns (file_id, file_path, duration_secs).
+    pub fn voice_audio_file_info(&self) -> Option<(i32, String, i32)> {
+        match self.content_type() {
+            MessageContentType::VoiceNote {
+                file_id,
+                file_path,
+                duration_secs,
+            }
+            | MessageContentType::Audio {
+                file_id,
+                file_path,
+                duration_secs,
+            } => Some((*file_id, file_path.clone(), *duration_secs)),
+            _ => None,
+        }
     }
 
     pub fn get_text_styled(
@@ -234,8 +282,21 @@ impl MessageEntry {
                     },
                 )
             }
-            MessageContent::MessageAudio(_) => {
-                (vec![Line::from("🎵 Audio")], MessageContentType::Other)
+            MessageContent::MessageAudio(audio) => {
+                let file_id = audio.audio.audio.id;
+                let file_path = audio.audio.audio.local.path.clone();
+                let duration_secs = audio.audio.duration;
+                (
+                    vec![Line::from(format!(
+                        "🎵 Audio ({}s) — Alt+P play/stop",
+                        duration_secs
+                    ))],
+                    MessageContentType::Audio {
+                        file_id,
+                        file_path,
+                        duration_secs,
+                    },
+                )
             }
             MessageContent::MessageSticker(_) => {
                 (vec![Line::from("🎨 Sticker")], MessageContentType::Other)
@@ -246,8 +307,21 @@ impl MessageEntry {
             MessageContent::MessageAnimation(_) => {
                 (vec![Line::from("🎞️ Animation")], MessageContentType::Other)
             }
-            MessageContent::MessageVoiceNote(_) => {
-                (vec![Line::from("🎤 Voice Note")], MessageContentType::Other)
+            MessageContent::MessageVoiceNote(voice) => {
+                let file_id = voice.voice_note.voice.id;
+                let file_path = voice.voice_note.voice.local.path.clone();
+                let duration_secs = voice.voice_note.duration;
+                (
+                    vec![Line::from(format!(
+                        "🎤 Voice note ({}s) — Alt+P play/stop",
+                        duration_secs
+                    ))],
+                    MessageContentType::VoiceNote {
+                        file_id,
+                        file_path,
+                        duration_secs,
+                    },
+                )
             }
             MessageContent::MessageDocument(_) => {
                 (vec![Line::from("📄 Document")], MessageContentType::Other)
