@@ -84,17 +84,34 @@ where
         None
     }
 
-    /// Frame size in ms from Opus TOC (first byte of packet). See RFC 6716.
+    /// Decodes the Opus TOC (Table of Contents) byte to get this packet's frame duration in milliseconds.
+    ///
+    /// Every Opus packet starts with a TOC byte (RFC 6716, section 3.2). The upper 5 bits form a
+    /// configuration index `c = toc >> 3` that determines bandwidth, mode, and **frame size**.
+    /// We need the frame size to allocate the right output buffer before calling the decoder:
+    /// `num_samples = (sample_rate * frame_size_ms / 1000) * channels`. Opus uses six possible
+    /// frame sizes (2.5, 5, 10, 20, 40, 60 ms) depending on `c`.
+    ///
+    /// **How we decode it:** The spec groups the 32 config indices into three bands. In each band,
+    /// the frame size follows a fixed pattern, so we use a small lookup table and an index derived
+    /// from `c` (see comments below). The `_s` bit (toc >> 2 & 1) is the stereo flag; we don't
+    /// need it for duration. Returns `None` only for reserved/invalid `c` (e.g. c > 31).
     fn frame_size_ms(toc: u8) -> Option<f32> {
-        let c = toc >> 3;
-        let _s = (toc >> 2) & 1; // 0 = mono frame, 1 = stereo frame (for frame size calc)
+        let c = toc >> 3; // config index 0..31
+        let _s = (toc >> 2) & 1; // stereo flag; unused for duration
+
+        // RFC 6716 Table 7: frame size (ms) by config index band.
+        // Band 1 (c 0–11): pattern 10, 20, 40, 60 repeated → index = c % 4
+        const FRAME_MS_0_11: [f32; 4] = [10.0, 20.0, 40.0, 60.0];
+        // Band 2 (c 12–15): pattern 10, 20, 10, 20 → index = c - 12
+        const FRAME_MS_12_15: [f32; 4] = [10.0, 20.0, 10.0, 20.0];
+        // Band 3 (c 16–31): reduced-delay pattern 2.5, 5, 10, 20 repeated → index = (c - 16) % 4
+        const FRAME_MS_16_31: [f32; 4] = [2.5, 5.0, 10.0, 20.0];
+
         let ms = match c {
-            0 | 4 | 8 | 12 | 14 | 18 | 22 | 26 | 30 => 10.0,
-            1 | 5 | 9 | 13 | 15 | 19 | 23 | 27 | 31 => 20.0,
-            2 | 6 | 10 => 40.0,
-            3 | 7 | 11 => 60.0,
-            16 | 20 | 24 | 28 => 2.5,
-            17 | 21 | 25 | 29 => 5.0,
+            0..=11 => FRAME_MS_0_11[c as usize % 4],
+            12..=15 => FRAME_MS_12_15[(c - 12) as usize],
+            16..=31 => FRAME_MS_16_31[(c - 16) as usize % 4],
             _ => return None,
         };
         Some(ms)

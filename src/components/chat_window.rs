@@ -253,7 +253,7 @@ impl ChatWindow {
         }
     }
 
-    /// Toggle voice/audio playback for the selected message (Alt+P: start from beginning or stop).
+    /// Toggle voice/audio playback for the selected message (start from beginning or stop playback).
     fn play_voice_selected(&self) {
         if let Some(selected) = self.message_list_state.selected() {
             let entry = &self.message_list[selected];
