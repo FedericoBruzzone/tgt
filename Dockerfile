@@ -13,7 +13,8 @@ COPY . .
 RUN mkdir -p /deps/tdlib
 
 RUN apt update && \
-    apt install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev && \
+    apt install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev \
+        pkg-config libasound2-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # build TDLib with v1.8.0 version as base and using clang compiler
