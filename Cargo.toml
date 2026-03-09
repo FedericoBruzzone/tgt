@@ -71,7 +71,7 @@ clap = { version = "4.5.60", features = ["derive"] }
 nucleo-matcher = "0.3.1"
 unicode-width = "0.2.2"
 # Voice message and audio playback (latest rodio; we implement Source in ogg_opus.rs).
-rodio = { version = "0.21", optional = true, default-features = true }
+rodio = { version = "0.22", optional = true, default-features = true }
 # OGG Opus for Telegram voice notes (we implement the rodio Source in ogg_opus.rs).
 ogg = { version = "0.8", optional = true }
 # Opus codec for Telegram voice notes (via audiopus_sys; requires CMake when building with voice-message).
