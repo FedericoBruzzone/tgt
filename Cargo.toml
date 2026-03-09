@@ -56,7 +56,7 @@ ratatui = "0.30.0"
 serde = "1.0.228"
 toml = "1.0"
 tdlib-rs = "1.2.0"
-tokio = { version = "1.49.0", features = ["full"] }
+tokio = { version = "1.50.0", features = ["full"] }
 tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
