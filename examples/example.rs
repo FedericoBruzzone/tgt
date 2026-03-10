@@ -59,7 +59,7 @@ async fn get_command(client_id: i32) -> bool {
             });
             match functions::send_message(
                 commands[1].parse().unwrap(),
-                0,
+                None,
                 None,
                 None,
                 text,

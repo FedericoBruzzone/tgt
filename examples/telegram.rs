@@ -444,7 +444,7 @@ impl TgBackend {
                             let mut _chats = chats.lock().unwrap();
                             match _chats.get_mut(&update_chat.chat_id) {
                                 Some(chat) => {
-                                    chat.theme_name = update_chat.theme_name;
+                                    chat.theme = update_chat.theme.clone();
                                 }
                                 None => update_dequeue.push_back(update),
                             }
@@ -663,6 +663,9 @@ impl TgBackend {
                     }
                     break;
                 }
+                AuthorizationState::WaitPremiumPurchase(_) => {
+                    println!("[HANDLE AUTH]: Waiting for premium purchase");
+                }
             }
         }
     }
@@ -736,7 +739,7 @@ impl TgBackend {
                 });
                 match functions::send_message(
                     commands[1].parse::<i64>().unwrap(),
-                    0,
+                    None,
                     None,
                     None,
                     text,

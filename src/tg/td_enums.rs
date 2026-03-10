@@ -32,9 +32,9 @@ pub struct TdMessageReplyToMessage {
 impl From<&TdMessageReplyToMessage> for tdlib_rs::types::InputMessageReplyToMessage {
     fn from(reply_to_message: &TdMessageReplyToMessage) -> Self {
         tdlib_rs::types::InputMessageReplyToMessage {
-            chat_id: reply_to_message.chat_id,
             message_id: reply_to_message.message_id,
             quote: None,
+            checklist_task_id: 0,
         }
     }
 }
@@ -59,7 +59,7 @@ pub struct TdMessageReplyToStory {
 impl From<&TdMessageReplyToStory> for tdlib_rs::types::MessageReplyToStory {
     fn from(reply_to_story: &TdMessageReplyToStory) -> Self {
         tdlib_rs::types::MessageReplyToStory {
-            story_sender_chat_id: reply_to_story.story_sender_chat_id,
+            story_poster_chat_id: reply_to_story.story_sender_chat_id,
             story_id: reply_to_story.story_id,
         }
     }
@@ -68,7 +68,7 @@ impl From<&TdMessageReplyToStory> for tdlib_rs::types::MessageReplyToStory {
 impl From<&tdlib_rs::types::MessageReplyToStory> for TdMessageReplyToStory {
     fn from(reply_to_story: &tdlib_rs::types::MessageReplyToStory) -> Self {
         TdMessageReplyToStory {
-            story_sender_chat_id: reply_to_story.story_sender_chat_id,
+            story_sender_chat_id: reply_to_story.story_poster_chat_id,
             story_id: reply_to_story.story_id,
         }
     }
