@@ -337,6 +337,7 @@ impl TgContext {
         for ord_chat in chats_index.iter() {
             let mut chat_list_item = ChatListEntry::new();
             chat_list_item.set_chat_id(ord_chat.chat_id);
+            chat_list_item.set_is_pinned(ord_chat.position.is_pinned);
             if let Some(chat) = chats.get(&ord_chat.chat_id) {
                 chat_list_item.set_is_marked_as_unread(chat.unread_count > 0);
                 chat_list_item.set_chat_name(chat.title.clone());

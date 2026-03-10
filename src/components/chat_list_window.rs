@@ -25,6 +25,8 @@ pub struct ChatListEntry {
     user: Option<User>,
     is_marked_as_unread: bool,
     unread_count: i32,
+    /// Whether this chat is pinned in its chat list.
+    is_pinned: bool,
     /// Identifier of the last read incoming message
     last_read_inbox_message_id: Option<i64>,
     /// Identifier of the last read outgoing message
@@ -44,6 +46,7 @@ impl ChatListEntry {
             user: None,
             is_marked_as_unread: false,
             unread_count: 0,
+            is_pinned: false,
             last_read_inbox_message_id: None,
             last_read_outbox_message_id: None,
         }
@@ -64,6 +67,9 @@ impl ChatListEntry {
     pub fn set_is_marked_as_unread(&mut self, is_marked_as_unread: bool) {
         self.is_marked_as_unread = is_marked_as_unread;
     }
+    pub fn set_is_pinned(&mut self, is_pinned: bool) {
+        self.is_pinned = is_pinned;
+    }
     pub fn set_unread_count(&mut self, unread_count: i32) {
         self.unread_count = unread_count;
     }
@@ -75,6 +81,7 @@ impl ChatListEntry {
     }
 
     pub(crate) fn get_text_styled(&self, app_context: &AppContext) -> Text<'_> {
+        let pin_symbol = if self.is_pinned { "📌 " } else { "" };
         let mut online_symbol = "";
         let mut verificated_symbol = "";
         if let Some(user) = &self.user {
@@ -97,6 +104,7 @@ impl ChatListEntry {
         let preview_lines = -1;
         let mut entry = Text::default();
         entry.extend(vec![Line::from(vec![
+            Span::raw(pin_symbol),
             Span::raw(online_symbol),
             Span::styled(
                 self.chat_name.clone(),

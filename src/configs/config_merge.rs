@@ -1,7 +1,7 @@
 //! Safe merge of user config with bundled default so new keys/sections are added without overwriting user customizations.
 //! Merge rule: user values take precedence; any command/key present in default but missing in user is added.
 
-use crate::configs::raw::keymap_raw::{KeymapEntry, KeymapMode, KeymapRaw};
+use crate::configs::raw::keymap_raw::{KeymapMode, KeymapRaw};
 use std::collections::HashSet;
 
 /// Merge keymap sections: user entries first; then add any default entry whose `command` is not bound in user.
@@ -51,6 +51,7 @@ pub fn merge_keymap_raw(default: KeymapRaw, user: Option<KeymapRaw>) -> KeymapRa
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::configs::raw::keymap_raw::KeymapEntry;
 
     fn entry(keys: &[&str], command: &str) -> KeymapEntry {
         KeymapEntry {
