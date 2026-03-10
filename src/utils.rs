@@ -237,6 +237,7 @@ mod tests {
         env::remove_var("HOME");
         #[cfg(target_os = "linux")]
         assert_eq!(result.as_deref(), Some(dot_tgt.as_path()));
+        let _ = result;
     }
 
     /// When legacy ~/.tgt exists, config dir paths must list legacy first so config discovery finds it.
