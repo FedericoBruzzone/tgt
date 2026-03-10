@@ -381,7 +381,10 @@ mod tests {
         let temp_config_dir = temp_dir.path().join("tgt").join("config");
 
         // Set TGT_CONFIG_DIR to point to the config directory itself
-        env::set_var("TGT_CONFIG_DIR", temp_config_dir.to_string_lossy().as_ref());
+        env::set_var(
+            "TGT_CONFIG_DIR",
+            temp_config_dir.to_string_lossy().to_string(),
+        );
 
         let app_config = AppConfig::default();
 
@@ -433,7 +436,10 @@ mod tests {
         .unwrap();
 
         // Set TGT_CONFIG_DIR to point to user config directory directly
-        env::set_var("TGT_CONFIG_DIR", user_config_dir.to_string_lossy().as_ref());
+        env::set_var(
+            "TGT_CONFIG_DIR",
+            user_config_dir.to_string_lossy().to_string(),
+        );
 
         let app_config = AppConfig {
             theme_filename: "themes/user_theme.toml".to_string(),
@@ -486,7 +492,10 @@ mod tests {
 
         let temp_dir = TempDir::new().unwrap();
         let temp_config_dir = temp_dir.path().join("tgt").join("config");
-        env::set_var("TGT_CONFIG_DIR", temp_config_dir.to_string_lossy().as_ref());
+        env::set_var(
+            "TGT_CONFIG_DIR",
+            temp_config_dir.to_string_lossy().to_string(),
+        );
 
         let app_config = AppConfig {
             mouse_support: false,
@@ -540,7 +549,10 @@ mod tests {
 
         let temp_dir = TempDir::new().unwrap();
         let temp_config_dir = temp_dir.path().join("nonexistent");
-        env::set_var("TGT_CONFIG_DIR", temp_config_dir.to_string_lossy().as_ref());
+        env::set_var(
+            "TGT_CONFIG_DIR",
+            temp_config_dir.to_string_lossy().to_string(),
+        );
 
         let app_config = AppConfig::default();
 

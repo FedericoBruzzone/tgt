@@ -230,16 +230,11 @@ impl TgBackend {
     ) -> Result<Vec<MessageEntry>, tdlib_rs::types::Error> {
         let filter = Some(SearchMessagesFilter::Empty);
         match functions::search_chat_messages(
-            chat_id,
-            query,
-            None,
-            0,
-            0,
-            limit,
-            filter,
-            0,
-            0,
-            self.client_id,
+            chat_id, None, // topic_id
+            query, None, // sender_id
+            0,    // from_message_id
+            0,    // offset
+            limit, filter, 0, // message_thread_id
         )
         .await
         {
@@ -339,7 +334,7 @@ impl TgBackend {
         });
         let reply_to: Option<InputMessageReplyTo> =
             reply_to.map(|reply_to| InputMessageReplyTo::Message((&reply_to).into()));
-        match functions::send_message(chat_id, 0, reply_to, None, text, self.client_id).await {
+        match functions::send_message(chat_id, None, reply_to, None, text, self.client_id).await {
             Ok(tdlib_rs::enums::Message::Message(message)) => Ok(message),
             Err(e) => {
                 tracing::error!("Failed to send message: {e:?}");
@@ -598,6 +593,10 @@ impl TgBackend {
                     tracing::info!("Closed");
                     self.can_quit.store(true, Ordering::Release);
                     break;
+                }
+                AuthorizationState::WaitPremiumPurchase(_) => {
+                    // Wait for user to complete premium purchase on another device or skip
+                    tracing::info!("Waiting for premium purchase confirmation");
                 }
             }
         }
@@ -1000,7 +999,7 @@ impl TgBackend {
                             Update::ChatTheme(update_chat) => {
                                 match tg_context.chats().get_mut(&update_chat.chat_id) {
                                     Some(chat) => {
-                                        chat.theme_name = update_chat.theme_name;
+                                        chat.theme = update_chat.theme.clone();
                                     }
                                     None => update_dequeue.push_back(update),
                                 }

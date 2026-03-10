@@ -93,7 +93,8 @@ impl ChatListEntry {
                 UserStatus::LastWeek(_) => "",
                 UserStatus::LastMonth(_) => "",
             };
-            verificated_symbol = if user.is_verified { "✅" } else { "" };
+            // tdlib-rs 1.3+: User.is_verified removed; verified badge disabled until we map from new API
+            verificated_symbol = "";
         }
         let unread_info = if self.is_marked_as_unread {
             format!("({})", self.unread_count)
