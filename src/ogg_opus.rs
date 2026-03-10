@@ -3,6 +3,7 @@
 
 use audiopus::{coder::Decoder, Channels};
 use std::io::{Read, Seek};
+use std::num::{NonZeroU16, NonZeroU32};
 use std::time::Duration;
 
 /// Minimal OGG Opus source: reads Opus packets from an OGG container and decodes to f32 samples.
@@ -166,12 +167,12 @@ where
         }
     }
 
-    fn channels(&self) -> u16 {
-        self.channel_count as u16
+    fn channels(&self) -> NonZeroU16 {
+        NonZeroU16::new(self.channel_count as u16).unwrap_or(NonZeroU16::MIN)
     }
 
-    fn sample_rate(&self) -> u32 {
-        48_000
+    fn sample_rate(&self) -> NonZeroU32 {
+        NonZeroU32::new(48_000).expect("sample rate is non-zero")
     }
 
     fn total_duration(&self) -> Option<Duration> {
