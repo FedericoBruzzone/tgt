@@ -15,3 +15,6 @@ result
 
 # Developer docs (planning / specs, not for repo)
 /devdocs/
+.autopilot.json
+.cursor/rules/after_each_chat.mdc
+/tmp/*
