@@ -119,15 +119,7 @@ yay -S tgt-client-git
 
 **From `flake.nix`**
 
-First, create the required TOML configuration files in `~/.tgt/config` using these commands:
-
-```bash
-git clone https://github.com/FedericoBruzzone/tgt ~/tgt
-mkdir -p ~/.tgt/config
-cp -r ~/tgt/config/* ~/.tgt/config
-```
-
-After setting up the configuration files, you have two installation options:
+Config directories are created automatically on first run, or you can generate initial config with `tgt init-config` (see [CONFIG.md](CONFIG.md)). Then you have two installation options:
 
 1. Run directly with `nix run`:
 
@@ -213,129 +205,9 @@ docker exec -it <container_name> bash
 
 ### Configuration
 
-Note that `tgt` is fully customizable.
-For more information about the **configuration**, please look at [here](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration).
-The configuration files are manyfold.
+`tgt` is fully customizable. Config uses **XDG-style paths** (e.g. `~/.config/tgt` on Linux) with **backwards compatibility** for the legacy `~/.tgt` folder. The app **creates config directories** at startup if missing, and **bundles default configs** so it works out of the box after `cargo install`. Configs are **versioned** and the program adds missing keybindings on upgrade. Use `tgt init-config` to generate initial config files and `tgt clear --config` (or `--data` / `--logs` / `--all`) to remove them for a fresh start.
 
-1. [`app.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/app.toml): contains general configurations about the application (see [`app.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/app.toml.md) for explanations about each field). Message status icons (edited, reply, sent, seen) can be shown as **ASCII-style** (default) or **emoji**: set `use_emoji_icons = true` in `app.toml` to use emoji (✏️ ↩️ 📤 👀); when `false` (default), the app uses `[mod]` edited, `<-- Reply to` reply, `[✓]` sent, `[o o]` seen.
-2. [`keymap.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/keymap.toml): contains the keybindings used in the application (see [`keymap.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/keymap.toml.md) for explanations about each field).
-3. [`logger.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/logger.toml): contains the logging configurations (see [`logger.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/logger.toml.md) for explanations about each field).
-4. [`telegram.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/telegram.toml): contains the Telegram API and TDLib configurations (see [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) for explanations about each field).
-5. [`theme.toml`](https://github.com/FedericoBruzzone/tgt/tree/main/config/theme.toml): contains the color theme configurations (see [`theme.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/theme.toml.md) for explanations about each field).
-
-> [!NOTE]
-> The theme switcher only persists the selected theme in **release** mode. In debug mode, the chosen theme is not saved between sessions.
-
-> [!WARNING]
-> Generally, end-users are expected to supply their own api_id and api_hash.
-> While some open-source clients, including `tgt`, may provide "default" credentials to make the "out-of-the-box" experience smoother, shipping shared credentials carries risks.
-> The [`telegram.toml.md`](https://github.com/FedericoBruzzone/tgt/tree/main/docs/configuration/telegram.toml.md) file contains more information about this topic.
-
-**Default keybindings**:
-
-_None state_:
-
-```bash
-esc:               to the "None" state
-alt+1 | alt+left:  Focus on the chat list
-alt+2 | alt+right: Focus on the chat
-alt+3 | alt+down:  Focus on the prompt
-alt+h | alt+l:     Resize the chat list
-alt+j | alt+k:     Resize the prompt
-alt+n:             Toggle chat list
-alt+r:             Start chat list search (when nothing is selected)
-alt+c:             Restore the default ordering of the chat list
-alt+f1:            Show command guide with all keybindings
-alt+t:             Show theme selector
-q | ctrl+c:        Quit
-```
-
-_Chat List_
-
-```bash
-up | down:     Move selection
-enter | right: Open the chat
-left:          Unselect chat
-alt+r:         Focus on prompt to start searching
-alt+c:         Restore the default ordering of the chat list
-
-esc:               Return to the "None" state
-alt+1 | alt+left:  Focus on the chat list
-alt+2 | alt+right: Focus on the chat
-alt+3 | alt+down:  Focus on the prompt
-```
-
-_Chat_
-
-```bash
-up | down: Scroll the messages
-left:      Unselect message
-y:         Copy the message
-e:         Edit the message
-r:         Reply to the message
-d:         Delete the message for everyone
-D:         Delete the message for me
-alt+v:     View photo from selected message (opens photo viewer)
-alt+r:     Focus on prompt to search messages in the chat window
-alt+c:     Restore the default ordering of messages
-
-esc:               Return to the "None" state
-alt+1 | alt+left:  Focus on the chat list
-alt+2 | alt+right: Focus on the chat
-alt+3 | alt+down:  Focus on the prompt
-```
-
-_Photo Viewer_  
-Open from the chat by selecting a photo message and pressing `alt+v`. When the photo viewer is focused:
-
-```bash
-esc :   Close the photo viewer
-up | k:    View previous message
-down | j:  View next message
-
-esc:               Return to the "None" state
-alt+1 | alt+left:  Focus on the chat list
-alt+2 | alt+right: Focus on the chat
-alt+3 | alt+down:  Focus on the prompt
-```
-
-_Prompt_
-
-Note that when the prompt is focused, you can **NOT** use `q` or `ctrl+c` to quit the application, you need to press `esc` to return to the "None" state.
-
-```bash
-alt+enter:                        Send the message
-
-left | right | up | down:         Move the cursor
-ctrl+left | ctrl+b:               Move the cursor to the previous word
-ctrl+right | ctrl+f:              Move the cursor to the next word
-ctrl+alt+left | ctrl+a | home:    Move the cursor to the beginning of the line (also ctrl+left+b | shift+super+left | shift+super+b)
-ctrl+alt+right | ctrl+e | end:    Move the cursor to the end of the line (also ctrl+right+f | shift+super+right | shift+super+f)
-
-shift+left:                       Move the cursor left and select the text
-shift+right:                      Move the cursor right and select the text
-shift+up:                         Move the cursor up and select the text
-shift+down:                        Move the cursor down and select the text
-shift+ctrl+left:                  Select the text before the cursor
-shift+ctrl+right:                 Select the text after the cursor
-
-ctrl+c:                           Copy the selected text
-ctrl+v:                           Paste the copied text
-
-ctrl+w | ctrl+backspace | ctrl+h: Delete the word before the cursor
-
-esc:               Return to the "None" state
-alt+1 | alt+left:  Focus on the chat list
-alt+2 | alt+right: Focus on the chat
-alt+3 | alt+down:  Focus on the prompt
-```
-
-_Mouse_
-
-```bash
-Scroll:   In chat list or chat to move selection or messages
-Chat list: First click focuses the list, second click on an item opens that chat
-```
+For config locations, versioning, CLI commands, keybindings, and per-file details, see **[CONFIG.md](CONFIG.md)**.
 
 ## Contributing
 
