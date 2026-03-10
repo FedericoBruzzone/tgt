@@ -401,12 +401,19 @@ impl ConfigFile for KeymapConfig {
         let user_raw = Self::deserialize_custom_config::<KeymapRaw>("keymap.toml");
         let merged = crate::configs::config_merge::merge_keymap_raw(default_raw, user_raw);
         if !cfg!(test) {
-            let write_path = Self::search_config_file("keymap.toml")
-                .or_else(|| crate::utils::tgt_config_dir().ok().map(|d| d.join("keymap.toml")));
+            let write_path = Self::search_config_file("keymap.toml").or_else(|| {
+                crate::utils::tgt_config_dir()
+                    .ok()
+                    .map(|d| d.join("keymap.toml"))
+            });
             if let Some(path) = write_path {
                 if let Ok(toml) = toml::to_string_pretty(&merged) {
                     if let Err(e) = std::fs::write(&path, toml) {
-                        tracing::warn!("Could not write merged keymap to {}: {}", path.display(), e);
+                        tracing::warn!(
+                            "Could not write merged keymap to {}: {}",
+                            path.display(),
+                            e
+                        );
                     } else {
                         tracing::info!("Wrote merged keymap to {}", path.display());
                     }
@@ -884,7 +891,10 @@ mod tests {
             ComponentName::CoreWindow,
             Action::from_str("show_command_guide").unwrap(),
         );
-        assert!(!try_quit_keys.is_empty(), "user binding try_quit should be present");
+        assert!(
+            !try_quit_keys.is_empty(),
+            "user binding try_quit should be present"
+        );
         assert!(
             !show_guide_keys.is_empty(),
             "default-added show_command_guide should be present after merge"

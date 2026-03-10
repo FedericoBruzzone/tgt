@@ -130,7 +130,11 @@ impl From<LoggerRaw> for LoggerConfig {
         let log_dir: String = if Path::new(&log_dir_rel).is_absolute() {
             log_dir_rel.clone()
         } else if cfg!(debug_assertions) {
-            utils::tgt_dir().unwrap().join(&log_dir_rel).to_string_lossy().to_string()
+            utils::tgt_dir()
+                .unwrap()
+                .join(&log_dir_rel)
+                .to_string_lossy()
+                .to_string()
         } else if let Some(legacy) = utils::tgt_legacy_dir() {
             legacy.join(&log_dir_rel).to_string_lossy().to_string()
         } else {

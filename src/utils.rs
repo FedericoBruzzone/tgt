@@ -18,11 +18,7 @@ pub fn resolve_tgt_paths(
 ) -> (PathBuf, PathBuf, PathBuf) {
     if legacy_exists {
         let legacy = home.join(format!(".{}", TGT));
-        (
-            legacy.join("config"),
-            legacy.clone(),
-            legacy.join(".data"),
-        )
+        (legacy.join("config"), legacy.clone(), legacy.join(".data"))
     } else {
         (
             config_base.join(TGT).join("config"),
@@ -59,9 +55,9 @@ pub fn tgt_config_dir_path() -> io::Result<PathBuf> {
         return Ok(env::current_dir()?.join("config"));
     }
     let dirs = tgt_config_dir_paths_ordered()?;
-    dirs.into_iter().next().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "No config directory path")
-    })
+    dirs.into_iter()
+        .next()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No config directory path"))
 }
 
 /// Returns user config directory paths in search order: legacy first if it exists, then XDG.
@@ -70,9 +66,8 @@ pub fn tgt_config_dir_paths_ordered() -> io::Result<Vec<PathBuf>> {
     if cfg!(debug_assertions) {
         return Ok(vec![env::current_dir()?.join("config")]);
     }
-    let home = dirs::home_dir().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "HOME directory not found")
-    })?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME directory not found"))?;
     let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
     let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
     let state_base = dirs::state_dir().unwrap_or_else(|| home.join(".local").join("state"));
@@ -99,16 +94,16 @@ pub fn tgt_config_dir() -> io::Result<PathBuf> {
 /// Get the data directory (XDG_DATA_HOME/tgt or ~/.tgt if legacy).
 pub fn tgt_data_dir() -> io::Result<PathBuf> {
     if cfg!(debug_assertions) {
-        return Ok(env::current_dir()?);
+        return env::current_dir();
     }
-    let home = dirs::home_dir().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "HOME directory not found")
-    })?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME directory not found"))?;
     let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
     let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
     let state_base = dirs::state_dir().unwrap_or_else(|| home.join(".local").join("state"));
     let legacy_exists = legacy_dir_if_exists().is_some();
-    let (_, data_dir, _) = resolve_tgt_paths(&home, &config_base, &data_base, &state_base, legacy_exists);
+    let (_, data_dir, _) =
+        resolve_tgt_paths(&home, &config_base, &data_base, &state_base, legacy_exists);
     Ok(data_dir)
 }
 
@@ -117,14 +112,14 @@ pub fn tgt_state_dir() -> io::Result<PathBuf> {
     if cfg!(debug_assertions) {
         return Ok(env::current_dir()?.join(".data"));
     }
-    let home = dirs::home_dir().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "HOME directory not found")
-    })?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME directory not found"))?;
     let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
     let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
     let state_base = dirs::state_dir().unwrap_or_else(|| home.join(".local").join("state"));
     let legacy_exists = legacy_dir_if_exists().is_some();
-    let (_, _, state_dir) = resolve_tgt_paths(&home, &config_base, &data_base, &state_base, legacy_exists);
+    let (_, _, state_dir) =
+        resolve_tgt_paths(&home, &config_base, &data_base, &state_base, legacy_exists);
     Ok(state_dir)
 }
 
@@ -132,7 +127,7 @@ pub fn tgt_state_dir() -> io::Result<PathBuf> {
 /// Prefer tgt_config_dir(), tgt_data_dir(), tgt_state_dir() for specific uses.
 pub fn tgt_dir() -> io::Result<PathBuf> {
     if cfg!(debug_assertions) {
-        return Ok(env::current_dir()?);
+        return env::current_dir();
     }
     // Legacy: use ~/.tgt only if it already exists; do not create ~/.tgt when using XDG.
     if let Some(legacy) = tgt_legacy_dir() {
@@ -182,7 +177,8 @@ mod tests {
         let config_base = Path::new("/home/user/.config");
         let data_base = Path::new("/home/user/.local/share");
         let state_base = Path::new("/home/user/.local/state");
-        let (config, data, state) = resolve_tgt_paths(home, config_base, data_base, state_base, true);
+        let (config, data, state) =
+            resolve_tgt_paths(home, config_base, data_base, state_base, true);
         assert_eq!(config, Path::new("/home/user/.tgt/config"));
         assert_eq!(data, Path::new("/home/user/.tgt"));
         assert_eq!(state, Path::new("/home/user/.tgt/.data"));
@@ -194,7 +190,8 @@ mod tests {
         let config_base = Path::new("/home/user/.config");
         let data_base = Path::new("/home/user/.local/share");
         let state_base = Path::new("/home/user/.local/state");
-        let (config, data, state) = resolve_tgt_paths(home, config_base, data_base, state_base, false);
+        let (config, data, state) =
+            resolve_tgt_paths(home, config_base, data_base, state_base, false);
         assert_eq!(config, Path::new("/home/user/.config/tgt/config"));
         assert_eq!(data, Path::new("/home/user/.local/share/tgt"));
         assert_eq!(state, Path::new("/home/user/.local/state/tgt"));
@@ -230,13 +227,19 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let home = temp.path();
         let dot_tgt = home.join(".tgt");
-        assert!(dot_tgt.starts_with(temp.path()), "must only create .tgt under temp dir, never real HOME");
+        assert!(
+            dot_tgt.starts_with(temp.path()),
+            "must only create .tgt under temp dir, never real HOME"
+        );
         std::fs::create_dir_all(&dot_tgt).unwrap();
         env::set_var("HOME", home);
         let result = tgt_legacy_dir();
         env::remove_var("HOME");
         #[cfg(target_os = "linux")]
-        assert_eq!(result.as_ref().map(|p| p.as_path()), Some(dot_tgt.as_path()));
+        assert_eq!(
+            result.as_ref().map(|p| p.as_path()),
+            Some(dot_tgt.as_path())
+        );
     }
 
     /// When legacy ~/.tgt exists, config dir paths must list legacy first so config discovery finds it.
@@ -248,7 +251,10 @@ mod tests {
         let home = temp.path();
         let dot_tgt = home.join(".tgt");
         let legacy_config = dot_tgt.join("config");
-        assert!(legacy_config.starts_with(temp.path()), "must only create under temp dir, never real HOME");
+        assert!(
+            legacy_config.starts_with(temp.path()),
+            "must only create under temp dir, never real HOME"
+        );
         std::fs::create_dir_all(&legacy_config).unwrap();
         env::set_var("HOME", home);
         let ordered = tgt_config_dir_paths_ordered().unwrap();

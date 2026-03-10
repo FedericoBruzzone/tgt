@@ -7,7 +7,13 @@ use std::path::Path;
 use crate::utils::{tgt_config_dir_path, tgt_data_dir, tgt_state_dir};
 
 /// Clear config, data, and/or logs. Confirms unless `yes` is true.
-pub fn run_clear(config: bool, data: bool, logs: bool, all: bool, yes: bool) -> std::io::Result<()> {
+pub fn run_clear(
+    config: bool,
+    data: bool,
+    logs: bool,
+    all: bool,
+    yes: bool,
+) -> std::io::Result<()> {
     let do_config = config || all;
     let do_data = data || all;
     let do_logs = logs || all;
@@ -61,10 +67,12 @@ pub fn run_clear(config: bool, data: bool, logs: bool, all: bool, yes: bool) -> 
 
     for (label, path) in &to_remove {
         remove_dir_all(path).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Failed to remove {} at {}: {}", label, path.display(), e),
-            )
+            io::Error::other(format!(
+                "Failed to remove {} at {}: {}",
+                label,
+                path.display(),
+                e
+            ))
         })?;
         println!("Removed {}: {}", label, path.display());
     }

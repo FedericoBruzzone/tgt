@@ -143,9 +143,13 @@ impl From<TelegramRaw> for TelegramConfig {
                 base.join(raw.database_dir.as_deref().unwrap_or(".data/tg"))
                     .to_string_lossy()
                     .to_string(),
-                base.join(raw.log_path.as_deref().unwrap_or(".data/tdlib_rs/tdlib_rs.log"))
-                    .to_string_lossy()
-                    .to_string(),
+                base.join(
+                    raw.log_path
+                        .as_deref()
+                        .unwrap_or(".data/tdlib_rs/tdlib_rs.log"),
+                )
+                .to_string_lossy()
+                .to_string(),
             )
         } else if let Some(legacy) = utils::tgt_legacy_dir() {
             (
@@ -154,7 +158,11 @@ impl From<TelegramRaw> for TelegramConfig {
                     .to_string_lossy()
                     .to_string(),
                 legacy
-                    .join(raw.log_path.as_deref().unwrap_or(".data/tdlib_rs/tdlib_rs.log"))
+                    .join(
+                        raw.log_path
+                            .as_deref()
+                            .unwrap_or(".data/tdlib_rs/tdlib_rs.log"),
+                    )
                     .to_string_lossy()
                     .to_string(),
             )

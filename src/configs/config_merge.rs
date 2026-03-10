@@ -92,7 +92,11 @@ mod tests {
         };
         let merged = merge_keymap_raw(default, Some(user));
         let core = merged.core_window.unwrap();
-        assert_eq!(core.keymap.len(), 2, "should have try_quit and show_command_guide");
+        assert_eq!(
+            core.keymap.len(),
+            2,
+            "should have try_quit and show_command_guide"
+        );
         let commands: Vec<&str> = core.keymap.iter().map(|e| e.command.as_str()).collect();
         assert!(commands.contains(&"try_quit"));
         assert!(commands.contains(&"show_command_guide"));
@@ -144,10 +148,7 @@ mod tests {
             photo_viewer: None,
         };
         let user = KeymapRaw {
-            core_window: Some(mode(vec![
-                entry(&["b"], "cmd_b"),
-                entry(&["a"], "cmd_a"),
-            ])),
+            core_window: Some(mode(vec![entry(&["b"], "cmd_b"), entry(&["a"], "cmd_a")])),
             chat_list: Some(mode(vec![])),
             chat: Some(mode(vec![])),
             prompt: Some(mode(vec![])),
@@ -195,7 +196,11 @@ mod tests {
         };
         let merged = merge_keymap_raw(default, Some(user));
         let core = merged.core_window.unwrap();
-        assert_eq!(core.keymap.len(), 2, "user's two bindings only (default try_quit not added, user overrode)");
+        assert_eq!(
+            core.keymap.len(),
+            2,
+            "user's two bindings only (default try_quit not added, user overrode)"
+        );
         let commands: Vec<&str> = core.keymap.iter().map(|e| e.command.as_str()).collect();
         assert!(commands.contains(&"try_quit"));
         assert!(commands.contains(&"my_custom_action"));

@@ -3,10 +3,7 @@ fn tgt_build_paths() -> (std::path::PathBuf, std::path::PathBuf) {
     let home = dirs::home_dir().unwrap();
     let legacy = home.join(".tgt");
     if legacy.exists() && legacy.is_dir() {
-        (
-            legacy.join("config"),
-            legacy.join("tdlib"),
-        )
+        (legacy.join("config"), legacy.join("tdlib"))
     } else {
         let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
         let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
@@ -32,7 +29,10 @@ fn copy_default_config_into(config_dest: &std::path::Path, manifest_dir: &str) {
         let file_name = path.file_name().unwrap();
         let dest_file = config_dest.join(file_name);
         if !dest_file.exists() {
-            println!("cargo:warning=Creating default config file: {}", dest_file.display());
+            println!(
+                "cargo:warning=Creating default config file: {}",
+                dest_file.display()
+            );
             std::fs::copy(path, &dest_file).unwrap();
         }
     }

@@ -83,7 +83,9 @@ impl AppConfig {
             }
         } else {
             // Use standard user config directory (XDG or legacy ~/.tgt/config)
-            crate::utils::tgt_config_dir().ok().map(|d| d.join("app.toml"))
+            crate::utils::tgt_config_dir()
+                .ok()
+                .map(|d| d.join("app.toml"))
         };
 
         let config_path = user_config_path.ok_or_else(|| {
