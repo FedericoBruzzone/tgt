@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// The command keymap configuration.
 pub struct KeymapEntry {
     /// The key combination.
@@ -13,7 +13,7 @@ pub struct KeymapEntry {
     pub description: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// The keymap configuration.
 pub struct KeymapMode {
     #[serde(default)]
@@ -21,7 +21,7 @@ pub struct KeymapMode {
     pub keymap: Vec<KeymapEntry>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// The raw keymap configuration.
 pub struct KeymapRaw {
     /// The keymap for the core window mode, they are used in all components.

@@ -74,10 +74,17 @@ impl ConfigFile for TelegramConfig {
                     self.api_hash = api_hash;
                 }
                 if let Some(database_dir) = _other.database_dir {
-                    if !Path::new(&database_dir).exists() {
-                        std::fs::create_dir_all(&database_dir).unwrap();
+                    let abs = if Path::new(&database_dir).is_absolute() {
+                        PathBuf::from(&database_dir)
+                    } else if let Some(legacy) = utils::tgt_legacy_dir() {
+                        legacy.join(&database_dir)
+                    } else {
+                        utils::tgt_data_dir().unwrap().join(&database_dir)
+                    };
+                    if !abs.exists() {
+                        std::fs::create_dir_all(&abs).unwrap();
                     }
-                    self.database_dir = database_dir;
+                    self.database_dir = abs.to_string_lossy().to_string();
                 }
                 if let Some(use_file_database) = _other.use_file_database {
                     self.use_file_database = use_file_database;
@@ -98,11 +105,19 @@ impl ConfigFile for TelegramConfig {
                     self.verbosity_level = verbosity_level;
                 }
                 if let Some(log_path) = _other.log_path {
-                    if !Path::new(&log_path).exists() {
-                        std::fs::create_dir_all(PathBuf::from(&log_path).parent().unwrap())
-                            .unwrap();
+                    let abs = if Path::new(&log_path).is_absolute() {
+                        PathBuf::from(&log_path)
+                    } else if let Some(legacy) = utils::tgt_legacy_dir() {
+                        legacy.join(&log_path)
+                    } else {
+                        utils::tgt_state_dir().unwrap().join(&log_path)
+                    };
+                    if let Some(parent) = abs.parent() {
+                        if !parent.exists() {
+                            std::fs::create_dir_all(parent).unwrap();
+                        }
                     }
-                    self.log_path = log_path;
+                    self.log_path = abs.to_string_lossy().to_string();
                 }
                 if let Some(redirect_stderr) = _other.redirect_stderr {
                     self.redirect_stderr = redirect_stderr;
@@ -122,22 +137,58 @@ impl Default for TelegramConfig {
 /// configuration.
 impl From<TelegramRaw> for TelegramConfig {
     fn from(raw: TelegramRaw) -> Self {
-        let database_dir = utils::tgt_dir()
-            .unwrap()
-            .join(raw.database_dir.unwrap())
-            .to_string_lossy()
-            .to_string();
-        let log_path = utils::tgt_dir()
-            .unwrap()
-            .join(raw.log_path.unwrap())
-            .to_string_lossy()
-            .to_string();
+        let (database_dir, log_path) = if cfg!(debug_assertions) {
+            let base = utils::tgt_dir().unwrap();
+            (
+                base.join(raw.database_dir.as_deref().unwrap_or(".data/tg"))
+                    .to_string_lossy()
+                    .to_string(),
+                base.join(
+                    raw.log_path
+                        .as_deref()
+                        .unwrap_or(".data/tdlib_rs/tdlib_rs.log"),
+                )
+                .to_string_lossy()
+                .to_string(),
+            )
+        } else if let Some(legacy) = utils::tgt_legacy_dir() {
+            (
+                legacy
+                    .join(raw.database_dir.as_deref().unwrap_or(".data/tg"))
+                    .to_string_lossy()
+                    .to_string(),
+                legacy
+                    .join(
+                        raw.log_path
+                            .as_deref()
+                            .unwrap_or(".data/tdlib_rs/tdlib_rs.log"),
+                    )
+                    .to_string_lossy()
+                    .to_string(),
+            )
+        } else {
+            (
+                utils::tgt_data_dir()
+                    .unwrap()
+                    .join("tg")
+                    .to_string_lossy()
+                    .to_string(),
+                utils::tgt_state_dir()
+                    .unwrap()
+                    .join("tdlib_rs")
+                    .join("tdlib_rs.log")
+                    .to_string_lossy()
+                    .to_string(),
+            )
+        };
 
         if !Path::new(&database_dir).exists() {
             std::fs::create_dir_all(&database_dir).unwrap();
         }
-        if !Path::new(&log_path).exists() {
-            std::fs::create_dir_all(PathBuf::from(&log_path).parent().unwrap()).unwrap();
+        if let Some(parent) = PathBuf::from(&log_path).parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).unwrap();
+            }
         }
 
         Self {

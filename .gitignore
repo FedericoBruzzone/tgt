@@ -1,5 +1,6 @@
 /target
 /.data
+/.tgt-dev
 /.log
 /.logs
 tgt.log
@@ -15,3 +16,10 @@ result
 
 # Developer docs (planning / specs, not for repo)
 /devdocs/
+.autopilot.json
+.cursor/rules/after_each_chat.mdc
+/tmp/*
+
+# Specstory history and Cursor indexing
+.specstory/
+.cursorindexingignore

@@ -50,8 +50,14 @@ impl ThemeConfig {
             return configs::deserialize_to_config_into::<ThemeRaw, Self>(path);
         }
 
-        // If not found, try to load from themes/theme.toml
+        // If not found, try to load from themes/theme.toml in config dir, then in CONFIG_DIR_HIERARCHY (e.g. repo config in debug)
         if let Ok(config_dir) = crate::utils::tgt_config_dir() {
+            let themes_path = config_dir.join("themes").join("theme.toml");
+            if themes_path.exists() {
+                return configs::deserialize_to_config_into::<ThemeRaw, Self>(&themes_path);
+            }
+        }
+        for config_dir in crate::configs::config_file::CONFIG_DIR_HIERARCHY.iter() {
             let themes_path = config_dir.join("themes").join("theme.toml");
             if themes_path.exists() {
                 return configs::deserialize_to_config_into::<ThemeRaw, Self>(&themes_path);

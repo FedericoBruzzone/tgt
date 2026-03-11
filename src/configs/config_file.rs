@@ -1,13 +1,14 @@
 use {
     crate::configs::{self, config_type::ConfigType},
-    crate::utils::{TGT, TGT_CONFIG_DIR},
+    crate::utils::TGT_CONFIG_DIR,
     lazy_static::lazy_static,
     serde::de::DeserializeOwned,
     std::path::PathBuf,
 };
 
 lazy_static! {
-    static ref CONFIG_DIR_HIERARCHY: Vec<PathBuf> = {
+    /// Config directory search order: TGT_CONFIG_DIR, debug ./config, then XDG or legacy.
+    pub(crate) static ref CONFIG_DIR_HIERARCHY: Vec<PathBuf> = {
         let mut config_dirs = vec![];
 
         if let Ok(p) = std::env::var(TGT_CONFIG_DIR) {
@@ -29,29 +30,11 @@ lazy_static! {
             }
         }
 
-        if let Some(p) = if cfg!(target_os = "macos") {
-            dirs::home_dir().map(|h| h.join(".config"))
-        } else {
-            dirs::config_dir()
-        } {
-            let mut p = p;
-            p.push(TGT);
-            if p.is_dir() {
+        // User config dirs in order: legacy (~/.tgt/config) first when it exists, then XDG (~/.config/tgt/config)
+        if let Ok(ordered) = crate::utils::tgt_config_dir_paths_ordered() {
+            for p in &ordered {
                 config_dirs.push(p.clone());
-            }
-            p.push("config");
-            if p.is_dir() {
-                config_dirs.push(p.clone());
-            }
-            tracing::info!("Using {} for config", p.display());
-        }
-
-        // Also check ~/.tgt/config (where build.rs copies files in release mode)
-        if let Some(home) = dirs::home_dir() {
-            let tgt_config = home.join(format!(".{}", TGT)).join("config");
-            if tgt_config.is_dir() {
-                config_dirs.push(tgt_config);
-                tracing::info!("Using ~/.tgt/config for config");
+                tracing::info!("Using {} for config", p.display());
             }
         }
 

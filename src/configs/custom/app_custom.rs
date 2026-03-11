@@ -58,7 +58,7 @@ impl AppConfig {
     /// # Returns
     /// `Ok(())` if the configuration was saved successfully, or an error if it failed.
     pub fn save(&self) -> Result<(), AppError<()>> {
-        use crate::utils::{TGT, TGT_CONFIG_DIR};
+        use crate::utils::TGT_CONFIG_DIR;
         use std::env;
 
         // Find user config directory (skip repo config directories)
@@ -82,35 +82,10 @@ impl AppConfig {
                 Some(config_dir.join("app.toml"))
             }
         } else {
-            // Use standard user config directory
-            if let Some(user_config_dir) = if cfg!(target_os = "macos") {
-                dirs::home_dir().map(|h| h.join(".config"))
-            } else {
-                dirs::config_dir()
-            } {
-                // Try ~/.config/tgt/config/app.toml first
-                let tgt_config = user_config_dir.join(TGT).join("config");
-                if tgt_config.is_dir() || tgt_config.join("app.toml").exists() {
-                    Some(tgt_config.join("app.toml"))
-                } else {
-                    // Fallback to ~/.tgt/config/app.toml
-                    if let Some(home) = dirs::home_dir() {
-                        let tgt_dir = home.join(format!(".{}", TGT));
-                        if tgt_dir.join("config").is_dir()
-                            || tgt_dir.join("config").join("app.toml").exists()
-                        {
-                            Some(tgt_dir.join("config").join("app.toml"))
-                        } else {
-                            // Create ~/.config/tgt/config/app.toml as default
-                            Some(tgt_config.join("app.toml"))
-                        }
-                    } else {
-                        None
-                    }
-                }
-            } else {
-                None
-            }
+            // Use standard user config directory (XDG or legacy ~/.tgt/config)
+            crate::utils::tgt_config_dir()
+                .ok()
+                .map(|d| d.join("app.toml"))
         };
 
         let config_path = user_config_path.ok_or_else(|| {

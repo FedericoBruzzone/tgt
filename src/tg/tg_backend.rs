@@ -481,6 +481,7 @@ impl TgBackend {
             }
         };
         let database_dir = telegram_config.database_dir.clone();
+        tracing::info!("TDLib database directory: {}", database_dir);
         let use_file_database = telegram_config.use_file_database;
         let use_chat_info_database = telegram_config.use_chat_info_database;
         let use_message_database = telegram_config.use_message_database;

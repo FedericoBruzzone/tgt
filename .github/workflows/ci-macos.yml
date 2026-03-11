@@ -48,6 +48,9 @@ jobs:
       - name: Install chafa (for ratatui-image)
         run: brew install chafa
 
+      - name: Install chafa (for ratatui-image)
+        run: brew install chafa
+
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         id: cache-tdlib-restore
