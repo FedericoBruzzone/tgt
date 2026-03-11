@@ -21,7 +21,7 @@ RUN apt update && \
 RUN cd /deps/tdlib && \
     git clone https://github.com/tdlib/td.git && \
     cd td && \
-    git checkout b3ab664a18f8611f4dfcd3054717504271eeaa7a && \
+    git checkout 11e254af695060d8890024dd7faa1cc2d6685ef8 && \
     export CXXFLAGS="-stdlib=libc++" && export CC=/usr/bin/clang && export CXX=/usr/bin/clang++ && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/deps/tdlib/tdlib-install-dir && \
     cmake --build build --target install -j$(nproc)
@@ -37,14 +37,14 @@ FROM debian:trixie-slim AS runtime
 WORKDIR /app
 
 COPY --from=builder /app/target/release/tgt /usr/bin/
-COPY --from=builder /root/.tgt/tdlib/lib/libtdjson.so.1.8.29 /usr/lib/
+COPY --from=builder /deps/tdlib/tdlib-install-dir/lib/libtdjson.so* /usr/lib/
 
-RUN mkdir -p /root/.tgt
+RUN mkdir -p /root/.config/tgt /root/.local/share/tgt
 
-COPY --from=builder /app/config /root/.tgt/config
+COPY --from=builder /app/config /root/.config/tgt/config
 
 RUN apt update && \
-    apt install -y libc++1 && \
+    apt install -y libc++1 libasound2 && \
     rm -rf /var/lib/apt/lists/*
 
 # opening bash shell to run tgt interactively
