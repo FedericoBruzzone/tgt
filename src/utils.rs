@@ -4,6 +4,9 @@ use std::{env, io};
 
 pub const TGT: &str = "tgt";
 pub const TGT_CONFIG_DIR: &str = "TGT_CONFIG_DIR";
+/// In debug builds, config/data/state live under this dir so that `tgt clear` never
+/// removes the project root or tdlib-rs; only config-related content is cleared.
+const TGT_DEBUG_DEV_DIR: &str = ".tgt-dev";
 
 /// Resolve config, data, and state directories from base paths and legacy presence.
 /// Used for testing and by the public path getters.
@@ -52,7 +55,7 @@ pub fn tgt_legacy_dir() -> Option<PathBuf> {
 /// Returns the config directory path without creating it. Use for read-only hierarchy.
 pub fn tgt_config_dir_path() -> io::Result<PathBuf> {
     if cfg!(debug_assertions) {
-        return Ok(env::current_dir()?.join("config"));
+        return Ok(env::current_dir()?.join(TGT_DEBUG_DEV_DIR).join("config"));
     }
     let dirs = tgt_config_dir_paths_ordered()?;
     dirs.into_iter()
@@ -64,7 +67,9 @@ pub fn tgt_config_dir_path() -> io::Result<PathBuf> {
 /// Used to build CONFIG_DIR_HIERARCHY so legacy ~/.tgt/config is always tried before XDG.
 pub fn tgt_config_dir_paths_ordered() -> io::Result<Vec<PathBuf>> {
     if cfg!(debug_assertions) {
-        return Ok(vec![env::current_dir()?.join("config")]);
+        return Ok(vec![env::current_dir()?
+            .join(TGT_DEBUG_DEV_DIR)
+            .join("config")]);
     }
     let home = dirs::home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME directory not found"))?;
@@ -94,7 +99,7 @@ pub fn tgt_config_dir() -> io::Result<PathBuf> {
 /// Get the data directory (XDG_DATA_HOME/tgt or ~/.tgt if legacy).
 pub fn tgt_data_dir() -> io::Result<PathBuf> {
     if cfg!(debug_assertions) {
-        return env::current_dir();
+        return Ok(env::current_dir()?.join(TGT_DEBUG_DEV_DIR).join("data"));
     }
     let home = dirs::home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME directory not found"))?;
@@ -110,7 +115,7 @@ pub fn tgt_data_dir() -> io::Result<PathBuf> {
 /// Get the state directory (XDG_STATE_HOME/tgt or ~/.tgt/.data if legacy).
 pub fn tgt_state_dir() -> io::Result<PathBuf> {
     if cfg!(debug_assertions) {
-        return Ok(env::current_dir()?.join(".data"));
+        return Ok(env::current_dir()?.join(TGT_DEBUG_DEV_DIR).join("state"));
     }
     let home = dirs::home_dir()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME directory not found"))?;

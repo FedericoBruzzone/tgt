@@ -1,17 +1,20 @@
-/// Returns (config_dir, tdlib_dir) using legacy ~/.tgt when it exists, else XDG.
+/// Returns (config_dir, tdlib_dir). Config may be legacy or XDG; tdlib is always the standard
+/// data dir (e.g. ~/Library/Application Support/tgt/tdlib on macOS) so the folder is always
+/// created and the app finds it after cleanup (when legacy is gone).
 fn tgt_build_paths() -> (std::path::PathBuf, std::path::PathBuf) {
     let home = dirs::home_dir().unwrap();
+    let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
+    let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
+    let standard_config = config_base.join("tgt").join("config");
+    let standard_tdlib = data_base.join("tgt").join("tdlib");
     let legacy = home.join(".tgt");
-    if legacy.exists() && legacy.is_dir() {
-        (legacy.join("config"), legacy.join("tdlib"))
+    let config_dir = if legacy.exists() && legacy.is_dir() {
+        legacy.join("config")
     } else {
-        let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
-        let data_base = dirs::data_dir().unwrap_or_else(|| home.join(".local").join("share"));
-        (
-            config_base.join("tgt").join("config"),
-            data_base.join("tgt").join("tdlib"),
-        )
-    }
+        standard_config
+    };
+    // Always use standard tdlib path so it exists after clear; runtime uses tgt_data_dir() which matches.
+    (config_dir, standard_tdlib)
 }
 
 /// Copy default config files from manifest config/ into dest. Only copy files that don't exist (preserve user customizations).
@@ -73,17 +76,22 @@ fn main() -> std::io::Result<()> {
     }
 
     // Copy default configs to both legacy (if present) and XDG so that after deleting ~/.tgt the app still finds configs.
+    // Never copy into the repo (CARGO_MANIFEST_DIR) so we don't overwrite tracked config files.
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let manifest_path = std::path::Path::new(&manifest_dir);
     let (config_dest_legacy_or_xdg, _) = tgt_build_paths();
-    copy_default_config_into(&config_dest_legacy_or_xdg, &manifest_dir);
+    if !config_dest_legacy_or_xdg.starts_with(manifest_path) {
+        copy_default_config_into(&config_dest_legacy_or_xdg, &manifest_dir);
+    }
     let home = dirs::home_dir().unwrap();
     let config_base = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
     let xdg_config = config_base.join("tgt").join("config");
-    if xdg_config != config_dest_legacy_or_xdg {
+    if xdg_config != config_dest_legacy_or_xdg && !xdg_config.starts_with(manifest_path) {
         copy_default_config_into(&xdg_config, &manifest_dir);
     }
 
     let (_, tdlib_dest) = tgt_build_paths();
+    std::fs::create_dir_all(&tdlib_dest).unwrap();
     tdlib_rs::build::build(Some(tdlib_dest.to_string_lossy().into_owned()));
 
     Ok(())

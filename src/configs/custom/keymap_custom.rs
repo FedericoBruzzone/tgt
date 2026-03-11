@@ -400,12 +400,11 @@ impl ConfigFile for KeymapConfig {
             .expect("bundled keymap.toml must be valid TOML");
         let user_raw = Self::deserialize_custom_config::<KeymapRaw>("keymap.toml");
         let merged = crate::configs::config_merge::merge_keymap_raw(default_raw, user_raw);
+        // Always write merged keymap to the user config dir only (never to repo config/).
         if !cfg!(test) {
-            let write_path = Self::search_config_file("keymap.toml").or_else(|| {
-                crate::utils::tgt_config_dir()
-                    .ok()
-                    .map(|d| d.join("keymap.toml"))
-            });
+            let write_path = crate::utils::tgt_config_dir()
+                .ok()
+                .map(|d| d.join("keymap.toml"));
             if let Some(path) = write_path {
                 if let Ok(toml) = toml::to_string_pretty(&merged) {
                     if let Err(e) = std::fs::write(&path, toml) {

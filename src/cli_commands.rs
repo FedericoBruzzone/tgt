@@ -1,10 +1,21 @@
 //! CLI subcommand handlers: clear, init-config.
 //! Uses the same XDG/legacy path logic as the rest of the app.
+//! Clear only removes config-related dirs; never deletes paths that contain the
+//! project root (Cargo.toml, .git) or tdlib-rs.
 
 use std::io::{self, Write};
 use std::path::Path;
 
 use crate::utils::{tgt_config_dir_path, tgt_data_dir, tgt_state_dir};
+
+/// Refuse to remove a directory that looks like a repo root or contains tdlib-rs,
+/// so that `tgt clear` never deletes the project or build artifacts.
+fn is_unsafe_to_remove(path: &Path) -> bool {
+    if !path.exists() || !path.is_dir() {
+        return false;
+    }
+    path.join("Cargo.toml").exists() || path.join(".git").exists() || path.join("tdlib-rs").exists()
+}
 
 /// Clear config, data, and/or logs. Confirms unless `yes` is true.
 pub fn run_clear(
@@ -66,6 +77,15 @@ pub fn run_clear(
     }
 
     for (label, path) in &to_remove {
+        if is_unsafe_to_remove(path) {
+            eprintln!(
+                "Refusing to remove {} at {}: directory contains Cargo.toml, .git, or tdlib-rs. \
+                 Only config-related content should be cleared.",
+                label,
+                path.display()
+            );
+            std::process::exit(1);
+        }
         remove_dir_all(path).map_err(|e| {
             io::Error::other(format!(
                 "Failed to remove {} at {}: {}",
