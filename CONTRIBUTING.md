@@ -66,7 +66,7 @@ The steps to build TDLib can be found [here](https://tdlib.github.io/td/build.ht
 
 About the `api_id` you can get one form [https://my.telegram.org](https://my.telegram.org), for other info check the official [documentation](https://core.telegram.org/api/obtaining_api_id).
 
-Current supported TDLib version: [1.8.19](https://github.com/tdlib/td/commit/2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09).
+Current supported TDLib version: [commit 6d50906](https://github.com/tdlib/td/commit/6d509061574d684117f74133056aa43df89022fc) (used in CI and Dockerfile).
 
 ---
 
@@ -80,10 +80,7 @@ xcode-select --install
 brew install gperf cmake openssl
 git clone https://github.com/tdlib/td.git
 cd td
-git checkout 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
-# On macOS, TDLib fails to build (UserId/long). From inside the td clone run:
-#   ../scripts/patch-tdlib-macos.sh .
-# (Or from tgt repo root: ./scripts/patch-tdlib-macos.sh /path/to/td)
+git checkout 6d509061574d684117f74133056aa43df89022fc
 rm -rf build
 mkdir build
 cd build
