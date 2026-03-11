@@ -81,6 +81,9 @@ brew install gperf cmake openssl
 git clone https://github.com/tdlib/td.git
 cd td
 git checkout 2589c3fd46925f5d57e4ec79233cd1bd0f5d0c09
+# On macOS, TDLib fails to build (UserId/long). From inside the td clone run:
+#   ../scripts/patch-tdlib-macos.sh .
+# (Or from tgt repo root: ./scripts/patch-tdlib-macos.sh /path/to/td)
 rm -rf build
 mkdir build
 cd build

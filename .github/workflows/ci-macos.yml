@@ -10,6 +10,7 @@ on:
       - "Cargo.toml"
       - "rustfmt.toml"
       - "config/**"
+      - "scripts/**"
       - ".github/workflows/**"
   pull_request:
     branches: ["**"]
@@ -19,6 +20,7 @@ on:
       - "Cargo.toml"
       - "rustfmt.toml"
       - "config/**"
+      - "scripts/**"
       - ".github/workflows/**"
 
 env:
@@ -48,9 +50,6 @@ jobs:
       - name: Install chafa (for ratatui-image)
         run: brew install chafa
 
-      - name: Install chafa (for ratatui-image)
-        run: brew install chafa
-
       - name: Restore cache TDLib
         if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib'
         id: cache-tdlib-restore
@@ -67,6 +66,7 @@ jobs:
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
+          ../scripts/patch-tdlib-macos.sh .
           rm -rf build
           mkdir build
           cd build
