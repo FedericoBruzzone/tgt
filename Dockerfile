@@ -21,7 +21,7 @@ RUN apt update && \
 RUN cd /deps/tdlib && \
     git clone https://github.com/tdlib/td.git && \
     cd td && \
-    git checkout 11e254af695060d8890024dd7faa1cc2d6685ef8 && \
+    git checkout 6d509061574d684117f74133056aa43df89022fc && \
     export CXXFLAGS="-stdlib=libc++" && export CC=/usr/bin/clang && export CXX=/usr/bin/clang++ && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/deps/tdlib/tdlib-install-dir && \
     cmake --build build --target install -j$(nproc)

@@ -10,7 +10,6 @@ on:
       - "Cargo.toml"
       - "rustfmt.toml"
       - "config/**"
-      - "scripts/**"
       - ".github/workflows/**"
   pull_request:
     branches: ["**"]
@@ -20,13 +19,12 @@ on:
       - "Cargo.toml"
       - "rustfmt.toml"
       - "config/**"
-      - "scripts/**"
       - ".github/workflows/**"
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  TDLIB_VERSION: 11e254af695060d8890024dd7faa1cc2d6685ef8
+  TDLIB_VERSION: 6d509061574d684117f74133056aa43df89022fc
   API_HASH: a3406de8d171bb422bb6ddf3bbd800e2
   API_ID: 94575
 
@@ -57,7 +55,6 @@ jobs:
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
-
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config' || matrix.feature == 'download-tdlib')
         run: |
@@ -66,7 +63,6 @@ jobs:
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
-          ../scripts/patch-tdlib-macos.sh .
           rm -rf build
           mkdir build
           cd build
