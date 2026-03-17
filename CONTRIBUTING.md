@@ -66,7 +66,7 @@ The steps to build TDLib can be found [here](https://tdlib.github.io/td/build.ht
 
 About the `api_id` you can get one form [https://my.telegram.org](https://my.telegram.org), for other info check the official [documentation](https://core.telegram.org/api/obtaining_api_id).
 
-Current supported TDLib version: [commit 6d50906](https://github.com/tdlib/td/commit/6d509061574d684117f74133056aa43df89022fc) (used in CI and Dockerfile).
+Current supported TDLib version: [1.8.61 - commit 6d50906](https://github.com/tdlib/td/commit/6d509061574d684117f74133056aa43df89022fc) (used in CI and Dockerfile).
 
 ---
 
