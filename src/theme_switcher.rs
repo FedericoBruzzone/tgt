@@ -33,7 +33,11 @@ fn adapt_theme_for_readability(theme_name: &str, theme: &mut ThemeConfig) {
         }
     }
     fn rel_luminance(rgb: (u8, u8, u8)) -> f32 {
-        let (r, g, b) = (rgb.0 as f32 / 255.0, rgb.1 as f32 / 255.0, rgb.2 as f32 / 255.0);
+        let (r, g, b) = (
+            rgb.0 as f32 / 255.0,
+            rgb.1 as f32 / 255.0,
+            rgb.2 as f32 / 255.0,
+        );
         let (r, g, b) = (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b));
         0.2126 * r + 0.7152 * g + 0.0722 * b
     }
@@ -41,7 +45,11 @@ fn adapt_theme_for_readability(theme_name: &str, theme: &mut ThemeConfig) {
         let (l1, l2) = {
             let a = rel_luminance(fg);
             let b = rel_luminance(bg);
-            if a >= b { (a, b) } else { (b, a) }
+            if a >= b {
+                (a, b)
+            } else {
+                (b, a)
+            }
         };
         (l1 + 0.05) / (l2 + 0.05)
     }
@@ -158,16 +166,16 @@ fn adapt_theme_for_readability(theme_name: &str, theme: &mut ThemeConfig) {
     const MIN_NAME_MSG_LUMA_SEP: f32 = 0.12;
 
     // Adjust a foreground color to satisfy contrast against bg by blending towards white/black.
-    fn ensure_contrast(
-        fg: (u8, u8, u8),
-        bg: (u8, u8, u8),
-        min_ratio: f32,
-    ) -> (u8, u8, u8) {
+    fn ensure_contrast(fg: (u8, u8, u8), bg: (u8, u8, u8), min_ratio: f32) -> (u8, u8, u8) {
         if contrast_ratio(fg, bg) >= min_ratio {
             return fg;
         }
         let bg_l = rel_luminance(bg);
-        let target = if bg_l < 0.5 { (255, 255, 255) } else { (0, 0, 0) };
+        let target = if bg_l < 0.5 {
+            (255, 255, 255)
+        } else {
+            (0, 0, 0)
+        };
         // Binary-search-ish stepping.
         let mut best = fg;
         let mut lo = 0.0f32;
@@ -228,11 +236,19 @@ fn adapt_theme_for_readability(theme_name: &str, theme: &mut ThemeConfig) {
         || (name_l - msg_l).abs() < MIN_NAME_MSG_LUMA_SEP
     {
         // Prefer keeping message as "secondary": try moving it closer to background first.
-        let c_towards_bg = ensure_contrast(lerp(msg_rgb_v, chat_list_bg, 0.25), chat_list_bg, MIN_CR_MSG);
+        let c_towards_bg = ensure_contrast(
+            lerp(msg_rgb_v, chat_list_bg, 0.25),
+            chat_list_bg,
+            MIN_CR_MSG,
+        );
 
         // Alternative: move it away from background (if towards-bg doesn't separate enough).
         let bg_l = rel_luminance(chat_list_bg);
-        let away_target = if bg_l < 0.5 { (255, 255, 255) } else { (0, 0, 0) };
+        let away_target = if bg_l < 0.5 {
+            (255, 255, 255)
+        } else {
+            (0, 0, 0)
+        };
         let c_away = ensure_contrast(lerp(msg_rgb_v, away_target, 0.25), chat_list_bg, MIN_CR_MSG);
 
         let score = |cand: (u8, u8, u8)| -> (u32, f32) {
@@ -255,7 +271,11 @@ fn adapt_theme_for_readability(theme_name: &str, theme: &mut ThemeConfig) {
         if (name_l - msg_l).abs() < MIN_NAME_MSG_LUMA_SEP {
             let target = if msg_l >= name_l {
                 // message too bright vs name → darken a bit (towards bg if bg is dark; towards black otherwise)
-                if bg_l < 0.5 { chat_list_bg } else { (0, 0, 0) }
+                if bg_l < 0.5 {
+                    chat_list_bg
+                } else {
+                    (0, 0, 0)
+                }
             } else {
                 // message too dark vs name → brighten a bit (towards white)
                 (255, 255, 255)

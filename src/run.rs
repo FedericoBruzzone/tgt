@@ -900,11 +900,13 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                         // Avoid a tight spin loop: ack may be delayed or never arrive.
                         // Wait up to a bounded time while yielding to the runtime.
                         let deadline = Instant::now() + Duration::from_secs(10);
-                        while app_context.tg_context().last_acknowledged_message_id() != message_id {
+                        while app_context.tg_context().last_acknowledged_message_id() != message_id
+                        {
                             if Instant::now() >= deadline {
                                 tracing::warn!(
                                     message_id,
-                                    last_ack = app_context.tg_context().last_acknowledged_message_id(),
+                                    last_ack =
+                                        app_context.tg_context().last_acknowledged_message_id(),
                                     "Timed out waiting for MessageSendAcknowledged"
                                 );
                                 break;
