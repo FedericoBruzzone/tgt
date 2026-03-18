@@ -46,7 +46,10 @@ pub fn merge_keymap_raw(default: KeymapRaw, user: Option<KeymapRaw>) -> KeymapRa
         theme_selector: merge_keymap_mode(user.theme_selector, default.theme_selector),
         search_overlay: merge_keymap_mode(user.search_overlay, default.search_overlay),
         photo_viewer: merge_keymap_mode(user.photo_viewer, default.photo_viewer),
-        file_upload_explorer: merge_keymap_mode(user.file_upload_explorer, default.file_upload_explorer),
+        file_upload_explorer: merge_keymap_mode(
+            user.file_upload_explorer,
+            default.file_upload_explorer,
+        ),
     }
 }
 

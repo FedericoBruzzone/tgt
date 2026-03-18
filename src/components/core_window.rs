@@ -599,9 +599,8 @@ impl Component for CoreWindow {
                     self.app_context
                         .set_focused_component(self.component_focused);
 
-                    if let Some(component) = self
-                        .components
-                        .get_mut(&ComponentName::FileUploadExplorer)
+                    if let Some(component) =
+                        self.components.get_mut(&ComponentName::FileUploadExplorer)
                     {
                         component.focus();
                         component.update(action.clone());
@@ -617,9 +616,7 @@ impl Component for CoreWindow {
 
             Action::HideFileUploadExplorer => {
                 self.show_file_upload_explorer = false;
-                if let Some(component) = self
-                    .components
-                    .get_mut(&ComponentName::FileUploadExplorer)
+                if let Some(component) = self.components.get_mut(&ComponentName::FileUploadExplorer)
                 {
                     component.update(action.clone());
                 }

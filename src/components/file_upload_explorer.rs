@@ -5,13 +5,14 @@ use crate::{
 };
 use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 use dirs;
+use ratatui::widgets::FrameExt as _;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::Modifier,
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, HighlightSpacing, Paragraph},
     Frame,
 };
-use ratatui::widgets::FrameExt as _;
 use ratatui_explorer::{FileExplorer, FileExplorerBuilder, Input as ExplorerInput, Theme};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -28,7 +29,7 @@ pub struct FileUploadExplorer {
 
 impl FileUploadExplorer {
     pub fn new(app_context: Arc<AppContext>) -> Self {
-        let theme = Self::build_explorer_theme(&app_context);
+        let theme = Self::build_explorer_theme(Arc::clone(&app_context));
 
         let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
 
@@ -36,7 +37,12 @@ impl FileUploadExplorer {
             .working_dir(home_dir)
             .theme(theme)
             .build()
-            .unwrap_or_else(|_| FileExplorerBuilder::build_with_theme(Self::build_explorer_theme(&app_context)).unwrap());
+            .unwrap_or_else(|_| {
+                FileExplorerBuilder::build_with_theme(Self::build_explorer_theme(Arc::clone(
+                    &app_context,
+                )))
+                .unwrap()
+            });
 
         FileUploadExplorer {
             app_context,
@@ -53,18 +59,47 @@ impl FileUploadExplorer {
         self
     }
 
-    fn build_explorer_theme(app_context: &AppContext) -> Theme {
+    /// Full explorer chrome (block, list, highlights) uses the active tgt theme.
+    /// Title lines resolve styles on each paint via `Arc<AppContext>` so they stay in sync.
+    fn build_explorer_theme(app_context: Arc<AppContext>) -> Theme {
         let style_chat = app_context.style_chat();
-        let style_item_selected = app_context.style_item_selected();
-        let style_dir = app_context.style_item_reply_target();
+        let border = app_context.style_border_component_focused();
+        let item_file = app_context.style_chat_message_other_content();
+        let dir_style = app_context.style_item_reply_target();
+        let highlight_item = app_context.style_item_selected();
+        let highlight_dir = highlight_item.add_modifier(Modifier::BOLD);
 
-        Theme::default()
+        let ac_title = Arc::clone(&app_context);
+        let ac_footer = Arc::clone(&app_context);
+
+        Theme::new()
+            .with_block(
+                Block::new()
+                    .borders(Borders::ALL)
+                    .border_style(border)
+                    .style(style_chat),
+            )
+            .with_title_top(move |fe: &FileExplorer| {
+                Line::from(vec![Span::styled(
+                    fe.cwd().display().to_string(),
+                    ac_title.style_timestamp(),
+                )])
+            })
+            .with_title_bottom(move |fe: &FileExplorer| {
+                let n = fe.files().len();
+                Line::from(vec![Span::styled(
+                    format!("[{n} entries]"),
+                    ac_footer.style_timestamp(),
+                )])
+                .alignment(Alignment::Right)
+            })
             .with_style(style_chat)
-            .with_item_style(style_chat)
-            .with_dir_style(style_dir)
-            .with_highlight_item_style(style_item_selected)
-            .with_highlight_dir_style(style_item_selected)
-            .with_highlight_symbol("> ".into())
+            .with_item_style(item_file)
+            .with_dir_style(dir_style)
+            .with_highlight_item_style(highlight_item)
+            .with_highlight_dir_style(highlight_dir)
+            .with_highlight_symbol("> ")
+            .with_highlight_spacing(HighlightSpacing::Always)
     }
 
     fn current_selected_label(&self) -> String {
@@ -88,10 +123,7 @@ impl HandleFocus for FileUploadExplorer {
 }
 
 impl Component for FileUploadExplorer {
-    fn register_action_handler(
-        &mut self,
-        tx: UnboundedSender<Action>,
-    ) -> std::io::Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.action_tx = Some(tx);
         Ok(())
     }
@@ -101,6 +133,9 @@ impl Component for FileUploadExplorer {
             Action::ShowFileUploadExplorer => {
                 self.visible = true;
                 self.focused = true;
+
+                self.explorer
+                    .set_theme(Self::build_explorer_theme(Arc::clone(&self.app_context)));
 
                 // Reset browsing location when the popup is opened.
                 let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -165,6 +200,11 @@ impl Component for FileUploadExplorer {
             return Ok(());
         }
 
+        // Theme can change while the app runs; title callbacks read fresh styles each paint,
+        // but list/block colors are snapshotted in Theme — refresh each draw when visible.
+        self.explorer
+            .set_theme(Self::build_explorer_theme(Arc::clone(&self.app_context)));
+
         // Centered overlay.
         let popup_w = area.width.min(100);
         let popup_h = area.height.min(28);
@@ -197,7 +237,10 @@ impl Component for FileUploadExplorer {
         let hint = vec![Line::from(vec![
             Span::styled(selected_label, self.app_context.style_timestamp()),
             Span::raw("  "),
-            Span::styled("Enter=upload  Esc/q=cancel", self.app_context.style_timestamp()),
+            Span::styled(
+                "Enter=upload  Esc/q=cancel",
+                self.app_context.style_timestamp(),
+            ),
         ])];
 
         let instructions_area = layout[1];
@@ -211,4 +254,3 @@ impl Component for FileUploadExplorer {
         Ok(())
     }
 }
-

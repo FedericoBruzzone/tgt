@@ -219,9 +219,7 @@ async fn handle_tui_backend_one_event(
                 Some(ComponentName::ThemeSelector) => &keymap_config.theme_selector,
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
                 Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
-                Some(ComponentName::FileUploadExplorer) => {
-                    &keymap_config.file_upload_explorer
-                }
+                Some(ComponentName::FileUploadExplorer) => &keymap_config.file_upload_explorer,
                 _ => &keymap_config.core_window,
             };
 
