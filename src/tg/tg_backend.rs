@@ -9,7 +9,10 @@ use tdlib_rs::enums::{
     InputMessageReplyTo, LogStream, Messages, OptionValue, SearchMessagesFilter, Update, User,
 };
 use tdlib_rs::functions;
-use tdlib_rs::types::{Chat, ChatPosition, InputMessageText, LogStreamFile, OptionValueBoolean};
+use tdlib_rs::types::{
+    Chat, ChatPosition, InputFileLocal, InputMessageDocument, InputMessageText, LogStreamFile,
+    OptionValueBoolean,
+};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -342,6 +345,41 @@ impl TgBackend {
             Ok(tdlib_rs::enums::Message::Message(message)) => Ok(message),
             Err(e) => {
                 tracing::error!("Failed to send message: {e:?}");
+                Err(e)
+            }
+        }
+    }
+
+    #[allow(clippy::await_holding_lock)]
+    pub async fn send_document(
+        &mut self,
+        file_path: String,
+        chat_id: i64,
+    ) -> Result<tdlib_rs::types::Message, tdlib_rs::types::Error> {
+        self.app_context
+            .tg_context()
+            .set_reply_message_i64(-1, "".to_string());
+
+        self.app_context
+            .action_tx()
+            .send(Action::HideChatWindowReply)
+            .unwrap();
+
+        let input_file = InputFileLocal { path: file_path };
+
+        let document = InputMessageDocument {
+            document: tdlib_rs::enums::InputFile::Local(input_file),
+            thumbnail: None,
+            disable_content_type_detection: true,
+            caption: None,
+        };
+
+        let content = InputMessageContent::InputMessageDocument(document);
+
+        match functions::send_message(chat_id, None, None, None, content, self.client_id).await {
+            Ok(tdlib_rs::enums::Message::Message(message)) => Ok(message),
+            Err(e) => {
+                tracing::error!("Failed to send document: {e:?}");
                 Err(e)
             }
         }

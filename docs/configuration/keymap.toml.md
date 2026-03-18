@@ -33,6 +33,8 @@ keymap = [
   { keys = ["alt+k"], command = "increase_prompt_size", description = "Increase the prompt size"},
   # Decrease the prompt size
   { keys = ["alt+j"], command = "decrease_prompt_size", description = "Decrease the prompt size"},
+  # Upload file (opens the file explorer popup)
+  { keys = ["alt+u"], command = "show_file_upload_explorer", description = "Upload file"},
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
@@ -78,6 +80,14 @@ keymap = [
 # The prompt key bindings are only usable in the prompt component.
 # When the prompt is focused, the prompt key bindings will be active.
 [prompt]
+keymap = []
+
+[file_upload_explorer]
+keymap = [
+  # Close the file upload explorer popup
+  { keys = ["esc"], command = "hide_file_upload_explorer", description = "Close file upload explorer"},
+  { keys = ["q"], command = "hide_file_upload_explorer", description = "Close file upload explorer"},
+]
 
 ```
 

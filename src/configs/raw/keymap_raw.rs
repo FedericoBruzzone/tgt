@@ -40,4 +40,7 @@ pub struct KeymapRaw {
     pub search_overlay: Option<KeymapMode>,
     /// The keymap for the photo viewer popup.
     pub photo_viewer: Option<KeymapMode>,
+
+    /// The keymap for the file upload explorer popup.
+    pub file_upload_explorer: Option<KeymapMode>,
 }

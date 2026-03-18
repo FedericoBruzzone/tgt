@@ -360,6 +360,7 @@ impl AppContext {
             Some(ComponentName::ThemeSelector) => 9,
             Some(ComponentName::SearchOverlay) => 10,
             Some(ComponentName::PhotoViewer) => 11,
+            Some(ComponentName::FileUploadExplorer) => 12,
         }
     }
 
@@ -380,6 +381,7 @@ impl AppContext {
             9 => Some(ComponentName::ThemeSelector),
             10 => Some(ComponentName::SearchOverlay),
             11 => Some(ComponentName::PhotoViewer),
+            12 => Some(ComponentName::FileUploadExplorer),
             _ => None, // Invalid encoding, treat as None
         }
     }

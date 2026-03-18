@@ -76,6 +76,7 @@ rodio = { version = "0.22", optional = true, default-features = true }
 ogg = { version = "0.9", optional = true }
 # Opus codec for Telegram voice notes (via audiopus_sys; requires CMake when building with voice-message).
 audiopus = { version = "0.2", optional = true }
+ratatui-explorer = "0.3.0"
 
 [build-dependencies]
 dirs = "6.0.0"
