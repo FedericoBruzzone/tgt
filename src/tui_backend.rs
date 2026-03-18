@@ -259,8 +259,19 @@ impl TuiBackend {
                                         event_tx.send(Event::Paste(text))?;
                                     },
                                 }
-                          },
-                          _ => unimplemented!()
+                          }
+                          // If the terminal event stream ends or errors, don't panic.
+                          // Panicking here can leave the terminal in raw/alt-screen state
+                          // which looks like the app "froze".
+                          Some(Err(e)) => {
+                              tracing::error!("TUI event stream error: {e:?}");
+                              // Back off a bit to avoid a hot loop if the stream is failing repeatedly.
+                              tokio::time::sleep(Duration::from_millis(50)).await;
+                          }
+                          None => {
+                              tracing::warn!("TUI event stream ended");
+                              break;
+                          }
                         }
                     },
                     _ = render_tick => {
@@ -268,6 +279,7 @@ impl TuiBackend {
                     }
                 }
             }
+            Ok(())
         });
     }
 }

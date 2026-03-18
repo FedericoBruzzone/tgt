@@ -39,7 +39,9 @@ pub async fn run_app(
     tg_backend.handle_authorization_state().await;
     tg_backend.use_quick_ack().await;
     tg_backend.get_me().await;
-    tg_backend.load_chats(ChatList::Main, 30).await;
+    // On startup, fetch a larger chunk of the main chat list so the UI reaches a "latest state"
+    // quickly and doesn't feel like it's incrementally catching up for a long time.
+    tg_backend.load_chats(ChatList::Main, 200).await;
 
     match handle_cli(Arc::clone(&app_context), tg_backend).await {
         HandleCliOutcome::Quit => {
@@ -75,7 +77,7 @@ pub async fn run_app(
     // Notify ChatList to populate visible_chats from initial load (it only rebuilds on LoadChats/ChatHistoryAppended/Resize).
     let _ = app_context
         .action_tx()
-        .send(Action::LoadChats(ChatList::Main.into(), 30));
+        .send(Action::LoadChats(ChatList::Main.into(), 200));
 
     // Refresh task: ~60 FPS. We no longer block on TUI/TG in the select, so this won't spin; wake + drain keeps UI responsive.
     const REFRESH_MS: u64 = 16; // 1000/60 ≈ 60 FPS
@@ -882,8 +884,19 @@ async fn handle_cli(app_context: Arc<AppContext>, tg_backend: &mut TgBackend) ->
                 match msg {
                     Ok(msg) => {
                         let message_id = msg.id;
-                        while app_context.tg_context().last_acknowledged_message_id() != message_id
-                        {
+                        // Avoid a tight spin loop: ack may be delayed or never arrive.
+                        // Wait up to a bounded time while yielding to the runtime.
+                        let deadline = Instant::now() + Duration::from_secs(10);
+                        while app_context.tg_context().last_acknowledged_message_id() != message_id {
+                            if Instant::now() >= deadline {
+                                tracing::warn!(
+                                    message_id,
+                                    last_ack = app_context.tg_context().last_acknowledged_message_id(),
+                                    "Timed out waiting for MessageSendAcknowledged"
+                                );
+                                break;
+                            }
+                            tokio::time::sleep(Duration::from_millis(10)).await;
                         }
                     }
                     Err(e) => {
