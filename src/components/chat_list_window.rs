@@ -557,7 +557,12 @@ impl Component for ChatListWindow {
                 self.rebuild_visible_chats_with_preserve_selection(true);
             }
             Action::ChatHistoryAppended | Action::Resize(..) => {
-                self.rebuild_visible_chats();
+                // During startup, TDLib can emit a large burst of chat updates (positions, last_message, unread, etc.).
+                // Rebuilding the list is necessary, but re-syncing selection to the open chat on every burst makes the
+                // chat list feel "stuck" (user can't navigate because selection gets overwritten).
+                //
+                // Preserve selection while the chat list is focused; otherwise keep syncing selection to open chat.
+                self.rebuild_visible_chats_with_preserve_selection(self.focused);
             }
             Action::FocusComponent(ComponentName::ChatList) => {
                 self.rebuild_visible_chats();
