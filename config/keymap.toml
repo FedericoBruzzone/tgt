@@ -38,6 +38,9 @@ keymap = [
   { keys = ["alt+f1"], command = "show_command_guide", description = "Show command guide with all keybindings"},
   # Show theme selector
   { keys = ["alt+t"], command = "show_theme_selector", description = "Show theme selector"},
+
+  # Upload file (opens the file explorer popup)
+  { keys = ["alt+u"], command = "show_file_upload_explorer", description = "Upload file"},
 ]
 
 # The chat_list key bindings are only usable in the chat list component.
@@ -149,5 +152,12 @@ keymap = [
   { keys = ["down"], command = "photo_viewer_next", description = "View next message"},
   { keys = ["k"], command = "photo_viewer_previous", description = "View previous message"},
   { keys = ["j"], command = "photo_viewer_next", description = "View next message"},
+]
+
+[file_upload_explorer]
+keymap = [
+  # Close the file upload explorer popup
+  { keys = ["esc"], command = "hide_file_upload_explorer", description = "Close file upload explorer"},
+  { keys = ["q"], command = "hide_file_upload_explorer", description = "Close file upload explorer"},
 ]
 

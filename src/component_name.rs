@@ -26,6 +26,8 @@ pub enum ComponentName {
     SearchOverlay,
     /// The photo viewer popup.
     PhotoViewer,
+    /// The file upload explorer popup.
+    FileUploadExplorer,
 }
 
 impl ComponentName {
@@ -38,6 +40,7 @@ impl ComponentName {
                 | ComponentName::ThemeSelector
                 | ComponentName::SearchOverlay
                 | ComponentName::PhotoViewer
+                | ComponentName::FileUploadExplorer
         )
     }
 }
@@ -56,6 +59,7 @@ impl Display for ComponentName {
             ComponentName::ThemeSelector => write!(f, "Theme Selector"),
             ComponentName::SearchOverlay => write!(f, "Search Overlay"),
             ComponentName::PhotoViewer => write!(f, "Photo Viewer"),
+            ComponentName::FileUploadExplorer => write!(f, "File Upload Explorer"),
         }
     }
 }

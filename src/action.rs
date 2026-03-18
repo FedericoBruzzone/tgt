@@ -287,6 +287,14 @@ pub enum Action {
     VoicePlaybackPosition(i64, u64, u64),
     /// Voice playback ended for this message.
     VoicePlaybackEnded(i64),
+
+    /// Show the file upload explorer popup.
+    ShowFileUploadExplorer,
+    /// Hide the file upload explorer popup.
+    HideFileUploadExplorer,
+
+    /// UploadFile action with a selected local path.
+    UploadFile(String),
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -352,6 +360,8 @@ impl FromStr for Action {
             "hide_photo_viewer" => Ok(Action::HidePhotoViewer),
             "photo_viewer_previous" => Ok(Action::PhotoViewerPrevious),
             "photo_viewer_next" => Ok(Action::PhotoViewerNext),
+            "show_file_upload_explorer" => Ok(Action::ShowFileUploadExplorer),
+            "hide_file_upload_explorer" => Ok(Action::HideFileUploadExplorer),
             "play_voice_message" => Ok(Action::ToggleVoicePlayback),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }

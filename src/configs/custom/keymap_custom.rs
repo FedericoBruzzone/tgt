@@ -45,6 +45,7 @@ enum KeymapKind {
     ThemeSelector,
     SearchOverlay,
     PhotoViewer,
+    FileUploadExplorer,
 }
 
 #[derive(Clone, Debug)]
@@ -67,6 +68,8 @@ pub struct KeymapConfig {
     pub search_overlay: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the photo viewer popup component.
     pub photo_viewer: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the file upload explorer popup component.
+    pub file_upload_explorer: HashMap<Event, ActionBinding>,
     /// core_window + chat_list; component overrides general. Used when chat list is focused.
     merged_chat_list: HashMap<Event, ActionBinding>,
     /// core_window + chat; component overrides general. Used when chat is focused.
@@ -81,6 +84,8 @@ pub struct KeymapConfig {
     merged_search_overlay: HashMap<Event, ActionBinding>,
     /// core_window + photo_viewer; component overrides general. Used when photo viewer is focused.
     merged_photo_viewer: HashMap<Event, ActionBinding>,
+    /// core_window + file_upload_explorer; component overrides general. Used when file upload explorer is focused.
+    merged_file_upload_explorer: HashMap<Event, ActionBinding>,
 }
 /// The keymap configuration implementation.
 impl KeymapConfig {
@@ -315,6 +320,7 @@ impl KeymapConfig {
         theme_selector: &HashMap<Event, ActionBinding>,
         search_overlay: &HashMap<Event, ActionBinding>,
         photo_viewer: &HashMap<Event, ActionBinding>,
+        file_upload_explorer: &HashMap<Event, ActionBinding>,
     ) {
         let mut all: Vec<&Event> = vec![];
         all.extend(default.keys());
@@ -325,6 +331,7 @@ impl KeymapConfig {
         all.extend(theme_selector.keys());
         all.extend(search_overlay.keys());
         all.extend(photo_viewer.keys());
+        all.extend(file_upload_explorer.keys());
 
         let mut duplicates = HashSet::new();
         for k in all {
@@ -355,6 +362,10 @@ impl KeymapConfig {
             .extend(self.search_overlay.clone());
         self.merged_photo_viewer = self.core_window.clone();
         self.merged_photo_viewer.extend(self.photo_viewer.clone());
+
+        self.merged_file_upload_explorer = self.core_window.clone();
+        self.merged_file_upload_explorer
+            .extend(self.file_upload_explorer.clone());
     }
 
     /// Get the effective keymap for a component: general (core_window) bindings plus
@@ -372,6 +383,7 @@ impl KeymapConfig {
                 ComponentName::ThemeSelector => &self.merged_theme_selector,
                 ComponentName::SearchOverlay => &self.merged_search_overlay,
                 ComponentName::PhotoViewer => &self.merged_photo_viewer,
+                ComponentName::FileUploadExplorer => &self.merged_file_upload_explorer,
                 _ => &self.core_window,
             },
             None => &self.core_window,
@@ -518,6 +530,20 @@ impl ConfigFile for KeymapConfig {
                         }
                     }
                 }
+
+                if let Some(file_upload_explorer) = other.file_upload_explorer {
+                    for (k, v) in Self::keymaps_vec_to_map(
+                        file_upload_explorer.keymap,
+                        KeymapKind::FileUploadExplorer,
+                    ) {
+                        if self.file_upload_explorer.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the file_upload_explorer section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
+                    }
+                }
                 Self::check_duplicates(
                     &self.core_window,
                     &self.chat_list,
@@ -527,6 +553,7 @@ impl ConfigFile for KeymapConfig {
                     &self.theme_selector,
                     &self.search_overlay,
                     &self.photo_viewer,
+                    &self.file_upload_explorer,
                 );
                 self.rebuild_merged();
                 self.clone()
@@ -574,6 +601,13 @@ impl From<KeymapRaw> for KeymapConfig {
                 .keymap,
             KeymapKind::PhotoViewer,
         );
+
+        let file_upload_explorer = Self::keymaps_vec_to_map(
+            raw.file_upload_explorer
+                .unwrap_or(KeymapMode { keymap: vec![] })
+                .keymap,
+            KeymapKind::FileUploadExplorer,
+        );
         Self::check_duplicates(
             &core_window,
             &chat_list,
@@ -583,6 +617,7 @@ impl From<KeymapRaw> for KeymapConfig {
             &theme_selector,
             &search_overlay,
             &photo_viewer,
+            &file_upload_explorer,
         );
         let mut config = Self {
             core_window,
@@ -593,6 +628,7 @@ impl From<KeymapRaw> for KeymapConfig {
             theme_selector,
             search_overlay,
             photo_viewer,
+            file_upload_explorer,
             merged_chat_list: HashMap::new(),
             merged_chat: HashMap::new(),
             merged_prompt: HashMap::new(),
@@ -600,6 +636,7 @@ impl From<KeymapRaw> for KeymapConfig {
             merged_theme_selector: HashMap::new(),
             merged_search_overlay: HashMap::new(),
             merged_photo_viewer: HashMap::new(),
+            merged_file_upload_explorer: HashMap::new(),
         };
         config.rebuild_merged();
         config
@@ -683,6 +720,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 0);
@@ -711,6 +749,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -739,6 +778,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         let mut keymap_config = KeymapConfig::from(keymap_raw);
         let keymap_raw = KeymapRaw {
@@ -756,6 +796,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -800,6 +841,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
 
@@ -863,6 +905,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         let user_raw = KeymapRaw {
             core_window: Some(KeymapMode {
@@ -879,6 +922,7 @@ mod tests {
             theme_selector: None,
             search_overlay: None,
             photo_viewer: None,
+            file_upload_explorer: None,
         };
         let merged = merge_keymap_raw(default_raw, Some(user_raw));
         let config = KeymapConfig::from(merged);

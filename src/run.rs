@@ -219,6 +219,9 @@ async fn handle_tui_backend_one_event(
                 Some(ComponentName::ThemeSelector) => &keymap_config.theme_selector,
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
                 Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
+                Some(ComponentName::FileUploadExplorer) => {
+                    &keymap_config.file_upload_explorer
+                }
                 _ => &keymap_config.core_window,
             };
 
@@ -321,6 +324,8 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::HideThemeSelector
             | Action::ShowPhotoViewer
             | Action::HidePhotoViewer
+            | Action::ShowFileUploadExplorer
+            | Action::HideFileUploadExplorer
             | Action::ViewPhotoMessage(_)
             | Action::PhotoDownloaded(_)
             | Action::PhotoDecoded(_)
@@ -404,6 +409,18 @@ pub async fn handle_app_actions(
             Action::SendMessageEdited(message_id, ref message) => {
                 tg_backend
                     .send_message_edited(*message_id, message.to_string())
+                    .await;
+            }
+            Action::UploadFile(ref file_path) => {
+                let chat_id = app_context.tg_context().open_chat_id().as_i64();
+                if chat_id == 0 {
+                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                        "Open a chat before uploading a file.".into(),
+                    ));
+                    continue;
+                }
+                let _ = tg_backend
+                    .send_document(file_path.to_string(), chat_id)
                     .await;
             }
             Action::GetChatHistory => {
