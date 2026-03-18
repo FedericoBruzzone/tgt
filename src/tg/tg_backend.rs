@@ -230,11 +230,15 @@ impl TgBackend {
     ) -> Result<Vec<MessageEntry>, tdlib_rs::types::Error> {
         let filter = Some(SearchMessagesFilter::Empty);
         match functions::search_chat_messages(
-            chat_id, None, // topic_id
-            query, None, // sender_id
+            chat_id,
+            None, // topic_id
+            query,
+            None, // sender_id
             0,    // from_message_id
             0,    // offset
-            limit, filter, self.client_id,
+            limit,
+            filter,
+            self.client_id,
         )
         .await
         {
