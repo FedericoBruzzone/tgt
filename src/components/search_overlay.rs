@@ -66,9 +66,13 @@ impl SearchOverlay {
 
     fn submit_search(&self) {
         if self.query.is_empty() {
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::StatusMessage("Search query is empty.".into()));
+            }
             return;
         }
         if let Some(tx) = self.action_tx.as_ref() {
+            let _ = tx.send(Action::StatusMessage(format!("Searching: {}", self.query)));
             let _ = tx.send(Action::SearchChatMessages(self.query.clone()));
         }
     }
@@ -156,6 +160,15 @@ impl Component for SearchOverlay {
                 match key_code {
                     KeyCode::Up => self.select_previous(),
                     KeyCode::Down => self.select_next(),
+                    // Handle Enter directly so search works even if keymap routing misses it.
+                    // (E.g. custom keymaps that don't include enter, or keymap lookup path not taken.)
+                    KeyCode::Enter => {
+                        if self.results.is_empty() {
+                            self.submit_search();
+                        } else {
+                            self.confirm_selection();
+                        }
+                    }
                     KeyCode::Backspace => {
                         self.query.pop();
                     }

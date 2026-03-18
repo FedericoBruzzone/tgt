@@ -313,6 +313,8 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::JumpCompleted(_)
             | Action::CloseSearchOverlay
             | Action::ShowSearchOverlay
+            | Action::SearchOverlaySubmit
+            | Action::SearchOverlayConfirm
             | Action::SwitchTheme
             | Action::SwitchThemeTo(_)
             | Action::ShowThemeSelector
@@ -488,6 +490,9 @@ pub async fn handle_app_actions(
             Action::SearchChatMessages(ref query) => {
                 let chat_id = app_context.tg_context().open_chat_id().as_i64();
                 if chat_id == 0 {
+                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                        "Open a chat before searching messages.".into(),
+                    ));
                     continue;
                 }
                 match tg_backend
@@ -495,9 +500,17 @@ pub async fn handle_app_actions(
                     .await
                 {
                     Ok(entries) => {
+                        let _ = app_context.action_tx().send(Action::StatusMessage(format!(
+                            "Search results: {}",
+                            entries.len()
+                        )));
                         let _ = app_context.action_tx().send(Action::SearchResults(entries));
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        let _ = app_context.action_tx().send(Action::StatusMessage(format!(
+                            "Search failed: {}",
+                            e.message
+                        )));
                         let _ = app_context.action_tx().send(Action::SearchResults(vec![]));
                     }
                 }

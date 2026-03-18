@@ -234,7 +234,7 @@ impl TgBackend {
             query, None, // sender_id
             0,    // from_message_id
             0,    // offset
-            limit, filter, 0, // message_thread_id
+            limit, filter, self.client_id,
         )
         .await
         {
