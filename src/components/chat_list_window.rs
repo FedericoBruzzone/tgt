@@ -304,6 +304,9 @@ impl ChatListWindow {
                 self.app_context.tg_context().clear_open_chat_messages();
                 self.app_context
                     .tg_context()
+                    .set_open_chat_pinned(Vec::new());
+                self.app_context
+                    .tg_context()
                     .set_jump_target_message_id_i64(0);
                 self.app_context
                     .action_tx()

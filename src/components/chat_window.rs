@@ -575,10 +575,9 @@ impl Component for ChatWindow {
             .tg_context()
             .open_chat_pinned_snapshot()
             .is_empty();
-        // Fixed header + single-line pin row; only the message list uses Min so Ratatui does not
-        // split spare space between two Min regions (that made the header/pin zone huge).
+        // Fixed header + pinned section (label row + preview row); only the message list uses Min.
         let header_h = 3u16;
-        let pin_h = if has_pins { 1u16 } else { 0u16 };
+        let pin_h = if has_pins { 2u16 } else { 0u16 };
         let chat_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -727,8 +726,27 @@ impl Component for ChatWindow {
 
         frame.render_widget(header, chat_layout[0]);
         if pin_h > 0 {
-            let pin_preview = self.pinned_preview_text();
+            let pin_area = chat_layout[1];
+            let pin_block = Block::new()
+                .borders(Borders::LEFT | Borders::RIGHT)
+                .border_style(style_panel_border)
+                .style(self.app_context.style_chat());
+            let pin_inner = pin_block.inner(pin_area);
+            frame.render_widget(pin_block, pin_area);
+
+            let pin_rows = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(1), Constraint::Length(1)])
+                .split(pin_inner);
+
             let open_keys = self.pinned_messages_popup_keys_hint();
+            let pin_title = Paragraph::new(Line::from(vec![Span::styled(
+                format!("Pinned messages (press {open_keys} to view)"),
+                self.app_context.style_chat_chat_name(),
+            )]))
+            .style(self.app_context.style_chat());
+
+            let pin_preview = self.pinned_preview_text();
             let pin_line = Line::from(vec![
                 Span::styled("📌 ", self.app_context.style_timestamp()),
                 Span::styled(
@@ -739,17 +757,11 @@ impl Component for ChatWindow {
                     },
                     self.app_context.style_chat_message_other_content(),
                 ),
-                Span::styled(
-                    format!("  ({open_keys})"),
-                    self.app_context.style_timestamp(),
-                ),
             ]);
-            let pin_block = Block::new()
-                .borders(Borders::LEFT | Borders::RIGHT)
-                .border_style(style_panel_border)
-                .style(self.app_context.style_chat());
-            let pin_paragraph = Paragraph::new(pin_line).block(pin_block);
-            frame.render_widget(pin_paragraph, chat_layout[1]);
+            let pin_preview_para = Paragraph::new(pin_line).style(self.app_context.style_chat());
+
+            frame.render_widget(pin_title, pin_rows[0]);
+            frame.render_widget(pin_preview_para, pin_rows[1]);
         }
         frame.render_stateful_widget(list, list_area, &mut self.message_list_state);
 

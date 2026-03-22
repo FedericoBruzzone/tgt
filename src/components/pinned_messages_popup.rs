@@ -5,7 +5,7 @@ use crate::{
     tg::message_entry::MessageEntry,
 };
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
@@ -150,11 +150,7 @@ impl Component for PinnedMessagesPopup {
 
         frame.render_widget(Clear, popup_area);
 
-        let title = format!(
-            "Pinned messages ({}/{})",
-            self.index + 1,
-            self.messages.len()
-        );
+        let title = format!("{}/{}", self.index + 1, self.messages.len());
         let block = Block::new()
             .borders(Borders::ALL)
             .title(title)
@@ -196,16 +192,26 @@ impl Component for PinnedMessagesPopup {
             .wrap(Wrap { trim: true });
 
         let footer_h = 2u16;
-        let body_h = inner.height.saturating_sub(footer_h);
-        let body_area = Rect::new(inner.x, inner.y, inner.width, body_h);
-        let footer_area = Rect::new(
-            inner.x,
-            inner.y + body_h,
-            inner.width,
-            footer_h.min(inner.height),
-        );
+        let header_h = 1u16;
+        let main = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(header_h),
+                Constraint::Min(1),
+                Constraint::Length(footer_h),
+            ])
+            .split(inner);
 
-        frame.render_widget(paragraph, body_area);
+        let header_para = Paragraph::new(Line::from(vec![Span::styled(
+            "Pinned messages:",
+            self.app_context.style_chat_chat_name(),
+        )]))
+        .style(self.app_context.style_chat());
+
+        frame.render_widget(header_para, main[0]);
+        frame.render_widget(paragraph, main[1]);
+
+        let footer_area = main[2];
 
         let hint = Line::from(vec![Span::styled(
             "↑/k older  ↓/j newer  Enter jump  Alt+V photo  Alt+P audio  Esc close",

@@ -41,7 +41,9 @@ pub struct TgContext {
     open_chat_id: AtomicChatId,
     /// Message cache and view window for the open chat.
     open_chat_messages: Mutex<OpenChatMessageStore>,
-    /// Pinned messages for the open chat (newest pin first). Cleared with [`Self::clear_open_chat_messages`].
+    /// Pinned messages for the open chat (newest pin first). Cleared when switching chats
+    /// (see chat list) or replaced by [`Self::set_open_chat_pinned`]. Not cleared when only the
+    /// message cache is cleared (e.g. jump-to-message reload).
     open_chat_pinned: Mutex<Vec<MessageEntry>>,
     open_chat_user: Mutex<Option<User>>,
 
@@ -140,7 +142,6 @@ impl TgContext {
             Backtrace::capture()
         );
         self.open_chat_messages().clear();
-        self.open_chat_pinned.lock().unwrap().clear();
     }
 
     pub fn set_from_message_id(&self, from_message_id: i64) {
