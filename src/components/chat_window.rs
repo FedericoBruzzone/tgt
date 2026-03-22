@@ -243,6 +243,33 @@ impl ChatWindow {
         }
     }
 
+    /// Open save-as flow for a photo or document on the selected message.
+    fn start_file_download_selected(&self) {
+        let Some(selected) = self.message_list_state.selected() else {
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::StatusMessage(
+                    "Select a message to save a file from.".into(),
+                ));
+            }
+            return;
+        };
+        let Some(entry) = self.message_list.get(selected) else {
+            return;
+        };
+        if entry.save_as_candidate().is_none() {
+            if let Some(tx) = self.action_tx.as_ref() {
+                let _ = tx.send(Action::StatusMessage(
+                    "Only photos and documents can be saved to disk.".into(),
+                ));
+            }
+            return;
+        }
+        let message_id = entry.id();
+        if let Some(tx) = self.action_tx.as_ref() {
+            let _ = tx.send(Action::ShowFileDownloadExplorer(message_id));
+        }
+    }
+
     /// View photo from the selected message.
     fn view_photo_selected(&self) {
         if let Some(selected) = self.message_list_state.selected() {
@@ -369,6 +396,9 @@ impl Component for ChatWindow {
             Action::ChatWindowCopy => self.copy_selected(),
             Action::ChatWindowEdit => self.edit_selected(),
             Action::ShowChatWindowReply => self.reply_selected(),
+            Action::StartFileDownload => {
+                self.start_file_download_selected();
+            }
             Action::ShowPhotoViewer => {
                 // User pressed keybinding to view photo from selected message
                 self.view_photo_selected();

@@ -295,6 +295,18 @@ pub enum Action {
 
     /// UploadFile action with a selected local path.
     UploadFile(String),
+
+    /// Begin save-as flow for the selected chat message (photo or document); chat window resolves message id.
+    StartFileDownload,
+    /// Show the file download explorer for this message id.
+    ShowFileDownloadExplorer(i64),
+    /// Hide the file download explorer popup.
+    HideFileDownloadExplorer,
+    /// Download/copy a Telegram file to `dest_path` (full path including file name).
+    SaveChatFileAs {
+        message_id: i64,
+        dest_path: String,
+    },
 }
 /// Implement the `Action` enum.
 impl Action {
@@ -362,6 +374,8 @@ impl FromStr for Action {
             "photo_viewer_next" => Ok(Action::PhotoViewerNext),
             "show_file_upload_explorer" => Ok(Action::ShowFileUploadExplorer),
             "hide_file_upload_explorer" => Ok(Action::HideFileUploadExplorer),
+            "start_file_download" => Ok(Action::StartFileDownload),
+            "hide_file_download_explorer" => Ok(Action::HideFileDownloadExplorer),
             "play_voice_message" => Ok(Action::ToggleVoicePlayback),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }

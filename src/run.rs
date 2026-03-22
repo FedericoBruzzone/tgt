@@ -220,6 +220,9 @@ async fn handle_tui_backend_one_event(
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
                 Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
                 Some(ComponentName::FileUploadExplorer) => &keymap_config.file_upload_explorer,
+                Some(ComponentName::FileDownloadExplorer) => {
+                    &keymap_config.file_download_explorer
+                }
                 _ => &keymap_config.core_window,
             };
 
@@ -324,6 +327,10 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::HidePhotoViewer
             | Action::ShowFileUploadExplorer
             | Action::HideFileUploadExplorer
+            | Action::StartFileDownload
+            | Action::ShowFileDownloadExplorer(_)
+            | Action::HideFileDownloadExplorer
+            | Action::SaveChatFileAs { .. }
             | Action::ViewPhotoMessage(_)
             | Action::PhotoDownloaded(_)
             | Action::PhotoDecoded(_)
@@ -420,6 +427,52 @@ pub async fn handle_app_actions(
                 let _ = tg_backend
                     .send_document(file_path.to_string(), chat_id)
                     .await;
+            }
+            Action::SaveChatFileAs {
+                message_id,
+                ref dest_path,
+            } => {
+                let Some(message) = app_context.tg_context().get_message(*message_id) else {
+                    let _ = app_context
+                        .action_tx()
+                        .send(Action::StatusMessage("Message not found.".into()));
+                    continue;
+                };
+                let Some((file_id, _)) = message.save_as_candidate() else {
+                    let _ = app_context.action_tx().send(Action::StatusMessage(
+                        "This message has no file to save.".into(),
+                    ));
+                    continue;
+                };
+
+                let src_path = if let Some(p) = message.local_telegram_file_path() {
+                    p
+                } else {
+                    match tg_backend.download_file(file_id, 32).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            tracing::error!("Save as: download failed: {:?}", e);
+                            let _ = app_context.action_tx().send(Action::StatusMessage(
+                                "Failed to download file from Telegram.".into(),
+                            ));
+                            continue;
+                        }
+                    }
+                };
+
+                match std::fs::copy(&src_path, dest_path) {
+                    Ok(n) => {
+                        let _ = app_context.action_tx().send(Action::StatusMessage(format!(
+                            "Saved {n} bytes to {dest_path}"
+                        )));
+                    }
+                    Err(e) => {
+                        tracing::error!("Save as: copy failed: {:?}", e);
+                        let _ = app_context.action_tx().send(Action::StatusMessage(format!(
+                            "Save failed: {e}"
+                        )));
+                    }
+                }
             }
             Action::GetChatHistory => {
                 if !app_context.tg_context().is_history_loading() {

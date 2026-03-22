@@ -8,6 +8,7 @@ use crate::{
         chat_window::ChatWindow,
         command_guide::CommandGuide,
         component_traits::{Component, HandleFocus},
+        file_download_explorer::FileDownloadExplorer,
         file_upload_explorer::FileUploadExplorer,
         photo_viewer::PhotoViewer,
         prompt_window::PromptWindow,
@@ -64,6 +65,8 @@ pub struct CoreWindow {
     show_photo_viewer: bool,
     /// Indicates whether the file upload explorer should be shown.
     show_file_upload_explorer: bool,
+    /// Indicates whether the file download (save-as) explorer should be shown.
+    show_file_download_explorer: bool,
     /// Last known screen areas for focusable sections (chat list, chat, prompt) for click-to-focus.
     last_focusable_areas: HashMap<ComponentName, Rect>,
 }
@@ -132,6 +135,12 @@ impl CoreWindow {
                     .with_name(ComponentName::FileUploadExplorer.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::FileDownloadExplorer,
+                FileDownloadExplorer::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::FileDownloadExplorer.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -151,6 +160,7 @@ impl CoreWindow {
         let show_search_overlay = false;
         let show_photo_viewer = false;
         let show_file_upload_explorer = false;
+        let show_file_download_explorer = false;
         let last_focusable_areas = HashMap::new();
 
         CoreWindow {
@@ -170,6 +180,7 @@ impl CoreWindow {
             show_search_overlay,
             show_photo_viewer,
             show_file_upload_explorer,
+            show_file_download_explorer,
             last_focusable_areas,
         }
     }
@@ -238,6 +249,7 @@ impl CoreWindow {
             ComponentName::SearchOverlay => Action::CloseSearchOverlay,
             ComponentName::PhotoViewer => Action::HidePhotoViewer,
             ComponentName::FileUploadExplorer => Action::HideFileUploadExplorer,
+            ComponentName::FileDownloadExplorer => Action::HideFileDownloadExplorer,
             _ => return, // Not a popup, nothing to do
         };
 
@@ -248,6 +260,7 @@ impl CoreWindow {
             ComponentName::SearchOverlay => self.show_search_overlay,
             ComponentName::PhotoViewer => self.show_photo_viewer,
             ComponentName::FileUploadExplorer => self.show_file_upload_explorer,
+            ComponentName::FileDownloadExplorer => self.show_file_download_explorer,
             _ => false,
         };
 
@@ -259,6 +272,7 @@ impl CoreWindow {
                 ComponentName::SearchOverlay => self.show_search_overlay = false,
                 ComponentName::PhotoViewer => self.show_photo_viewer = false,
                 ComponentName::FileUploadExplorer => self.show_file_upload_explorer = false,
+                ComponentName::FileDownloadExplorer => self.show_file_download_explorer = false,
                 _ => {}
             }
 
@@ -283,6 +297,7 @@ impl CoreWindow {
             ComponentName::SearchOverlay,
             ComponentName::PhotoViewer,
             ComponentName::FileUploadExplorer,
+            ComponentName::FileDownloadExplorer,
         ];
 
         for popup_name in popups {
@@ -397,6 +412,7 @@ impl Component for CoreWindow {
                 self.show_search_overlay = false;
                 self.show_photo_viewer = false;
                 self.show_file_upload_explorer = false;
+                self.show_file_download_explorer = false;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
                 }
@@ -622,6 +638,49 @@ impl Component for CoreWindow {
                 }
 
                 if self.component_focused == Some(ComponentName::FileUploadExplorer) {
+                    self.component_focused = Some(ComponentName::Chat);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
+                    if let Some(chat) = self.components.get_mut(&ComponentName::Chat) {
+                        chat.focus();
+                    }
+                    self.components
+                        .iter_mut()
+                        .filter(|(name, _)| *name != &ComponentName::Chat)
+                        .for_each(|(_, component)| component.unfocus());
+                }
+            }
+
+            Action::ShowFileDownloadExplorer(message_id) => {
+                self.hide_other_popups(ComponentName::FileDownloadExplorer);
+
+                self.show_file_download_explorer = true;
+                self.component_focused = Some(ComponentName::FileDownloadExplorer);
+                self.app_context
+                    .set_focused_component(self.component_focused);
+
+                if let Some(component) =
+                    self.components.get_mut(&ComponentName::FileDownloadExplorer)
+                {
+                    component.focus();
+                    component.update(Action::ShowFileDownloadExplorer(message_id));
+                }
+
+                self.components
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &ComponentName::FileDownloadExplorer)
+                    .for_each(|(_, component)| component.unfocus());
+            }
+
+            Action::HideFileDownloadExplorer => {
+                self.show_file_download_explorer = false;
+                if let Some(component) =
+                    self.components.get_mut(&ComponentName::FileDownloadExplorer)
+                {
+                    component.update(action.clone());
+                }
+
+                if self.component_focused == Some(ComponentName::FileDownloadExplorer) {
                     self.component_focused = Some(ComponentName::Chat);
                     self.app_context
                         .set_focused_component(self.component_focused);
@@ -968,6 +1027,18 @@ impl Component for CoreWindow {
                     panic!(
                         "Failed to get component: {}",
                         ComponentName::FileUploadExplorer
+                    )
+                })
+                .draw(frame, area)?;
+        }
+
+        if self.show_file_download_explorer {
+            self.components
+                .get_mut(&ComponentName::FileDownloadExplorer)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Failed to get component: {}",
+                        ComponentName::FileDownloadExplorer
                     )
                 })
                 .draw(frame, area)?;

@@ -43,4 +43,7 @@ pub struct KeymapRaw {
 
     /// The keymap for the file upload explorer popup.
     pub file_upload_explorer: Option<KeymapMode>,
+
+    /// The keymap for the file download / save-as explorer popup.
+    pub file_download_explorer: Option<KeymapMode>,
 }

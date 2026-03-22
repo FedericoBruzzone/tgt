@@ -3,11 +3,20 @@ use chrono::{DateTime, Local};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use std::time::{Duration, UNIX_EPOCH};
+use std::path::Path;
+
 use tdlib_rs::enums::{MessageContent, MessageReplyTo, MessageSender};
 use tdlib_rs::types::FormattedText;
 use unicode_width::UnicodeWidthChar;
 
 use super::td_enums::{TdMessageReplyTo, TdMessageSender};
+
+fn path_file_basename(path: &str) -> Option<String> {
+    if path.is_empty() {
+        return None;
+    }
+    Path::new(path).file_name()?.to_str().map(String::from)
+}
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct DateTimeEntry {
@@ -40,6 +49,12 @@ pub enum MessageContentType {
     Photo {
         file_id: i32,
         file_path: String,
+    },
+    /// Attached document (general file): TDLib file id, local cache path when downloaded, original file name.
+    Document {
+        file_id: i32,
+        file_path: String,
+        file_name: String,
     },
     /// Voice note or voice message (file_id for download, file_path when local, duration in seconds).
     VoiceNote {
@@ -148,6 +163,43 @@ impl MessageEntry {
                 file_path,
                 duration_secs,
             } => Some((*file_id, file_path.clone(), *duration_secs)),
+            _ => None,
+        }
+    }
+
+    /// Photo or document messages that can be saved to disk: TDLib `file_id` and a default base file name.
+    pub fn save_as_candidate(&self) -> Option<(i32, String)> {
+        match self.content_type() {
+            MessageContentType::Photo {
+                file_id,
+                file_path,
+            } => {
+                let base = path_file_basename(file_path).unwrap_or_else(|| "photo.jpg".to_string());
+                Some((*file_id, base))
+            }
+            MessageContentType::Document { file_id, file_name, .. } => {
+                let base = if file_name.is_empty() {
+                    "document".to_string()
+                } else {
+                    file_name.clone()
+                };
+                Some((*file_id, base))
+            }
+            _ => None,
+        }
+    }
+
+    /// If the Telegram file is already on disk, returns its local path.
+    pub fn local_telegram_file_path(&self) -> Option<String> {
+        match self.content_type() {
+            MessageContentType::Photo { file_path, .. }
+            | MessageContentType::Document { file_path, .. } => {
+                if !file_path.is_empty() && Path::new(file_path).is_file() {
+                    Some(file_path.clone())
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }
@@ -323,8 +375,23 @@ impl MessageEntry {
                     },
                 )
             }
-            MessageContent::MessageDocument(_) => {
-                (vec![Line::from("📄 Document")], MessageContentType::Other)
+            MessageContent::MessageDocument(doc) => {
+                let file_id = doc.document.document.id;
+                let file_path = doc.document.document.local.path.clone();
+                let file_name = doc.document.file_name.clone();
+                let label = if file_name.is_empty() {
+                    "📄 Document".to_string()
+                } else {
+                    format!("📄 {}", file_name)
+                };
+                (
+                    vec![Line::from(label)],
+                    MessageContentType::Document {
+                        file_id,
+                        file_path,
+                        file_name,
+                    },
+                )
             }
             MessageContent::MessageCall(call) => {
                 let call_type = if call.is_video {
