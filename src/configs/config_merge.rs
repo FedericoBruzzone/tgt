@@ -37,6 +37,7 @@ pub fn merge_keymap_raw(default: KeymapRaw, user: Option<KeymapRaw>) -> KeymapRa
         photo_viewer: None,
         file_upload_explorer: None,
         file_download_explorer: None,
+        pinned_messages_popup: None,
     });
     KeymapRaw {
         core_window: merge_keymap_mode(user.core_window, default.core_window),
@@ -54,6 +55,10 @@ pub fn merge_keymap_raw(default: KeymapRaw, user: Option<KeymapRaw>) -> KeymapRa
         file_download_explorer: merge_keymap_mode(
             user.file_download_explorer,
             default.file_download_explorer,
+        ),
+        pinned_messages_popup: merge_keymap_mode(
+            user.pinned_messages_popup,
+            default.pinned_messages_popup,
         ),
     }
 }
@@ -91,6 +96,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let user = KeymapRaw {
             core_window: Some(mode(vec![entry(&["q"], "try_quit")])),
@@ -103,6 +109,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let merged = merge_keymap_raw(default, Some(user));
         let core = merged.core_window.unwrap();
@@ -129,6 +136,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let user = KeymapRaw {
             core_window: Some(mode(vec![entry(&["F1"], "show_command_guide")])),
@@ -141,6 +149,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let merged = merge_keymap_raw(default, Some(user));
         let core = merged.core_window.unwrap();
@@ -166,6 +175,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let user = KeymapRaw {
             core_window: Some(mode(vec![entry(&["b"], "cmd_b"), entry(&["a"], "cmd_a")])),
@@ -178,6 +188,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let merged = merge_keymap_raw(default, Some(user));
         let core = merged.core_window.unwrap();
@@ -204,6 +215,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let user = KeymapRaw {
             core_window: Some(mode(vec![
@@ -219,6 +231,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let merged = merge_keymap_raw(default, Some(user));
         let core = merged.core_window.unwrap();
@@ -247,6 +260,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let merged = merge_keymap_raw(default, None);
         let core = merged.core_window.unwrap();

@@ -40,10 +40,10 @@ pub struct KeymapRaw {
     pub search_overlay: Option<KeymapMode>,
     /// The keymap for the photo viewer popup.
     pub photo_viewer: Option<KeymapMode>,
-
     /// The keymap for the file upload explorer popup.
     pub file_upload_explorer: Option<KeymapMode>,
-
     /// The keymap for the file download / save-as explorer popup.
     pub file_download_explorer: Option<KeymapMode>,
+    /// The keymap for the pinned messages popup.
+    pub pinned_messages_popup: Option<KeymapMode>,
 }

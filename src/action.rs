@@ -272,6 +272,23 @@ pub enum Action {
     /// Navigate to next message in photo viewer.
     PhotoViewerNext,
 
+    /// Load pinned messages for the open chat (TDLib search with pinned filter).
+    LoadPinnedMessages,
+    /// Open the pinned messages popup (Shift+Tab in chat or chat list when pins exist).
+    ShowPinnedMessagesPopup,
+    /// Close the pinned messages popup.
+    HidePinnedMessagesPopup,
+    /// Previous pinned message in the popup (older pin when sorted newest-first).
+    PinnedPopupPrevious,
+    /// Next pinned message in the popup (newer pin when sorted newest-first).
+    PinnedPopupNext,
+    /// Jump to the currently shown pinned message in the chat (then close popup).
+    PinnedPopupConfirmJump,
+    /// View photo for the current pinned message (inserts into open-chat cache if needed).
+    PinnedPopupViewPhoto,
+    /// Play voice/audio for the current pinned message (inserts into cache if needed).
+    PinnedPopupPlayVoice,
+
     /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
     StatusMessage(String),
     /// PromptCopy: copy selected text in the prompt (overrides try_quit when prompt focused).
@@ -373,6 +390,16 @@ impl FromStr for Action {
             "hide_file_upload_explorer" => Ok(Action::HideFileUploadExplorer),
             "start_file_download" => Ok(Action::StartFileDownload),
             "hide_file_download_explorer" => Ok(Action::HideFileDownloadExplorer),
+            "load_pinned_messages" => Ok(Action::LoadPinnedMessages),
+            "toggle_chat_pinned_bar" | "show_pinned_messages_popup" => {
+                Ok(Action::ShowPinnedMessagesPopup)
+            }
+            "hide_pinned_messages_popup" => Ok(Action::HidePinnedMessagesPopup),
+            "pinned_popup_previous" => Ok(Action::PinnedPopupPrevious),
+            "pinned_popup_next" => Ok(Action::PinnedPopupNext),
+            "pinned_popup_confirm_jump" => Ok(Action::PinnedPopupConfirmJump),
+            "pinned_popup_view_photo" => Ok(Action::PinnedPopupViewPhoto),
+            "pinned_popup_play_voice" => Ok(Action::PinnedPopupPlayVoice),
             "play_voice_message" => Ok(Action::ToggleVoicePlayback),
             _ => Err(AppError::InvalidAction(s.to_string())),
         }

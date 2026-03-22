@@ -47,6 +47,7 @@ enum KeymapKind {
     PhotoViewer,
     FileUploadExplorer,
     FileDownloadExplorer,
+    PinnedMessagesPopup,
 }
 
 #[derive(Clone, Debug)]
@@ -73,6 +74,8 @@ pub struct KeymapConfig {
     pub file_upload_explorer: HashMap<Event, ActionBinding>,
     /// The keymap configuration for the file download explorer popup component.
     pub file_download_explorer: HashMap<Event, ActionBinding>,
+    /// The keymap configuration for the pinned messages popup.
+    pub pinned_messages_popup: HashMap<Event, ActionBinding>,
     /// core_window + chat_list; component overrides general. Used when chat list is focused.
     merged_chat_list: HashMap<Event, ActionBinding>,
     /// core_window + chat; component overrides general. Used when chat is focused.
@@ -91,6 +94,8 @@ pub struct KeymapConfig {
     merged_file_upload_explorer: HashMap<Event, ActionBinding>,
     /// core_window + file_download_explorer; component overrides general. Used when file download explorer is focused.
     merged_file_download_explorer: HashMap<Event, ActionBinding>,
+    /// core_window + pinned_messages_popup; used when pinned messages popup is focused.
+    merged_pinned_messages_popup: HashMap<Event, ActionBinding>,
 }
 /// The keymap configuration implementation.
 impl KeymapConfig {
@@ -327,6 +332,7 @@ impl KeymapConfig {
         photo_viewer: &HashMap<Event, ActionBinding>,
         file_upload_explorer: &HashMap<Event, ActionBinding>,
         file_download_explorer: &HashMap<Event, ActionBinding>,
+        pinned_messages_popup: &HashMap<Event, ActionBinding>,
     ) {
         let mut all: Vec<&Event> = vec![];
         all.extend(default.keys());
@@ -339,6 +345,7 @@ impl KeymapConfig {
         all.extend(photo_viewer.keys());
         all.extend(file_upload_explorer.keys());
         all.extend(file_download_explorer.keys());
+        all.extend(pinned_messages_popup.keys());
 
         let mut duplicates = HashSet::new();
         for k in all {
@@ -377,6 +384,10 @@ impl KeymapConfig {
         self.merged_file_download_explorer = self.core_window.clone();
         self.merged_file_download_explorer
             .extend(self.file_download_explorer.clone());
+
+        self.merged_pinned_messages_popup = self.core_window.clone();
+        self.merged_pinned_messages_popup
+            .extend(self.pinned_messages_popup.clone());
     }
 
     /// Get the effective keymap for a component: general (core_window) bindings plus
@@ -396,6 +407,7 @@ impl KeymapConfig {
                 ComponentName::PhotoViewer => &self.merged_photo_viewer,
                 ComponentName::FileUploadExplorer => &self.merged_file_upload_explorer,
                 ComponentName::FileDownloadExplorer => &self.merged_file_download_explorer,
+                ComponentName::PinnedMessagesPopup => &self.merged_pinned_messages_popup,
                 _ => &self.core_window,
             },
             None => &self.core_window,
@@ -542,7 +554,6 @@ impl ConfigFile for KeymapConfig {
                         }
                     }
                 }
-
                 if let Some(file_upload_explorer) = other.file_upload_explorer {
                     for (k, v) in Self::keymaps_vec_to_map(
                         file_upload_explorer.keymap,
@@ -569,6 +580,19 @@ impl ConfigFile for KeymapConfig {
                         }
                     }
                 }
+                if let Some(pinned_messages_popup) = other.pinned_messages_popup {
+                    for (k, v) in Self::keymaps_vec_to_map(
+                        pinned_messages_popup.keymap,
+                        KeymapKind::PinnedMessagesPopup,
+                    ) {
+                        if self.pinned_messages_popup.insert(k.clone(), v).is_some() {
+                            tracing::warn!(
+                                    "Keymap entry {:?} is already present in the pinned_messages_popup section, you are overriding it",
+                                    k.to_string()
+                                );
+                        }
+                    }
+                }
                 Self::check_duplicates(
                     &self.core_window,
                     &self.chat_list,
@@ -580,6 +604,7 @@ impl ConfigFile for KeymapConfig {
                     &self.photo_viewer,
                     &self.file_upload_explorer,
                     &self.file_download_explorer,
+                    &self.pinned_messages_popup,
                 );
                 self.rebuild_merged();
                 self.clone()
@@ -627,7 +652,6 @@ impl From<KeymapRaw> for KeymapConfig {
                 .keymap,
             KeymapKind::PhotoViewer,
         );
-
         let file_upload_explorer = Self::keymaps_vec_to_map(
             raw.file_upload_explorer
                 .unwrap_or(KeymapMode { keymap: vec![] })
@@ -640,6 +664,12 @@ impl From<KeymapRaw> for KeymapConfig {
                 .keymap,
             KeymapKind::FileDownloadExplorer,
         );
+        let pinned_messages_popup = Self::keymaps_vec_to_map(
+            raw.pinned_messages_popup
+                .unwrap_or(KeymapMode { keymap: vec![] })
+                .keymap,
+            KeymapKind::PinnedMessagesPopup,
+        );
         Self::check_duplicates(
             &core_window,
             &chat_list,
@@ -651,6 +681,7 @@ impl From<KeymapRaw> for KeymapConfig {
             &photo_viewer,
             &file_upload_explorer,
             &file_download_explorer,
+            &pinned_messages_popup,
         );
         let mut config = Self {
             core_window,
@@ -663,6 +694,7 @@ impl From<KeymapRaw> for KeymapConfig {
             photo_viewer,
             file_upload_explorer,
             file_download_explorer,
+            pinned_messages_popup,
             merged_chat_list: HashMap::new(),
             merged_chat: HashMap::new(),
             merged_prompt: HashMap::new(),
@@ -672,6 +704,7 @@ impl From<KeymapRaw> for KeymapConfig {
             merged_photo_viewer: HashMap::new(),
             merged_file_upload_explorer: HashMap::new(),
             merged_file_download_explorer: HashMap::new(),
+            merged_pinned_messages_popup: HashMap::new(),
         };
         config.rebuild_merged();
         config
@@ -757,6 +790,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 0);
@@ -787,6 +821,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let keymap_config = KeymapConfig::from(keymap_raw);
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -817,6 +852,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let mut keymap_config = KeymapConfig::from(keymap_raw);
         let keymap_raw = KeymapRaw {
@@ -836,6 +872,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
         assert_eq!(keymap_config.core_window.len(), 1);
@@ -882,6 +919,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         keymap_config = keymap_config.merge(Some(keymap_raw));
 
@@ -947,6 +985,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let user_raw = KeymapRaw {
             core_window: Some(KeymapMode {
@@ -965,6 +1004,7 @@ mod tests {
             photo_viewer: None,
             file_upload_explorer: None,
             file_download_explorer: None,
+            pinned_messages_popup: None,
         };
         let merged = merge_keymap_raw(default_raw, Some(user_raw));
         let config = KeymapConfig::from(merged);

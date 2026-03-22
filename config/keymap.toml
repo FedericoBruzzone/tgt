@@ -62,6 +62,9 @@ keymap = [
   { keys = ["alt+r"], command = "chat_list_search", description = "Focus on prompt to start searching"},
   # Restore the default sorting in the chat list window.
   { keys = ["alt+c"], command = "chat_list_restore_sort", description = "Restore the default ordering of the chat list"},
+  # Open pinned messages for the current chat (no-op if none pinned).
+  { keys = ["shift+back_tab"], command = "show_pinned_messages_popup", description = "Open pinned messages for the open chat"},
+  { keys = ["back_tab"], command = "show_pinned_messages_popup", description = "Open pinned messages for the open chat"},
 ]
 
 # The chat key bindings are only usable in the chat component.
@@ -96,6 +99,9 @@ keymap = [
   { keys = ["alt+r"], command = "chat_window_search", description = "Focus on prompt to start searching messages"},
   # Restore the default message ordering in the chat window.
   { keys = ["alt+c"], command = "chat_window_restore_sort", description = "Restore the default ordering of messages"},
+  # Open pinned messages popup (when the chat has pinned messages).
+  { keys = ["shift+back_tab"], command = "show_pinned_messages_popup", description = "Open pinned messages browser"},
+  { keys = ["back_tab"], command = "show_pinned_messages_popup", description = "Open pinned messages browser"},
 ]
 
 # The prompt key bindings are only usable in the prompt component.
@@ -166,5 +172,18 @@ keymap = [
 [file_download_explorer]
 keymap = [
   { keys = ["esc"], command = "hide_file_download_explorer", description = "Cancel save file"},
+]
+
+# Pinned messages popup (browse all pins in the open chat).
+[pinned_messages_popup]
+keymap = [
+  { keys = ["esc"], command = "hide_pinned_messages_popup", description = "Close pinned messages"},
+  { keys = ["enter"], command = "pinned_popup_confirm_jump", description = "Jump to this message in chat"},
+  { keys = ["up"], command = "pinned_popup_previous", description = "Older pinned message"},
+  { keys = ["down"], command = "pinned_popup_next", description = "Newer pinned message"},
+  { keys = ["k"], command = "pinned_popup_previous", description = "Older pinned message"},
+  { keys = ["j"], command = "pinned_popup_next", description = "Newer pinned message"},
+  { keys = ["alt+v"], command = "pinned_popup_view_photo", description = "View photo from current pin"},
+  { keys = ["alt+p"], command = "pinned_popup_play_voice", description = "Play voice/audio from current pin"},
 ]
 

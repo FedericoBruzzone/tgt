@@ -234,7 +234,7 @@ impl TgBackend {
         let filter = Some(SearchMessagesFilter::Empty);
         match functions::search_chat_messages(
             chat_id,
-            None, // topic_id
+            None, // topic_id: all topics
             query,
             None, // sender_id
             0,    // from_message_id
@@ -258,6 +258,66 @@ impl TgBackend {
                 Err(e)
             }
         }
+    }
+
+    /// All pinned messages in a chat (paginated server search), newest message id first.
+    #[allow(clippy::await_holding_lock)]
+    pub async fn fetch_all_pinned_messages(&self, chat_id: i64) -> Vec<MessageEntry> {
+        let mut collected: Vec<MessageEntry> = Vec::new();
+        let mut from_message_id: i64 = 0;
+        loop {
+            let filter = Some(SearchMessagesFilter::Pinned);
+            match functions::search_chat_messages(
+                chat_id,
+                None,
+                String::new(),
+                None,
+                from_message_id,
+                0,
+                100,
+                filter,
+                self.client_id,
+            )
+            .await
+            {
+                Ok(FoundChatMessages::FoundChatMessages(found)) => {
+                    let next = found.next_from_message_id;
+                    for m in found.messages {
+                        collected.push(MessageEntry::from(&m));
+                    }
+                    if next == 0 || next == from_message_id {
+                        break;
+                    }
+                    from_message_id = next;
+                }
+                Err(e) => {
+                    tracing::error!("fetch_all_pinned_messages failed: {e:?}");
+                    break;
+                }
+            }
+        }
+        if collected.is_empty() {
+            match functions::get_chat_pinned_message(chat_id, self.client_id).await {
+                Ok(enums::Message::Message(m)) => {
+                    collected.push(MessageEntry::from(&m));
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        chat_id,
+                        error = ?e,
+                        "get_chat_pinned_message after empty pinned search"
+                    );
+                }
+            }
+        }
+        let mut by_id: std::collections::HashMap<i64, MessageEntry> =
+            std::collections::HashMap::new();
+        for e in collected {
+            by_id.insert(e.id(), e);
+        }
+        let mut v: Vec<MessageEntry> = by_id.into_values().collect();
+        v.sort_by_key(|a| std::cmp::Reverse(a.id()));
+        v
     }
 
     /// Download a file from Telegram. Returns the local path when download completes.
@@ -1157,6 +1217,12 @@ impl TgBackend {
                                         entry.set_message_content(&message.new_content);
                                         entry.set_is_edited(true);
                                     }
+                                }
+                            }
+                            Update::MessageIsPinned(pin) => {
+                                if tg_context.open_chat_id().as_i64() == pin.chat_id {
+                                    let _ = action_tx.send(Action::LoadPinnedMessages);
+                                    let _ = wake_tx.send(());
                                 }
                             }
                             Update::DeleteMessages(update_delete_messages) => {

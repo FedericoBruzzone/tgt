@@ -1,4 +1,3 @@
-use crate::component_name::ComponentName;
 use crate::component_name::ComponentName::Prompt;
 use crate::{
     action::Action, app_context::AppContext, app_error::AppError,
@@ -211,21 +210,9 @@ async fn handle_tui_backend_one_event(
             let keymap_config = app_context.keymap_config();
             let key_event = Event::Key(key, modifiers);
 
-            let component_keymap = match focused {
-                Some(ComponentName::ChatList) => &keymap_config.chat_list,
-                Some(ComponentName::Chat) => &keymap_config.chat,
-                Some(ComponentName::Prompt) => &keymap_config.prompt,
-                Some(ComponentName::CommandGuide) => &keymap_config.command_guide,
-                Some(ComponentName::ThemeSelector) => &keymap_config.theme_selector,
-                Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
-                Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
-                Some(ComponentName::FileUploadExplorer) => &keymap_config.file_upload_explorer,
-                Some(ComponentName::FileDownloadExplorer) => &keymap_config.file_download_explorer,
-                _ => &keymap_config.core_window,
-            };
-
+            // Merged map (core + component): component map includes core_window + mode-specific keys.
             let should_check_keymap =
-                focused.is_none() || component_keymap.contains_key(&key_event);
+                focused.is_none() || keymap_config.get_map_of(focused).contains_key(&key_event);
 
             if should_check_keymap {
                 let keymap = keymap_config.get_map_of(focused);
@@ -336,6 +323,14 @@ fn action_changes_ui(action: &Action) -> bool {
             | Action::VoicePlaybackStarted(_)
             | Action::VoicePlaybackPosition(_, _, _)
             | Action::VoicePlaybackEnded(_)
+            | Action::LoadPinnedMessages
+            | Action::ShowPinnedMessagesPopup
+            | Action::PinnedPopupConfirmJump
+            | Action::PinnedPopupViewPhoto
+            | Action::PinnedPopupPlayVoice
+            | Action::HidePinnedMessagesPopup
+            | Action::PinnedPopupPrevious
+            | Action::PinnedPopupNext
             | Action::Refresh
             | Action::ToggleChatList
             | Action::IncreaseChatListSize
@@ -510,6 +505,16 @@ pub async fn handle_app_actions(
 
                     app_context.tg_context().set_history_loading(false);
                     let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                }
+            }
+            Action::LoadPinnedMessages => {
+                let chat_id = app_context.tg_context().open_chat_id().as_i64();
+                if chat_id == 0 {
+                    continue;
+                }
+                let pins = tg_backend.fetch_all_pinned_messages(chat_id).await;
+                if app_context.tg_context().open_chat_id().as_i64() == chat_id {
+                    app_context.tg_context().set_open_chat_pinned(pins);
                 }
             }
             Action::GetChatHistoryNewer => {

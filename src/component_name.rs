@@ -30,6 +30,8 @@ pub enum ComponentName {
     FileUploadExplorer,
     /// The file download / save-as explorer popup.
     FileDownloadExplorer,
+    /// Pinned messages browser popup (open chat).
+    PinnedMessagesPopup,
 }
 
 impl ComponentName {
@@ -44,6 +46,7 @@ impl ComponentName {
                 | ComponentName::PhotoViewer
                 | ComponentName::FileUploadExplorer
                 | ComponentName::FileDownloadExplorer
+                | ComponentName::PinnedMessagesPopup
         )
     }
 }
@@ -64,6 +67,7 @@ impl Display for ComponentName {
             ComponentName::PhotoViewer => write!(f, "Photo Viewer"),
             ComponentName::FileUploadExplorer => write!(f, "File Upload Explorer"),
             ComponentName::FileDownloadExplorer => write!(f, "File Download Explorer"),
+            ComponentName::PinnedMessagesPopup => write!(f, "Pinned Messages"),
         }
     }
 }

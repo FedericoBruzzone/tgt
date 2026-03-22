@@ -11,6 +11,7 @@ use crate::{
         file_download_explorer::FileDownloadExplorer,
         file_upload_explorer::FileUploadExplorer,
         photo_viewer::PhotoViewer,
+        pinned_messages_popup::PinnedMessagesPopup,
         prompt_window::PromptWindow,
         search_overlay::SearchOverlay,
         theme_selector::ThemeSelector,
@@ -67,6 +68,8 @@ pub struct CoreWindow {
     show_file_upload_explorer: bool,
     /// Indicates whether the file download (save-as) explorer should be shown.
     show_file_download_explorer: bool,
+    /// Pinned messages browser popup (open chat).
+    show_pinned_messages_popup: bool,
     /// Last known screen areas for focusable sections (chat list, chat, prompt) for click-to-focus.
     last_focusable_areas: HashMap<ComponentName, Rect>,
 }
@@ -141,6 +144,12 @@ impl CoreWindow {
                     .with_name(ComponentName::FileDownloadExplorer.to_string())
                     .new_boxed(),
             ),
+            (
+                ComponentName::PinnedMessagesPopup,
+                PinnedMessagesPopup::new(Arc::clone(&app_context))
+                    .with_name(ComponentName::PinnedMessagesPopup.to_string())
+                    .new_boxed(),
+            ),
         ];
 
         let app_context = app_context;
@@ -161,6 +170,7 @@ impl CoreWindow {
         let show_photo_viewer = false;
         let show_file_upload_explorer = false;
         let show_file_download_explorer = false;
+        let show_pinned_messages_popup = false;
         let last_focusable_areas = HashMap::new();
 
         CoreWindow {
@@ -181,6 +191,7 @@ impl CoreWindow {
             show_photo_viewer,
             show_file_upload_explorer,
             show_file_download_explorer,
+            show_pinned_messages_popup,
             last_focusable_areas,
         }
     }
@@ -250,6 +261,7 @@ impl CoreWindow {
             ComponentName::PhotoViewer => Action::HidePhotoViewer,
             ComponentName::FileUploadExplorer => Action::HideFileUploadExplorer,
             ComponentName::FileDownloadExplorer => Action::HideFileDownloadExplorer,
+            ComponentName::PinnedMessagesPopup => Action::HidePinnedMessagesPopup,
             _ => return, // Not a popup, nothing to do
         };
 
@@ -261,6 +273,7 @@ impl CoreWindow {
             ComponentName::PhotoViewer => self.show_photo_viewer,
             ComponentName::FileUploadExplorer => self.show_file_upload_explorer,
             ComponentName::FileDownloadExplorer => self.show_file_download_explorer,
+            ComponentName::PinnedMessagesPopup => self.show_pinned_messages_popup,
             _ => false,
         };
 
@@ -273,6 +286,7 @@ impl CoreWindow {
                 ComponentName::PhotoViewer => self.show_photo_viewer = false,
                 ComponentName::FileUploadExplorer => self.show_file_upload_explorer = false,
                 ComponentName::FileDownloadExplorer => self.show_file_download_explorer = false,
+                ComponentName::PinnedMessagesPopup => self.show_pinned_messages_popup = false,
                 _ => {}
             }
 
@@ -298,6 +312,7 @@ impl CoreWindow {
             ComponentName::PhotoViewer,
             ComponentName::FileUploadExplorer,
             ComponentName::FileDownloadExplorer,
+            ComponentName::PinnedMessagesPopup,
         ];
 
         for popup_name in popups {
@@ -413,6 +428,7 @@ impl Component for CoreWindow {
                 self.show_photo_viewer = false;
                 self.show_file_upload_explorer = false;
                 self.show_file_download_explorer = false;
+                self.show_pinned_messages_popup = false;
                 for (_, component) in self.components.iter_mut() {
                     component.unfocus();
                 }
@@ -591,7 +607,6 @@ impl Component for CoreWindow {
                         .for_each(|(_, component)| component.unfocus());
                 }
             }
-
             Action::ShowFileUploadExplorer => {
                 if self.show_file_upload_explorer {
                     // Toggle off.
@@ -689,6 +704,53 @@ impl Component for CoreWindow {
                     if let Some(chat) = self.components.get_mut(&ComponentName::Chat) {
                         chat.focus();
                     }
+                    self.components
+                        .iter_mut()
+                        .filter(|(name, _)| *name != &ComponentName::Chat)
+                        .for_each(|(_, component)| component.unfocus());
+                }
+            }
+
+            Action::ShowPinnedMessagesPopup => {
+                if self
+                    .app_context
+                    .tg_context()
+                    .open_chat_pinned_snapshot()
+                    .is_empty()
+                {
+                    return;
+                }
+                self.hide_other_popups(ComponentName::PinnedMessagesPopup);
+                self.show_pinned_messages_popup = true;
+                self.component_focused = Some(ComponentName::PinnedMessagesPopup);
+                self.app_context
+                    .set_focused_component(self.component_focused);
+                if let Some(component) =
+                    self.components.get_mut(&ComponentName::PinnedMessagesPopup)
+                {
+                    component.focus();
+                    component.update(action.clone());
+                }
+                self.components
+                    .iter_mut()
+                    .filter(|(name, _)| *name != &ComponentName::PinnedMessagesPopup)
+                    .for_each(|(_, component)| component.unfocus());
+            }
+            Action::HidePinnedMessagesPopup => {
+                self.show_pinned_messages_popup = false;
+                if let Some(component) =
+                    self.components.get_mut(&ComponentName::PinnedMessagesPopup)
+                {
+                    component.update(action.clone());
+                }
+                if self.component_focused == Some(ComponentName::PinnedMessagesPopup) {
+                    self.component_focused = Some(ComponentName::Chat);
+                    self.app_context
+                        .set_focused_component(self.component_focused);
+                    self.components
+                        .get_mut(&ComponentName::Chat)
+                        .unwrap()
+                        .focus();
                     self.components
                         .iter_mut()
                         .filter(|(name, _)| *name != &ComponentName::Chat)
@@ -900,6 +962,19 @@ impl Component for CoreWindow {
                     }
                 }
             }
+            Action::LoadPinnedMessages => {
+                if let Some(component) = self.components.get_mut(&ComponentName::Chat) {
+                    component.update(action.clone());
+                }
+                if let Some(focused) = self.component_focused {
+                    if focused != ComponentName::Chat {
+                        self.components
+                            .get_mut(&focused)
+                            .unwrap_or_else(|| panic!("Failed to get component: {focused}"))
+                            .update(action);
+                    }
+                }
+            }
             Action::EditMessage(..) | Action::ReplyMessage(..) => {
                 // Always dispatch to Prompt so the message is loaded regardless of focus order.
                 if let Some(component) = self.components.get_mut(&ComponentName::Prompt) {
@@ -1041,6 +1116,18 @@ impl Component for CoreWindow {
                     panic!(
                         "Failed to get component: {}",
                         ComponentName::FileDownloadExplorer
+                    )
+                })
+                .draw(frame, area)?;
+        }
+
+        if self.show_pinned_messages_popup {
+            self.components
+                .get_mut(&ComponentName::PinnedMessagesPopup)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Failed to get component: {}",
+                        ComponentName::PinnedMessagesPopup
                     )
                 })
                 .draw(frame, area)?;

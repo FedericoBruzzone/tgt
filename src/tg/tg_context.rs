@@ -41,6 +41,8 @@ pub struct TgContext {
     open_chat_id: AtomicChatId,
     /// Message cache and view window for the open chat.
     open_chat_messages: Mutex<OpenChatMessageStore>,
+    /// Pinned messages for the open chat (newest pin first). Cleared with [`Self::clear_open_chat_messages`].
+    open_chat_pinned: Mutex<Vec<MessageEntry>>,
     open_chat_user: Mutex<Option<User>>,
 
     last_acknowledged_message_id: AtomicI64,
@@ -138,6 +140,7 @@ impl TgContext {
             Backtrace::capture()
         );
         self.open_chat_messages().clear();
+        self.open_chat_pinned.lock().unwrap().clear();
     }
 
     pub fn set_from_message_id(&self, from_message_id: i64) {
@@ -156,6 +159,16 @@ impl TgContext {
     /// to avoid TOCTOU: ordered_message_ids() then get_message(id) can see a cleared store between calls.
     pub fn ordered_messages_snapshot(&self) -> Vec<MessageEntry> {
         self.open_chat_messages().ordered_messages()
+    }
+
+    /// Snapshot of pinned messages for the open chat (newest first, as set by the backend).
+    pub fn open_chat_pinned_snapshot(&self) -> Vec<MessageEntry> {
+        self.open_chat_pinned.lock().unwrap().clone()
+    }
+
+    /// Replace pinned messages for the open chat (backend / load task).
+    pub fn set_open_chat_pinned(&self, messages: Vec<MessageEntry>) {
+        *self.open_chat_pinned.lock().unwrap() = messages;
     }
 
     /// Get a message by ID (clone). UI read-only.
@@ -394,6 +407,7 @@ impl Default for TgContext {
             me: AtomicI64::new(0),
             open_chat_id: AtomicChatId::new(ChatId::NONE),
             open_chat_messages: Mutex::default(),
+            open_chat_pinned: Mutex::default(),
             open_chat_user: Mutex::default(),
             last_acknowledged_message_id: AtomicI64::new(0),
             from_message_id: AtomicI64::new(0),

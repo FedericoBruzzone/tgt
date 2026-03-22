@@ -281,6 +281,10 @@ impl ChatListWindow {
                         .action_tx()
                         .send(Action::FocusComponent(Prompt))
                         .unwrap();
+                    let _ = self
+                        .app_context
+                        .action_tx()
+                        .send(Action::LoadPinnedMessages);
                     if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                         let _ = event_tx.send(Event::ViewAllMessages);
                     }
@@ -309,6 +313,10 @@ impl ChatListWindow {
                 // Start loading chat history immediately (same handle_app_actions run).
                 // Event::GetChatHistory is also sent for tg_backend; Action ensures we spawn the task now.
                 let _ = self.app_context.action_tx().send(Action::GetChatHistory);
+                let _ = self
+                    .app_context
+                    .action_tx()
+                    .send(Action::LoadPinnedMessages);
 
                 if let Some(event_tx) = self.app_context.tg_context().event_tx().as_ref() {
                     // Mark all unread messages as read

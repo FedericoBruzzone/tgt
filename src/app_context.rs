@@ -97,7 +97,7 @@ pub struct AppContext {
     /// The CLI arguments for the application.
     cli_args: Mutex<CliArgs>,
     /// The currently focused UI component, used for context-aware keymap lookup in the run loop.
-    /// Uses AtomicU8 for lock-free reads/writes. Encoded as: 0 = None, 1-11 = ComponentName variants.
+    /// Uses AtomicU8 for lock-free reads/writes. Encoded as: 0 = None, 1-14 = ComponentName variants.
     focused_component: AtomicU8,
     /// Result of background photo decode; consumed by PhotoViewer on PhotoDecoded(i64).
     pending_photo_decoded: Mutex<Option<(i64, Result<image::DynamicImage, String>)>>,
@@ -344,7 +344,7 @@ impl AppContext {
     }
 
     /// Encodes `Option<ComponentName>` to a `u8` for atomic storage.
-    /// Encoding: 0 = None, 1-13 = ComponentName variants.
+    /// Encoding: 0 = None, 1-14 = ComponentName variants.
     #[inline]
     fn encode_component(component: Option<ComponentName>) -> u8 {
         match component {
@@ -362,11 +362,11 @@ impl AppContext {
             Some(ComponentName::PhotoViewer) => 11,
             Some(ComponentName::FileUploadExplorer) => 12,
             Some(ComponentName::FileDownloadExplorer) => 13,
+            Some(ComponentName::PinnedMessagesPopup) => 14,
         }
     }
 
     /// Decodes a `u8` to `Option<ComponentName>` from atomic storage.
-    /// Encoding: 0 = None, 1-13 = ComponentName variants.
     #[inline]
     fn decode_component(encoded: u8) -> Option<ComponentName> {
         match encoded {
@@ -384,6 +384,7 @@ impl AppContext {
             11 => Some(ComponentName::PhotoViewer),
             12 => Some(ComponentName::FileUploadExplorer),
             13 => Some(ComponentName::FileDownloadExplorer),
+            14 => Some(ComponentName::PinnedMessagesPopup),
             _ => None, // Invalid encoding, treat as None
         }
     }
