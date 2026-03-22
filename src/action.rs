@@ -303,10 +303,7 @@ pub enum Action {
     /// Hide the file download explorer popup.
     HideFileDownloadExplorer,
     /// Download/copy a Telegram file to `dest_path` (full path including file name).
-    SaveChatFileAs {
-        message_id: i64,
-        dest_path: String,
-    },
+    SaveChatFileAs { message_id: i64, dest_path: String },
 }
 /// Implement the `Action` enum.
 impl Action {

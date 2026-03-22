@@ -277,8 +277,8 @@ impl FileDownloadExplorer {
         match key_code {
             KeyCode::Esc => self.confirm_overwrite_cancel(),
             KeyCode::Enter => self.confirm_overwrite_proceed(),
-            KeyCode::Char(c) if matches!(c, 'y' | 'Y') => self.confirm_overwrite_proceed(),
-            KeyCode::Char(c) if matches!(c, 'n' | 'N') => self.confirm_overwrite_cancel(),
+            KeyCode::Char('y' | 'Y') => self.confirm_overwrite_proceed(),
+            KeyCode::Char('n' | 'N') => self.confirm_overwrite_cancel(),
             _ => {}
         }
     }
@@ -426,11 +426,7 @@ impl Component for FileDownloadExplorer {
 
             let (before, at_cursor, after): (String, char, String) =
                 if self.filename_cursor >= self.filename_chars.len() {
-                    (
-                        self.filename_chars.iter().collect(),
-                        ' ',
-                        String::new(),
-                    )
+                    (self.filename_chars.iter().collect(), ' ', String::new())
                 } else {
                     let c = self.filename_chars[self.filename_cursor];
                     let b: String = self.filename_chars[..self.filename_cursor].iter().collect();
@@ -497,25 +493,16 @@ impl Component for FileDownloadExplorer {
 
         let footer = layout[footer_idx];
         let (label, keys) = match self.phase {
-            DownloadPhase::FileName => (
-                String::new(),
-                "Enter=next  Esc=cancel",
-            ),
+            DownloadPhase::FileName => (String::new(), "Enter=next  Esc=cancel"),
             DownloadPhase::PickFolder => (
                 self.folder_save_target_label(),
                 "Alt+Enter=save here  Enter=open folder  Esc=cancel",
             ),
-            DownloadPhase::ConfirmOverwrite => (
-                String::new(),
-                "Y/Enter=overwrite  N/Esc=go back",
-            ),
+            DownloadPhase::ConfirmOverwrite => (String::new(), "Y/Enter=overwrite  N/Esc=go back"),
         };
 
         let hint_line = if label.is_empty() {
-            Line::from(vec![Span::styled(
-                keys,
-                self.app_context.style_timestamp(),
-            )])
+            Line::from(vec![Span::styled(keys, self.app_context.style_timestamp())])
         } else {
             Line::from(vec![
                 Span::styled(label, self.app_context.style_timestamp()),

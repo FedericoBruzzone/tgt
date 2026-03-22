@@ -2,8 +2,8 @@ use crate::app_context::AppContext;
 use chrono::{DateTime, Local};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
-use std::time::{Duration, UNIX_EPOCH};
 use std::path::Path;
+use std::time::{Duration, UNIX_EPOCH};
 
 use tdlib_rs::enums::{MessageContent, MessageReplyTo, MessageSender};
 use tdlib_rs::types::FormattedText;
@@ -170,14 +170,13 @@ impl MessageEntry {
     /// Photo or document messages that can be saved to disk: TDLib `file_id` and a default base file name.
     pub fn save_as_candidate(&self) -> Option<(i32, String)> {
         match self.content_type() {
-            MessageContentType::Photo {
-                file_id,
-                file_path,
-            } => {
+            MessageContentType::Photo { file_id, file_path } => {
                 let base = path_file_basename(file_path).unwrap_or_else(|| "photo.jpg".to_string());
                 Some((*file_id, base))
             }
-            MessageContentType::Document { file_id, file_name, .. } => {
+            MessageContentType::Document {
+                file_id, file_name, ..
+            } => {
                 let base = if file_name.is_empty() {
                     "document".to_string()
                 } else {
