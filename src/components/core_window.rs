@@ -659,8 +659,9 @@ impl Component for CoreWindow {
                 self.app_context
                     .set_focused_component(self.component_focused);
 
-                if let Some(component) =
-                    self.components.get_mut(&ComponentName::FileDownloadExplorer)
+                if let Some(component) = self
+                    .components
+                    .get_mut(&ComponentName::FileDownloadExplorer)
                 {
                     component.focus();
                     component.update(Action::ShowFileDownloadExplorer(message_id));
@@ -674,8 +675,9 @@ impl Component for CoreWindow {
 
             Action::HideFileDownloadExplorer => {
                 self.show_file_download_explorer = false;
-                if let Some(component) =
-                    self.components.get_mut(&ComponentName::FileDownloadExplorer)
+                if let Some(component) = self
+                    .components
+                    .get_mut(&ComponentName::FileDownloadExplorer)
                 {
                     component.update(action.clone());
                 }

@@ -220,9 +220,7 @@ async fn handle_tui_backend_one_event(
                 Some(ComponentName::SearchOverlay) => &keymap_config.search_overlay,
                 Some(ComponentName::PhotoViewer) => &keymap_config.photo_viewer,
                 Some(ComponentName::FileUploadExplorer) => &keymap_config.file_upload_explorer,
-                Some(ComponentName::FileDownloadExplorer) => {
-                    &keymap_config.file_download_explorer
-                }
+                Some(ComponentName::FileDownloadExplorer) => &keymap_config.file_download_explorer,
                 _ => &keymap_config.core_window,
             };
 
@@ -468,9 +466,9 @@ pub async fn handle_app_actions(
                     }
                     Err(e) => {
                         tracing::error!("Save as: copy failed: {:?}", e);
-                        let _ = app_context.action_tx().send(Action::StatusMessage(format!(
-                            "Save failed: {e}"
-                        )));
+                        let _ = app_context
+                            .action_tx()
+                            .send(Action::StatusMessage(format!("Save failed: {e}")));
                     }
                 }
             }
