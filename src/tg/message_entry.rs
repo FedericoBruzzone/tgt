@@ -124,6 +124,36 @@ impl MessageEntry {
             .join("\n")
     }
 
+    /// One-line preview for the pinned strip (handles media where `message_content_to_string` is empty).
+    pub fn pinned_strip_preview(&self, max_chars: usize) -> String {
+        let text = self.message_content_to_string();
+        let trimmed = text.trim();
+        if !trimmed.is_empty() {
+            let n = trimmed.chars().count();
+            if n <= max_chars {
+                return trimmed.to_string();
+            }
+            let take = max_chars.saturating_sub(1);
+            return format!("{}…", trimmed.chars().take(take).collect::<String>());
+        }
+        match self.content_type() {
+            MessageContentType::Photo { .. } => "Photo".to_string(),
+            MessageContentType::Document { file_name, .. } => {
+                if file_name.is_empty() {
+                    "Document".to_string()
+                } else {
+                    file_name.clone()
+                }
+            }
+            MessageContentType::VoiceNote { duration_secs, .. } => {
+                format!("Voice message ({duration_secs}s)")
+            }
+            MessageContentType::Audio { .. } => "Audio file".to_string(),
+            MessageContentType::Text => "[Empty]".to_string(),
+            MessageContentType::Other => "Attachment".to_string(),
+        }
+    }
+
     pub fn set_message_content(&mut self, content: &MessageContent) {
         let (lines, content_type) = Self::message_content_with_type(content);
         self.message_content = lines;

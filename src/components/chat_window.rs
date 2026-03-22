@@ -82,6 +82,34 @@ impl ChatWindow {
         self.message_list = self.app_context.tg_context().ordered_messages_snapshot();
     }
 
+    fn pinned_preview_text(&self) -> String {
+        let pins = self.app_context.tg_context().open_chat_pinned_snapshot();
+        let Some(latest) = pins.first() else {
+            return String::new();
+        };
+        let preview = latest.pinned_strip_preview(200);
+        if pins.len() > 1 {
+            format!("{} · +{} pinned", preview, pins.len() - 1)
+        } else {
+            preview
+        }
+    }
+
+    /// Chords from the merged `[chat]` keymap that open the pinned popup (shown on the pin strip).
+    fn pinned_messages_popup_keys_hint(&self) -> String {
+        use std::collections::BTreeSet;
+        let keys = self
+            .app_context
+            .keymap_config()
+            .get_key_of_single_action(ComponentName::Chat, Action::ShowPinnedMessagesPopup);
+        let labels: BTreeSet<String> = keys.into_iter().map(|e| e.to_string()).collect();
+        if labels.is_empty() {
+            "Shift+Tab".to_string()
+        } else {
+            labels.into_iter().collect::<Vec<_>>().join(" / ")
+        }
+    }
+
     /// Select the next message item in the list (down = towards newer messages).
     fn next(&mut self) {
         let len = self.message_list.len();
@@ -400,18 +428,15 @@ impl Component for ChatWindow {
                 self.start_file_download_selected();
             }
             Action::ShowPhotoViewer => {
-                // User pressed keybinding to view photo from selected message
                 self.view_photo_selected();
             }
             Action::ToggleVoicePlayback => {
                 self.play_voice_selected();
             }
             Action::PhotoViewerPrevious => {
-                // Navigate to previous message and view its photo
                 self.view_photo_previous();
             }
             Action::PhotoViewerNext => {
-                // Navigate to next message and view its photo
                 self.view_photo_next();
             }
             Action::ViewPhotoMessage(message_id) => {
@@ -432,8 +457,14 @@ impl Component for ChatWindow {
             Action::ChatWindowSearch | Action::ChatListSearch => {
                 // Handled by CoreWindow: opens search overlay or focuses ChatList
             }
+            Action::LoadPinnedMessages => {}
             Action::Key(key_code, modifiers) => {
                 if self.focused {
+                    let has_message_pins = !self
+                        .app_context
+                        .tg_context()
+                        .open_chat_pinned_snapshot()
+                        .is_empty();
                     match key_code {
                         KeyCode::Char('r') if modifiers.alt => {
                             // Alt+R: switch to ChatList search (handled by CoreWindow)
@@ -441,9 +472,24 @@ impl Component for ChatWindow {
                                 let _ = tx.send(Action::ChatListSearch);
                             }
                         }
+                        // Shift+Tab: open pinned popup when keymap misses modifier quirks.
+                        KeyCode::BackTab if has_message_pins => {
+                            if let Some(tx) = self.action_tx.as_ref() {
+                                let _ = tx.send(Action::ShowPinnedMessagesPopup);
+                            }
+                        }
+                        KeyCode::Tab if modifiers.shift && has_message_pins => {
+                            if let Some(tx) = self.action_tx.as_ref() {
+                                let _ = tx.send(Action::ShowPinnedMessagesPopup);
+                            }
+                        }
                         KeyCode::Up => self.next(),
-                        KeyCode::Down => self.previous(),
-                        KeyCode::Tab => self.next(),
+                        KeyCode::Down => {
+                            self.previous();
+                        }
+                        KeyCode::Tab if !modifiers.shift => {
+                            self.next();
+                        }
                         _ => {}
                     }
                 }
@@ -524,10 +570,29 @@ impl Component for ChatWindow {
             }
         }
 
+        let has_pins = !self
+            .app_context
+            .tg_context()
+            .open_chat_pinned_snapshot()
+            .is_empty();
+        // Fixed header + single-line pin row; only the message list uses Min so Ratatui does not
+        // split spare space between two Min regions (that made the header/pin zone huge).
+        let header_h = 3u16;
+        let pin_h = if has_pins { 1u16 } else { 0u16 };
         let chat_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(2), Constraint::Percentage(100)])
+            .constraints([
+                Constraint::Length(header_h),
+                Constraint::Length(pin_h),
+                Constraint::Min(1),
+            ])
             .split(area);
+
+        let style_panel_border = if self.focused {
+            self.app_context.style_border_component_focused()
+        } else {
+            self.app_context.style_chat()
+        };
 
         let border = Set {
             top_left: line::NORMAL.vertical_right,
@@ -535,18 +600,12 @@ impl Component for ChatWindow {
             bottom_left: line::NORMAL.horizontal_up,
             ..border::PLAIN
         };
-        let style_border_focused = if self.focused {
-            self.app_context.style_border_component_focused()
-        } else {
-            self.app_context.style_chat()
-        };
-
         let block = Block::new()
             .border_set(border)
-            .border_style(style_border_focused)
+            .border_style(style_panel_border)
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .style(self.app_context.style_chat());
-        let list_area = chat_layout[1];
+        let list_area = chat_layout[2];
         let list_inner = block.inner(list_area);
         // Leave margin so wrapped lines and wide chars don't overflow the right edge
         let wrap_width = list_inner.width.saturating_sub(2) as i32;
@@ -645,7 +704,7 @@ impl Component for ChatWindow {
         };
         let block_header = Block::new()
             .border_set(border_header)
-            .border_style(style_border_focused)
+            .border_style(style_panel_border)
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .style(self.app_context.style_chat())
             .title(self.name.as_str());
@@ -667,7 +726,32 @@ impl Component for ChatWindow {
         .alignment(Alignment::Center);
 
         frame.render_widget(header, chat_layout[0]);
-        frame.render_stateful_widget(list, chat_layout[1], &mut self.message_list_state);
+        if pin_h > 0 {
+            let pin_preview = self.pinned_preview_text();
+            let open_keys = self.pinned_messages_popup_keys_hint();
+            let pin_line = Line::from(vec![
+                Span::styled("📌 ", self.app_context.style_timestamp()),
+                Span::styled(
+                    if pin_preview.is_empty() {
+                        "(no preview)".to_string()
+                    } else {
+                        pin_preview
+                    },
+                    self.app_context.style_chat_message_other_content(),
+                ),
+                Span::styled(
+                    format!("  ({open_keys})"),
+                    self.app_context.style_timestamp(),
+                ),
+            ]);
+            let pin_block = Block::new()
+                .borders(Borders::LEFT | Borders::RIGHT)
+                .border_style(style_panel_border)
+                .style(self.app_context.style_chat());
+            let pin_paragraph = Paragraph::new(pin_line).block(pin_block);
+            frame.render_widget(pin_paragraph, chat_layout[1]);
+        }
+        frame.render_stateful_widget(list, list_area, &mut self.message_list_state);
 
         // Restore selection to message_list index (oldest=0) for next/previous and other logic.
         let list_sel = self.message_list_state.selected();
