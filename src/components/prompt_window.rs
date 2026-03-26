@@ -20,6 +20,7 @@ use ratatui::{
 };
 use std::{io, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
+use unicode_width::UnicodeWidthChar;
 
 /// `DirSelection` is an enum that represents the direction of the selection.
 /// It is used to keep track of the direction of the selection when the user
@@ -106,9 +107,13 @@ impl Input {
     fn set_command_tx(&mut self, command_tx: UnboundedSender<Action>) {
         self.action_tx = Some(command_tx);
     }
+    /// Returns the rendered width of a line in terminal columns.
+    fn line_display_width(line: &[InputCell]) -> usize {
+        line.iter().map(|cell| cell.c.width().unwrap_or(0)).sum()
+    }
     /// Get the cursor x position of the `Input` struct.
     fn cursor_x(&self) -> usize {
-        self.cursor.0
+        Self::line_display_width(&self.text[self.cursor.1][..self.cursor.0])
     }
     /// Get the cursor y position of the `Input` struct.
     fn cursor_y(&self) -> usize {
@@ -142,8 +147,10 @@ impl Input {
     /// # Arguments
     /// * `c` - The character to insert.
     fn insert(&mut self, c: char) {
-        // The -2 is to account the cursor at the end of the line.
-        if self.cursor.0 + 1 == (self.area_input.width - 2) as usize {
+        // Subtract the two border columns and wrap by rendered width.
+        let available_width = self.area_input.width.saturating_sub(2) as usize;
+        let next_cell_width = c.width().unwrap_or(0);
+        if available_width > 0 && self.cursor_x() + next_cell_width >= available_width {
             self.insert_newline();
         }
         self.text[self.cursor.1].insert(self.cursor.0, InputCell { c, selected: false });
@@ -1124,5 +1131,33 @@ mod tests {
         let modifiers = Modifiers::from(KeyModifiers::empty());
         window.update(Action::Key(KeyCode::Esc, modifiers));
         assert!(matches!(window.current_mode(), Mode::Normal));
+    }
+
+    #[test]
+    fn wide_chars_wrap_by_display_width() {
+        let mut window = create_test_prompt_window();
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update_input(Rect::new(0, 0, 7, 3));
+
+        window.update(Action::Key(KeyCode::Char('하'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('니'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('달'), modifiers.clone()));
+
+        assert_eq!(window.input.text.len(), 2);
+        assert_eq!(window.input.cursor, (1, 1));
+        assert_eq!(
+            window.input.text[0]
+                .iter()
+                .map(|cell| cell.c)
+                .collect::<String>(),
+            "하니"
+        );
+        assert_eq!(
+            window.input.text[1]
+                .iter()
+                .map(|cell| cell.c)
+                .collect::<String>(),
+            "달"
+        );
     }
 }
