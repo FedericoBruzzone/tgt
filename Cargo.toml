@@ -65,7 +65,7 @@ arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard
 chrono = "0.4.44"
 # Default: no chafa. Enable via chafa-dyn or chafa-static (not supported on Windows ARM).
 ratatui-image = { version = "10.0.6", default-features = false, features = ["crossterm", "image-defaults"] }
-image = "0.25.9"
+image = "0.25.10"
 signal-hook = "0.4.3"
 clap = { version = "4.6.0", features = ["derive"] }
 nucleo-matcher = "0.3.1"
