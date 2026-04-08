@@ -1,11 +1,6 @@
 # use Trixie as the base image
 FROM rust:1.91-trixie AS builder
 
-# create workspace
-RUN mkdir -p /app
-WORKDIR /app
-COPY . .
-
 # build dependencies
 
 # build TDLib from source
@@ -14,7 +9,7 @@ RUN mkdir -p /deps/tdlib
 
 RUN apt update && \
     apt install -y make git zlib1g-dev libssl-dev gperf cmake clang libc++-dev libc++abi-dev \
-        pkg-config libasound2-dev && \
+        pkg-config libasound2-dev libopus-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # build TDLib with v1.8.0 version as base and using clang compiler
@@ -28,24 +23,30 @@ RUN cd /deps/tdlib && \
 
 ENV LOCAL_TDLIB_PATH=/deps/tdlib/tdlib-install-dir
 
+# create workspace
+RUN mkdir -p /app
+WORKDIR /app
+COPY . .
+
 # build the application
 RUN cargo build --release --features=default
 
 # final image
 FROM debian:trixie-slim AS runtime
 
-WORKDIR /app
-
 COPY --from=builder /app/target/release/tgt /usr/bin/
 COPY --from=builder /deps/tdlib/tdlib-install-dir/lib/libtdjson.so* /usr/lib/
 
-RUN mkdir -p /root/.config/tgt /root/.local/share/tgt
-
-COPY --from=builder /app/config /root/.config/tgt/config
-
 RUN apt update && \
-    apt install -y libc++1 libasound2 && \
+    apt install -y libc++1 libasound2 libopus0 && \
     rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 tgtuser
+USER tgtuser
+
+RUN mkdir -p /home/tgtuser/.config/tgt /home/tgtuser/.local/share/tgt
+COPY --from=builder --chown=tgtuser:tgtuser /app/config /home/tgtuser/.config/tgt/config
+ENV HOME=/home/tgtuser
 
 # opening bash shell to run tgt interactively
 CMD [ "bash" ]
