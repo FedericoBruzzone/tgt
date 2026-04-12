@@ -67,10 +67,10 @@ jobs:
           mkdir build
           cd build
           if [ "$(uname -m)" = "arm64" ]; then
-            OPENSSL_PREFIX="/opt/homebrew/opt/openssl"
+            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/opt/homebrew/opt/openssl")"
             ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/opt/homebrew/opt/zlib")"
           else
-            OPENSSL_PREFIX="/usr/local/opt/openssl"
+            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/usr/local/opt/openssl")"
             ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/usr/local/opt/zlib")"
           fi
           cmake \
@@ -86,15 +86,26 @@ jobs:
         if: matrix.feature == 'local-tdlib,static'
         run: |
           if [ "$(uname -m)" = "arm64" ]; then
-            OPENSSL_PREFIX="/opt/homebrew/opt/openssl"
-            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/opt/homebrew/opt/zlib")"
+            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/opt/homebrew/opt/openssl")"
           else
-            OPENSSL_PREFIX="/usr/local/opt/openssl"
-            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/usr/local/opt/zlib")"
+            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/usr/local/opt/openssl")"
           fi
-          cp -f "$OPENSSL_PREFIX/lib/libssl.a" "./td/tdlib/lib/"
-          cp -f "$OPENSSL_PREFIX/lib/libcrypto.a" "./td/tdlib/lib/"
-          cp -f "$ZLIB_PREFIX/lib/libz.a" "./td/tdlib/lib/"
+          OPENSSL_SSL="$(find "$OPENSSL_PREFIX" -type f -name libssl.a 2>/dev/null | head -n 1)"
+          OPENSSL_CRYPTO="$(find "$OPENSSL_PREFIX" -type f -name libcrypto.a 2>/dev/null | head -n 1)"
+          ZLIB_LIB="$(find "$(brew --prefix zlib 2>/dev/null || brew --prefix)" -type f -name libz.a 2>/dev/null | head -n 1)"
+          if [ -z "$OPENSSL_SSL" ] || [ -z "$OPENSSL_CRYPTO" ]; then
+            echo "OpenSSL static libs not found in $OPENSSL_PREFIX"
+            find "$(brew --prefix)" -type f \( -name 'libssl.a' -o -name 'libcrypto.a' \) | head -n 20
+            exit 1
+          fi
+          if [ -z "$ZLIB_LIB" ]; then
+            echo "libz.a not found in Homebrew zlib prefix"
+            find "$(brew --prefix)" -type f -name 'libz.*' | head -n 20
+            exit 1
+          fi
+          cp -f "$OPENSSL_SSL" "./td/tdlib/lib/"
+          cp -f "$OPENSSL_CRYPTO" "./td/tdlib/lib/"
+          cp -f "$ZLIB_LIB" "./td/tdlib/lib/"
 
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib'))
