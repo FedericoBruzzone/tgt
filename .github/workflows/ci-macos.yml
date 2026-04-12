@@ -67,12 +67,24 @@ jobs:
           mkdir build
           cd build
           if [ "$(uname -m)" = "arm64" ]; then
-            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/opt/homebrew/opt/openssl")"
-            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/opt/homebrew/opt/zlib")"
+            OPENSSL_PREFIX="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || brew --prefix openssl@1.1 2>/dev/null || echo "/opt/homebrew")"
           else
-            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/usr/local/opt/openssl")"
-            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/usr/local/opt/zlib")"
+            OPENSSL_PREFIX="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || brew --prefix openssl@1.1 2>/dev/null || echo "/usr/local")"
           fi
+          OPENSSL_SSL="$(find "$OPENSSL_PREFIX" -maxdepth 6 -type f -name 'libssl.a' 2>/dev/null | head -n 1)"
+          OPENSSL_CRYPTO="$(find "$OPENSSL_PREFIX" -maxdepth 6 -type f -name 'libcrypto.a' 2>/dev/null | head -n 1)"
+          if [ -z "$OPENSSL_SSL" ] || [ -z "$OPENSSL_CRYPTO" ]; then
+            OPENSSL_PREFIX="$(brew --prefix 2>/dev/null || echo "$OPENSSL_PREFIX")"
+            OPENSSL_SSL="$(find "$OPENSSL_PREFIX" -maxdepth 6 -type f -name 'libssl.a' 2>/dev/null | head -n 1)"
+            OPENSSL_CRYPTO="$(find "$OPENSSL_PREFIX" -maxdepth 6 -type f -name 'libcrypto.a' 2>/dev/null | head -n 1)"
+          fi
+          if [ -z "$OPENSSL_SSL" ] || [ -z "$OPENSSL_CRYPTO" ]; then
+            echo "OpenSSL static libs not found in $OPENSSL_PREFIX"
+            find "$(brew --prefix 2>/dev/null || echo "$OPENSSL_PREFIX")" -type f \( -name 'libssl.a' -o -name 'libcrypto.a' \) | head -n 20
+            exit 1
+          fi
+          OPENSSL_PREFIX="$(dirname "$(dirname "$OPENSSL_SSL")")"
+          ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "$OPENSSL_PREFIX")"
           cmake \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DCMAKE_BUILD_TYPE=Release \
@@ -85,22 +97,18 @@ jobs:
       - name: Copy static TDLib archives for local-tdlib,static
         if: matrix.feature == 'local-tdlib,static'
         run: |
-          if [ "$(uname -m)" = "arm64" ]; then
-            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/opt/homebrew/opt/openssl")"
-          else
-            OPENSSL_PREFIX="$(brew --prefix openssl 2>/dev/null || echo "/usr/local/opt/openssl")"
-          fi
-          OPENSSL_SSL="$(find "$OPENSSL_PREFIX" -type f -name libssl.a 2>/dev/null | head -n 1)"
-          OPENSSL_CRYPTO="$(find "$OPENSSL_PREFIX" -type f -name libcrypto.a 2>/dev/null | head -n 1)"
-          ZLIB_LIB="$(find "$(brew --prefix zlib 2>/dev/null || brew --prefix)" -type f -name libz.a 2>/dev/null | head -n 1)"
+          HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || echo "/opt/homebrew")"
+          OPENSSL_SSL="$(find "$HOMEBREW_PREFIX" -maxdepth 6 -type f -name 'libssl.a' 2>/dev/null | head -n 1)"
+          OPENSSL_CRYPTO="$(find "$HOMEBREW_PREFIX" -maxdepth 6 -type f -name 'libcrypto.a' 2>/dev/null | head -n 1)"
+          ZLIB_LIB="$(find "$HOMEBREW_PREFIX" -maxdepth 6 -type f -name 'libz.a' 2>/dev/null | head -n 1)"
           if [ -z "$OPENSSL_SSL" ] || [ -z "$OPENSSL_CRYPTO" ]; then
-            echo "OpenSSL static libs not found in $OPENSSL_PREFIX"
-            find "$(brew --prefix)" -type f \( -name 'libssl.a' -o -name 'libcrypto.a' \) | head -n 20
+            echo "OpenSSL static libs not found in Homebrew prefix $HOMEBREW_PREFIX"
+            find "$HOMEBREW_PREFIX" -type f \( -name 'libssl.a' -o -name 'libcrypto.a' \) | head -n 20
             exit 1
           fi
           if [ -z "$ZLIB_LIB" ]; then
-            echo "libz.a not found in Homebrew zlib prefix"
-            find "$(brew --prefix)" -type f -name 'libz.*' | head -n 20
+            echo "libz.a not found in Homebrew prefix $HOMEBREW_PREFIX"
+            find "$HOMEBREW_PREFIX" -type f -name 'libz.*' | head -n 20
             exit 1
           fi
           cp -f "$OPENSSL_SSL" "./td/tdlib/lib/"
