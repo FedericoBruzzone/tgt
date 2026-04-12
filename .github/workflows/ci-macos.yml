@@ -59,7 +59,7 @@ jobs:
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib'))
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          brew install gperf openssl
+          brew install gperf openssl zlib
           git clone https://github.com/tdlib/td.git
           cd td
           git checkout $TDLIB_VERSION
@@ -70,9 +70,19 @@ jobs:
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DCMAKE_BUILD_TYPE=Release \
             -DOPENSSL_ROOT_DIR=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl/' || '/usr/local/opt/openssl/' }} \
+            -DZLIB_ROOT=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/zlib/' || '/usr/local/opt/zlib/' }} \
             -DCMAKE_INSTALL_PREFIX:PATH=../tdlib \
             ..
           cmake --build . --target install
+
+      - name: Copy static TDLib archives for local-tdlib,static
+        if: matrix.feature == 'local-tdlib,static'
+        run: |
+          OPENSSL_PREFIX=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl' || '/usr/local/opt/openssl' }}
+          ZLIB_PREFIX=${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/zlib' || '/usr/local/opt/zlib' }}
+          cp -f "$OPENSSL_PREFIX/lib/libssl.a" "./td/tdlib/lib/"
+          cp -f "$OPENSSL_PREFIX/lib/libcrypto.a" "./td/tdlib/lib/"
+          cp -f "$ZLIB_PREFIX/lib/libz.a" "./td/tdlib/lib/"
 
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib'))

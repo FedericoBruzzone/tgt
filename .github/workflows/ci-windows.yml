@@ -70,6 +70,8 @@ jobs:
 
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
+        env:
+          FEATURE: ${{ matrix.feature }}
         run: |
           git clone https://github.com/tdlib/td.git
           cd td
@@ -77,23 +79,42 @@ jobs:
           git clone https://github.com/Microsoft/vcpkg.git
           cd vcpkg
           # Use latest vcpkg so MSYS2 package versions in vcpkg_acquire_msys.cmake are current (old versions 404 on mirrors).
-          if [[ "$RUNNER_ARCH" == "X64" ]]; then
-            ./bootstrap-vcpkg.bat
-            ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
-            CMAKE_ARCH="x64"
-          elif [[ "$RUNNER_ARCH" == "ARM64" ]]; then
-            ./bootstrap-vcpkg.bat
-            ./vcpkg.exe install gperf:arm64-windows openssl:arm64-windows zlib:arm64-windows
-            CMAKE_ARCH="ARM64"
+          if [[ "$FEATURE" == "local-tdlib,static" ]]; then
+            if [[ "$RUNNER_ARCH" == "X64" ]]; then
+              ./bootstrap-vcpkg.bat
+              ./vcpkg.exe install gperf:x64-windows-static openssl:x64-windows-static zlib:x64-windows-static
+              CMAKE_ARCH="x64"
+              VCPKG_TRIPLET="x64-windows-static"
+            elif [[ "$RUNNER_ARCH" == "ARM64" ]]; then
+              ./bootstrap-vcpkg.bat
+              ./vcpkg.exe install gperf:arm64-windows-static openssl:arm64-windows-static zlib:arm64-windows-static
+              CMAKE_ARCH="ARM64"
+              VCPKG_TRIPLET="arm64-windows-static"
+            else
+              echo "Unsupported architecture: $RUNNER_ARCH"
+              exit 1
+            fi
           else
-            echo "Unsupported architecture: $RUNNER_ARCH"
-            exit 1
+            if [[ "$RUNNER_ARCH" == "X64" ]]; then
+              ./bootstrap-vcpkg.bat
+              ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+              CMAKE_ARCH="x64"
+              VCPKG_TRIPLET="x64-windows"
+            elif [[ "$RUNNER_ARCH" == "ARM64" ]]; then
+              ./bootstrap-vcpkg.bat
+              ./vcpkg.exe install gperf:arm64-windows openssl:arm64-windows zlib:arm64-windows
+              CMAKE_ARCH="ARM64"
+              VCPKG_TRIPLET="arm64-windows"
+            else
+              echo "Unsupported architecture: $RUNNER_ARCH"
+              exit 1
+            fi
           fi
           cd ..
           rm -rf build
           mkdir build
           cd build
-          cmake -A "$CMAKE_ARCH" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_INSTALL_PREFIX:PATH=../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+          cmake -A "$CMAKE_ARCH" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_INSTALL_PREFIX:PATH=../tdlib -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" ..
           cmake --build . --target install --config Release
         shell: bash
 
@@ -107,6 +128,23 @@ jobs:
       - name: Extract TDLib
         if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config')
         run: cp -r ./td/tdlib ./
+        shell: bash
+
+      - name: Copy static TDLib archives for local-tdlib,static
+        if: matrix.feature == 'local-tdlib,static'
+        run: |
+          if [[ "$RUNNER_ARCH" == "X64" ]]; then
+            TRIPLET=x64-windows-static
+          else
+            TRIPLET=arm64-windows-static
+          fi
+          mkdir -p ./tdlib/lib
+          for lib in libssl.a libcrypto.a libz.a ssl.lib crypto.lib zlib.lib; do
+            path=$(find ./td/vcpkg/installed/$TRIPLET -type f -name "$lib" 2>/dev/null | head -n 1 || true)
+            if [ -n "$path" ]; then
+              cp -f "$path" ./tdlib/lib/
+            fi
+          done
         shell: bash
 
       - name: Install pkg-config

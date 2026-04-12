@@ -105,6 +105,19 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=../tdlib ..
           cmake --build . --target install
 
+      - name: Copy static TDLib archives for local-tdlib,static
+        if: matrix.feature == 'local-tdlib,static'
+        run: |
+          mkdir -p ./td/tdlib/lib
+          for lib in libssl.a libcrypto.a libz.a; do
+            path=$(find /usr /usr/local -type f -name "$lib" 2>/dev/null | head -n 1)
+            if [ -z "$path" ]; then
+              echo "Static library $lib not found"
+              exit 1
+            fi
+            cp -f "$path" ./td/tdlib/lib/
+          done
+
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
         uses: actions/cache/save@v5
