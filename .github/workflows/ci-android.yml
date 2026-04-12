@@ -64,10 +64,8 @@ jobs:
               echo "CC_aarch64_linux_android=$NDK_TOOLCHAIN/bin/aarch64-linux-android29-clang" >> $GITHUB_ENV
               echo "CXX_aarch64_linux_android=$NDK_TOOLCHAIN/bin/aarch64-linux-android29-clang++" >> $GITHUB_ENV
               echo "AR_aarch64_linux_android=$NDK_TOOLCHAIN/bin/llvm-ar" >> $GITHUB_ENV
-              NDK_SYSROOT_LIB="$NDK_TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android"
-              if [ -d "$NDK_SYSROOT_LIB/29" ]; then
-                NDK_SYSROOT_LIB="$NDK_SYSROOT_LIB/29"
-              fi
+              NDK_SYSROOT_LIB_BASE="$NDK_TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android"
+              NDK_SYSROOT_LIB_API="$NDK_SYSROOT_LIB_BASE/29"
               NDK_CLANG_LIB="$NDK_TOOLCHAIN/lib64/clang/${CLANG_VERSION}/lib/linux/aarch64"
               ;;
             x86_64-linux-android)
@@ -75,14 +73,16 @@ jobs:
               echo "CC_x86_64_linux_android=$NDK_TOOLCHAIN/bin/x86_64-linux-android29-clang" >> $GITHUB_ENV
               echo "CXX_x86_64_linux_android=$NDK_TOOLCHAIN/bin/x86_64-linux-android29-clang++" >> $GITHUB_ENV
               echo "AR_x86_64_linux_android=$NDK_TOOLCHAIN/bin/llvm-ar" >> $GITHUB_ENV
-              NDK_SYSROOT_LIB="$NDK_TOOLCHAIN/sysroot/usr/lib/x86_64-linux-android"
-              if [ -d "$NDK_SYSROOT_LIB/29" ]; then
-                NDK_SYSROOT_LIB="$NDK_SYSROOT_LIB/29"
-              fi
+              NDK_SYSROOT_LIB_BASE="$NDK_TOOLCHAIN/sysroot/usr/lib/x86_64-linux-android"
+              NDK_SYSROOT_LIB_API="$NDK_SYSROOT_LIB_BASE/29"
               NDK_CLANG_LIB="$NDK_TOOLCHAIN/lib64/clang/${CLANG_VERSION}/lib/linux/x86_64"
               ;;
           esac
-          echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB -L native=$NDK_CLANG_LIB" >> $GITHUB_ENV
+          if [ -d "$NDK_SYSROOT_LIB_API" ]; then
+            echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB_BASE -L native=$NDK_SYSROOT_LIB_API -L native=$NDK_CLANG_LIB" >> $GITHUB_ENV
+          else
+            echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB_BASE -L native=$NDK_CLANG_LIB" >> $GITHUB_ENV
+          fi
 
       - name: Download TDLib artifact
         if: contains(matrix.feature, 'local-tdlib')
