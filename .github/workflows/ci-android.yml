@@ -49,6 +49,11 @@ jobs:
           echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;27.3.13750724"
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.3.13750724" >> $GITHUB_ENV
 
+      - name: Install Android host build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libc++-dev libc++abi-dev
+
       - name: Set NDK linker env
         run: |
           NDK_TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
@@ -60,6 +65,9 @@ jobs:
               echo "CXX_aarch64_linux_android=$NDK_TOOLCHAIN/bin/aarch64-linux-android29-clang++" >> $GITHUB_ENV
               echo "AR_aarch64_linux_android=$NDK_TOOLCHAIN/bin/llvm-ar" >> $GITHUB_ENV
               NDK_SYSROOT_LIB="$NDK_TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android"
+              if [ -d "$NDK_SYSROOT_LIB/29" ]; then
+                NDK_SYSROOT_LIB="$NDK_SYSROOT_LIB/29"
+              fi
               NDK_CLANG_LIB="$NDK_TOOLCHAIN/lib64/clang/${CLANG_VERSION}/lib/linux/aarch64"
               ;;
             x86_64-linux-android)
@@ -68,6 +76,9 @@ jobs:
               echo "CXX_x86_64_linux_android=$NDK_TOOLCHAIN/bin/x86_64-linux-android29-clang++" >> $GITHUB_ENV
               echo "AR_x86_64_linux_android=$NDK_TOOLCHAIN/bin/llvm-ar" >> $GITHUB_ENV
               NDK_SYSROOT_LIB="$NDK_TOOLCHAIN/sysroot/usr/lib/x86_64-linux-android"
+              if [ -d "$NDK_SYSROOT_LIB/29" ]; then
+                NDK_SYSROOT_LIB="$NDK_SYSROOT_LIB/29"
+              fi
               NDK_CLANG_LIB="$NDK_TOOLCHAIN/lib64/clang/${CLANG_VERSION}/lib/linux/x86_64"
               ;;
           esac
