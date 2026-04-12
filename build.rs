@@ -55,6 +55,19 @@ fn copy_default_config_into(config_dest: &std::path::Path, manifest_dir: &str) {
     }
 }
 
+fn build_tdlib_if_native(lib_path: Option<String>) {
+    let host = std::env::var("HOST").unwrap_or_default();
+    let target = std::env::var("TARGET").unwrap_or_default();
+    if host != target {
+        println!(
+            "cargo:warning=Cross-compiling from {host} to {target}; skipping tdlib-rs build helper in build script."
+        );
+        return;
+    }
+
+    tdlib_rs::build::build(lib_path);
+}
+
 fn main() -> std::io::Result<()> {
     // chafa-dyn and chafa-static are not supported on Windows ARM; fail the build if enabled there
     let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
@@ -71,7 +84,7 @@ fn main() -> std::io::Result<()> {
     }
 
     if cfg!(debug_assertions) {
-        tdlib_rs::build::build(None);
+        build_tdlib_if_native(None);
         return Ok(());
     }
 
@@ -92,7 +105,7 @@ fn main() -> std::io::Result<()> {
 
     let (_, tdlib_dest) = tgt_build_paths();
     std::fs::create_dir_all(&tdlib_dest).unwrap();
-    tdlib_rs::build::build(Some(tdlib_dest.to_string_lossy().into_owned()));
+    build_tdlib_if_native(Some(tdlib_dest.to_string_lossy().into_owned()));
 
     Ok(())
 }
