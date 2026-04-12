@@ -344,9 +344,13 @@ impl TgContext {
         None
     }
 
+    /// Build the main chat list for the UI. Lock `chats` before `chats_index`: the TDLib update
+    /// task takes `chats` then `chats_index` when applying position updates; the previous
+    /// opposite order here could deadlock after a large catch-up when the UI rebuilt the list
+    /// concurrently with incoming updates.
     pub fn get_chats_index(&self) -> Result<Option<Vec<ChatListEntry>>, AppError<Event>> {
-        let chats_index = self.chats_index();
         let chats = self.chats();
+        let chats_index = self.chats_index();
         let mut chat_list: Vec<ChatListEntry> = Vec::new();
         for ord_chat in chats_index.iter() {
             let mut chat_list_item = ChatListEntry::new();
