@@ -280,6 +280,45 @@ async fn consume_until_single_action(
         }
     }
 }
+
+/// TDLib can emit long bursts of chat-list-related updates. The main loop would otherwise drain
+/// thousands of [`Action::ChatHistoryAppended`] / [`Action::Refresh`] in one turn, each forcing
+/// chat list work. Compress any run consisting only of those two variants to at most one refresh
+/// tick plus one list sync (order preserved relative to other actions).
+fn fold_chat_list_refresh_actions(actions: Vec<Action>) -> Vec<Action> {
+    if actions.is_empty() {
+        return actions;
+    }
+    let mut out = Vec::with_capacity(actions.len());
+    let mut i = 0;
+    while i < actions.len() {
+        if matches!(actions[i], Action::ChatHistoryAppended | Action::Refresh) {
+            let mut saw_refresh = false;
+            let mut saw_cha = false;
+            while i < actions.len()
+                && matches!(actions[i], Action::ChatHistoryAppended | Action::Refresh)
+            {
+                match &actions[i] {
+                    Action::Refresh => saw_refresh = true,
+                    Action::ChatHistoryAppended => saw_cha = true,
+                    _ => {}
+                }
+                i += 1;
+            }
+            if saw_refresh {
+                out.push(Action::Refresh);
+            }
+            if saw_cha {
+                out.push(Action::ChatHistoryAppended);
+            }
+        } else {
+            out.push(actions[i].clone());
+            i += 1;
+        }
+    }
+    out
+}
+
 /// Returns true for actions that change UI-visible state and should trigger a render.
 fn action_changes_ui(action: &Action) -> bool {
     matches!(
@@ -349,8 +388,13 @@ fn action_changes_ui(action: &Action) -> bool {
     )
 }
 
-#[allow(clippy::await_holding_lock)]
 /// Handle incoming actions from the application.
+///
+/// Bursts of [`Action::ChatHistoryAppended`] / [`Action::Refresh`] are folded before handling
+/// ([`fold_chat_list_refresh_actions`]) so one TDLib flurry does not run thousands of chat-list
+/// rebuilds in a single turn. [`crate::tg::tg_context::TgContext`] mutexes are not held across
+/// `.await` in the [`Action::GetChatHistory`] path (loads use discrete lock regions per batch).
+#[allow(clippy::await_holding_lock)]
 ///
 /// # Arguments
 /// * `app_context` - An Arc wrapped AppContext struct.
@@ -366,7 +410,27 @@ pub async fn handle_app_actions(
     tui_backend: &mut TuiBackend,
     tg_backend: &mut TgBackend,
 ) -> Result<(), AppError<Action>> {
-    while let Ok(action) = app_context.action_rx().try_recv() {
+    let mut batch = Vec::new();
+    while let Ok(a) = app_context.action_rx().try_recv() {
+        batch.push(a);
+    }
+    if batch.is_empty() {
+        return Ok(());
+    }
+
+    let raw_len = batch.len();
+    let folded = fold_chat_list_refresh_actions(batch);
+    let folded_len = folded.len();
+    if raw_len > 64 {
+        tracing::debug!(
+            target: "tgt::actions",
+            raw = raw_len,
+            folded = folded_len,
+            "folded action batch (TDLib/UI burst)"
+        );
+    }
+
+    for action in folded {
         match &action {
             Action::Render => {
                 // Actual draw happens at end of loop when should_render()
@@ -907,6 +971,10 @@ pub async fn handle_app_actions(
         tui.update(action.clone())
     }
 
+    if raw_len >= 32 {
+        tokio::task::yield_now().await;
+    }
+
     if app_context.should_render() {
         tui_backend.terminal.draw(|f| {
             tui.draw(f, f.area()).unwrap();
@@ -1049,4 +1117,39 @@ async fn log_out(tg_backend: &mut TgBackend) {
 
     // Clear the terminal and move the cursor to the top left corner
     io::Write::write_all(&mut io::stdout().lock(), b"\x1b[2J\x1b[1;1H").unwrap();
+}
+
+#[cfg(test)]
+mod fold_action_tests {
+    use super::{fold_chat_list_refresh_actions, Action};
+
+    #[test]
+    fn fold_compresses_long_cha_refresh_run() {
+        let v = vec![
+            Action::ChatHistoryAppended,
+            Action::ChatHistoryAppended,
+            Action::Refresh,
+            Action::ChatHistoryAppended,
+        ];
+        let f = fold_chat_list_refresh_actions(v);
+        assert_eq!(f.len(), 2);
+        assert!(matches!(f[0], Action::Refresh));
+        assert!(matches!(f[1], Action::ChatHistoryAppended));
+    }
+
+    #[test]
+    fn fold_preserves_other_actions_in_order() {
+        let v = vec![
+            Action::ChatHistoryAppended,
+            Action::Quit,
+            Action::Refresh,
+            Action::ChatHistoryAppended,
+        ];
+        let f = fold_chat_list_refresh_actions(v);
+        assert_eq!(f.len(), 4);
+        assert!(matches!(f[0], Action::ChatHistoryAppended));
+        assert!(matches!(f[1], Action::Quit));
+        assert!(matches!(f[2], Action::Refresh));
+        assert!(matches!(f[3], Action::ChatHistoryAppended));
+    }
 }

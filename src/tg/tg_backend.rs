@@ -1302,6 +1302,8 @@ impl TgBackend {
                                 needs_chat_list_update = false;
                             }
                         }
+                        // Let the runtime schedule other tasks (main loop, I/O) during TDLib bursts.
+                        tokio::task::yield_now().await;
                     }
                     None => {
                         // No updates available, sleep briefly to avoid busy-wait loop
