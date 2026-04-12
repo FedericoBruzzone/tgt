@@ -66,8 +66,13 @@ jobs:
           rm -rf build
           mkdir build
           cd build
-          OPENSSL_PREFIX="${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl' || '/usr/local/opt/openssl' }}"
-          ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/zlib' || '/usr/local/opt/zlib' }}")"
+          if [ "$(uname -m)" = "arm64" ]; then
+            OPENSSL_PREFIX="/opt/homebrew/opt/openssl"
+            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/opt/homebrew/opt/zlib")"
+          else
+            OPENSSL_PREFIX="/usr/local/opt/openssl"
+            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/usr/local/opt/zlib")"
+          fi
           cmake \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DCMAKE_BUILD_TYPE=Release \
@@ -80,8 +85,13 @@ jobs:
       - name: Copy static TDLib archives for local-tdlib,static
         if: matrix.feature == 'local-tdlib,static'
         run: |
-          OPENSSL_PREFIX="${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/openssl' || '/usr/local/opt/openssl' }}"
-          ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "${{ runner.arch == 'ARM64' && '/opt/homebrew/opt/zlib' || '/usr/local/opt/zlib' }}")"
+          if [ "$(uname -m)" = "arm64" ]; then
+            OPENSSL_PREFIX="/opt/homebrew/opt/openssl"
+            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/opt/homebrew/opt/zlib")"
+          else
+            OPENSSL_PREFIX="/usr/local/opt/openssl"
+            ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || echo "/usr/local/opt/zlib")"
+          fi
           cp -f "$OPENSSL_PREFIX/lib/libssl.a" "./td/tdlib/lib/"
           cp -f "$OPENSSL_PREFIX/lib/libcrypto.a" "./td/tdlib/lib/"
           cp -f "$ZLIB_PREFIX/lib/libz.a" "./td/tdlib/lib/"

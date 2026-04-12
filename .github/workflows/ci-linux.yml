@@ -109,8 +109,10 @@ jobs:
         if: matrix.feature == 'local-tdlib,static'
         run: |
           mkdir -p ./td/tdlib/lib
+          ARCH_TRIPLET=$(gcc -dumpmachine)
+          SEARCH_PATHS="/usr/lib/$ARCH_TRIPLET /usr/local/lib /usr/lib"
           for lib in libssl.a libcrypto.a libz.a; do
-            path=$(find /usr /usr/local -type f -name "$lib" 2>/dev/null | head -n 1)
+            path=$(find $SEARCH_PATHS -type f -name "$lib" 2>/dev/null | head -n 1)
             if [ -z "$path" ]; then
               echo "Static library $lib not found"
               exit 1
