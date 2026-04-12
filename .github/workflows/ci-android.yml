@@ -79,9 +79,9 @@ jobs:
               ;;
           esac
           if [ -d "$NDK_SYSROOT_LIB_API" ]; then
-            echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB_BASE -L native=$NDK_SYSROOT_LIB_API -L native=$NDK_CLANG_LIB" >> $GITHUB_ENV
+            echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB_BASE -L native=$NDK_SYSROOT_LIB_API -L native=$NDK_CLANG_LIB -l c++abi" >> $GITHUB_ENV
           else
-            echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB_BASE -L native=$NDK_CLANG_LIB" >> $GITHUB_ENV
+            echo "RUSTFLAGS=-L native=$NDK_SYSROOT_LIB_BASE -L native=$NDK_CLANG_LIB -l c++abi" >> $GITHUB_ENV
           fi
 
       - name: Download TDLib artifact
