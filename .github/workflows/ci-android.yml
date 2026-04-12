@@ -1,0 +1,92 @@
+name: CI Android
+
+on:
+  push:
+    branches-ignore: ["dependabot/**"]
+    tags-ignore: ["**"]
+    paths:
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "src/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+      - "config/**"
+      - ".github/workflows/**"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  API_HASH: a3406de8d171bb422bb6ddf3bbd800e2
+  API_ID: 94575
+
+jobs:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [aarch64-linux-android, x86_64-linux-android]
+        feature: ["download-tdlib,static", "local-tdlib,static"]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Setup Android NDK
+        run: |
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;27.3.13750724"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.3.13750724" >> $GITHUB_ENV
+
+      - name: Set NDK linker env
+        run: |
+          NDK_TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
+          case "${{ matrix.target }}" in
+            aarch64-linux-android)
+              echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_TOOLCHAIN/bin/aarch64-linux-android29-clang" >> $GITHUB_ENV
+              echo "CC_aarch64_linux_android=$NDK_TOOLCHAIN/bin/aarch64-linux-android29-clang" >> $GITHUB_ENV
+              echo "CXX_aarch64_linux_android=$NDK_TOOLCHAIN/bin/aarch64-linux-android29-clang++" >> $GITHUB_ENV
+              echo "AR_aarch64_linux_android=$NDK_TOOLCHAIN/bin/llvm-ar" >> $GITHUB_ENV
+              ;;
+            x86_64-linux-android)
+              echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$NDK_TOOLCHAIN/bin/x86_64-linux-android29-clang" >> $GITHUB_ENV
+              echo "CC_x86_64_linux_android=$NDK_TOOLCHAIN/bin/x86_64-linux-android29-clang" >> $GITHUB_ENV
+              echo "CXX_x86_64_linux_android=$NDK_TOOLCHAIN/bin/x86_64-linux-android29-clang++" >> $GITHUB_ENV
+              echo "AR_x86_64_linux_android=$NDK_TOOLCHAIN/bin/llvm-ar" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Download TDLib artifact
+        if: contains(matrix.feature, 'local-tdlib')
+        run: |
+          ARCH=$(echo "${{ matrix.target }}" | cut -d'-' -f1)
+          gh release download --repo FedericoBruzzone/tdlib-rs --pattern "tdlib-*-android-${ARCH}.zip"
+          unzip -q *.zip -d .
+          echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Cargo and rustc versions
+        run: |
+          cargo --version
+          rustc --version
+
+      - name: Run cargo build
+        run: cargo build --no-default-features --verbose --target ${{ matrix.target }} --features ${{ matrix.feature }}
+
+      - name: Run cargo clippy
+        run: cargo clippy --no-default-features --all-targets --target ${{ matrix.target }} --features ${{ matrix.feature }} -- -D warnings
+
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check

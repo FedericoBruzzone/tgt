@@ -36,6 +36,7 @@ default = ["download-tdlib", "voice-message", "rodio"]
 local-tdlib = ["tdlib-rs/local-tdlib"]
 download-tdlib = ["tdlib-rs/download-tdlib"]
 pkg-config = ["tdlib-rs/pkg-config"]
+static = ["tdlib-rs/static"]
 # Enable chafa-based image rendering in ratatui-image (macOS, Linux x86_64, Windows x64). Not supported on Windows ARM.
 chafa-dyn = ["ratatui-image/chafa-dyn"]
 chafa-static = ["ratatui-image/chafa-static"]
@@ -54,8 +55,8 @@ futures = "0.3.32"
 lazy_static = "1.5.0"
 ratatui = "0.30.0"
 serde = "1.0.228"
-toml = "1.1"
-tdlib-rs = "1.3.0"
+toml = "1.0"
+tdlib-rs = "1.4.0"
 tokio = { version = "1.50.0", features = ["full"] }
 tracing = "0.1.44"
 tracing-error = "0.2.1"

@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        feature: [local-tdlib, pkg-config, download-tdlib]
+        feature: [local-tdlib, pkg-config, download-tdlib, "local-tdlib,static", "download-tdlib,static"]
         os: [ubuntu-latest, ubuntu-24.04-arm]
 
     runs-on: ${{ matrix.os }}
@@ -86,7 +86,7 @@ jobs:
           cat $(pkg-config --variable=pcfiledir chafa)/chafa.pc || echo "Could not find chafa.pc"
 
       - name: Restore cache TDLib
-        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config')
         id: cache-tdlib-restore
         uses: actions/cache/restore@v5
         with:
@@ -94,7 +94,7 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
 
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
         run: |
           sudo apt-get install -y make git zlib1g-dev libssl-dev gperf php-cli cmake clang-18 libc++-18-dev libc++abi-18-dev
           git clone https://github.com/tdlib/td.git
@@ -106,27 +106,27 @@ jobs:
           cmake --build . --target install
 
       - name: Save cache TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
         uses: actions/cache/save@v5
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
 
       - name: Extract TDLib
-        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config')
         run: |
           cp -r ./td/tdlib ./
           sudo cp ./tdlib/lib/libtdjson.so.* /usr/lib/
 
       - name: Set PKG_CONFIG_PATH and LD_LIBRARY_PATH for TDLib
-        if: matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'pkg-config')
         run: |
           # Prepend TDLib to path while keeping the Chafa/GLib paths we set earlier
           echo "PKG_CONFIG_PATH=$(pwd)/tdlib/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$(pwd)/tdlib/lib:${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
 
       - name: Set LOCAL_TDLIB_PATH
-        if: matrix.feature == 'local-tdlib'
+        if: contains(matrix.feature, 'local-tdlib')
         run: echo "LOCAL_TDLIB_PATH=$(pwd)/tdlib" >> $GITHUB_ENV
 
       - name: Cargo and rustc versions
@@ -138,7 +138,7 @@ jobs:
       # needs it in LD_LIBRARY_PATH when it runs. Pre-build tdlib-rs so we can locate
       # the lib and set LD_LIBRARY_PATH for the rest of the job.
       - name: Set LD_LIBRARY_PATH for download-tdlib
-        if: matrix.feature == 'download-tdlib'
+        if: contains(matrix.feature, 'download-tdlib')
         run: |
           cargo build --no-default-features --features tdlib-rs/download-tdlib -p tdlib-rs 2>/dev/null || true
           TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)

@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
+- `static` feature to statically link `tdjson` (use with `download-tdlib` or `local-tdlib`); no runtime `tdjson` dependency needed. Powered by **tdlib-rs v1.4.0**.
+- CI: `static` feature combinations (`local-tdlib,static`, `download-tdlib,static`) in Linux, macOS, and Windows workflows.
+- CI: Android cross-compilation workflow (`aarch64-linux-android`, `x86_64-linux-android`) with static linking.
 - Command guide popup (`Alt+F1`) listing keybindings from `keymap.toml`.
 - Theme switcher with dynamic theme discovery; theme choice can persist (see docs for release vs debug behaviour).
 - Server-side chat message search (TDLib), search overlay, jump-to-message, and `Alt+C` to restore default message order; search errors surface in the status bar.
@@ -22,6 +25,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Changed
 
+- Upgraded **tdlib-rs** to v1.4.0 (new `static` feature, `ureq` replaces `reqwest`, Android support, `#[link]` attribute removed from tdjson FFI).
 - UI render-on-demand to reduce idle CPU while keeping Telegram-driven updates responsive.
 - Focus tracking uses atomics instead of a mutex for lock-free reads/writes.
 - Hardcoded keys moved into `keymap.toml`; keymaps merge defaults with user config and load dynamically (including photo viewer hints).

@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, windows-11-arm]
-        feature: [local-tdlib, pkg-config, download-tdlib]
+        feature: [local-tdlib, pkg-config, download-tdlib, "local-tdlib,static", "download-tdlib,static"]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -61,7 +61,7 @@ jobs:
         shell: pwsh
 
       - name: Restore cache TDLib
-        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config')
         id: cache-tdlib-restore
         uses: actions/cache/restore@v5
         with:
@@ -69,7 +69,7 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
 
       - name: Build TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
         run: |
           git clone https://github.com/tdlib/td.git
           cd td
@@ -98,19 +98,19 @@ jobs:
         shell: bash
 
       - name: Save cache TDLib
-        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config')
+        if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
         uses: actions/cache/save@v5
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
 
       - name: Extract TDLib
-        if: matrix.feature == 'local-tdlib' || matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config')
         run: cp -r ./td/tdlib ./
         shell: bash
 
       - name: Install pkg-config
-        if: matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'pkg-config')
         run: |
           mkdir pkg-config
           cd pkg-config
@@ -125,7 +125,7 @@ jobs:
         shell: bash
 
       - name: Set PKG_CONFIG_PATH and bin
-        if: matrix.feature == 'pkg-config'
+        if: contains(matrix.feature, 'pkg-config')
         run: |
           $root = (Get-Item .).FullName
           echo "$root\pkg-config\pkg-config_0.26-1_win32\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -141,7 +141,7 @@ jobs:
         shell: pwsh
 
       - name: Set LOCAL_TDLIB_PATH
-        if: matrix.feature == 'local-tdlib'
+        if: contains(matrix.feature, 'local-tdlib')
         run: echo "LOCAL_TDLIB_PATH=$((Get-Item .).FullName)\tdlib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       # - name: Cache cargo
       #   uses: actions/cache@v4
