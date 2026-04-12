@@ -6,6 +6,7 @@ use crate::{
     event::Event,
     tg::td_enums::TdMessageReplyToMessage,
 };
+#[cfg(not(target_os = "android"))]
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
 use ratatui::{
@@ -449,6 +450,7 @@ impl Input {
     /// Copy the selected text of the `Input` struct.
     /// The selected text is copied to the clipboard.
     fn copy_selected(&self) {
+        #[cfg(not(target_os = "android"))]
         if let Ok(mut clipboard) = Clipboard::new() {
             let mut text = String::new();
             for (i, line) in self.text.iter().enumerate() {
@@ -837,6 +839,7 @@ impl Component for PromptWindow {
                 }
 
                 (KeyCode::Char('v'), Modifiers { control: true, .. }) => {
+                    #[cfg(not(target_os = "android"))]
                     if let Ok(mut clipboard) = Clipboard::new() {
                         if let Ok(text) = clipboard.get_text() {
                             self.input.paste(text);

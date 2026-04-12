@@ -62,7 +62,6 @@ tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
-arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 chrono = "0.4.44"
 # Default: no chafa. Enable via chafa-dyn or chafa-static (not supported on Windows ARM).
 ratatui-image = { version = "10.0.6", default-features = false, features = ["crossterm", "image-defaults"] }
@@ -78,6 +77,9 @@ ogg = { version = "0.9", optional = true }
 # Opus codec for Telegram voice notes (via audiopus_sys; requires CMake when building with voice-message).
 audiopus = { version = "0.2", optional = true }
 ratatui-explorer = "0.3.0"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+arboard = { version = "3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 
 [build-dependencies]
 dirs = "6.0.0"

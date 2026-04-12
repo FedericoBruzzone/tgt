@@ -6,6 +6,7 @@ use crate::{
     event::Event,
     tg::message_entry::MessageEntry,
 };
+#[cfg(not(target_os = "android"))]
 use arboard::Clipboard;
 use crossterm::event::{KeyCode, MouseEventKind};
 use ratatui::{
@@ -223,6 +224,7 @@ impl ChatWindow {
             return;
         };
         let message = entry.message_content_to_string();
+        #[cfg(not(target_os = "android"))]
         match Clipboard::new() {
             Ok(mut clipboard) => {
                 if clipboard.set_text(&message).is_ok() {
@@ -236,6 +238,11 @@ impl ChatWindow {
             Err(e) => {
                 tracing::warn!("Clipboard unavailable (copy message): {}", e);
             }
+        }
+        #[cfg(target_os = "android")]
+        {
+            let _ = message;
+            tracing::warn!("Clipboard not supported on Android");
         }
     }
 

@@ -272,6 +272,7 @@ If you have any questions, suggestions, or feedback, do not hesitate to [contact
 Maintainers:
 
 - [FedericoBruzzone](https://github.com/FedericoBruzzone)
+- [https://github.com/longelas](https://github.com/longelas)
 - [Andreal2000](https://github.com/Andreal2000)
 
 <!-- [docs-rs]: https://docs.rs/tgt -->
