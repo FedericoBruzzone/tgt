@@ -105,8 +105,8 @@ jobs:
             echo "libz.a not found in /opt/homebrew or /usr/local; building zlib from source"
             ZLIB_BUILD_DIR="$(mktemp -d)"
             trap 'rm -rf "$ZLIB_BUILD_DIR"' EXIT
-            curl -L https://zlib.net/zlib-1.3.0.tar.gz | tar xz -C "$ZLIB_BUILD_DIR"
-            cd "$ZLIB_BUILD_DIR"/zlib-1.3.0
+            curl -L https://zlib.net/zlib-1.2.13.tar.gz | tar xz -C "$ZLIB_BUILD_DIR"
+            cd "$ZLIB_BUILD_DIR"/zlib-1.2.13
             ./configure --static --prefix="$ZLIB_BUILD_DIR/install"
             make -j"$(sysctl -n hw.ncpu)"
             make install
