@@ -102,9 +102,19 @@ jobs:
             exit 1
           fi
           if [ -z "$ZLIB_LIB" ]; then
-            echo "libz.a not found in /opt/homebrew or /usr/local"
-            find /opt/homebrew /usr/local -type f -name 'libz.*' | head -n 20
-            exit 1
+            echo "libz.a not found in /opt/homebrew or /usr/local; building zlib from source"
+            ZLIB_BUILD_DIR="$(mktemp -d)"
+            trap 'rm -rf "$ZLIB_BUILD_DIR"' EXIT
+            curl -L https://zlib.net/zlib-1.3.0.tar.gz | tar xz -C "$ZLIB_BUILD_DIR"
+            cd "$ZLIB_BUILD_DIR"/zlib-1.3.0
+            ./configure --static --prefix="$ZLIB_BUILD_DIR/install"
+            make -j"$(sysctl -n hw.ncpu)"
+            make install
+            ZLIB_LIB="$ZLIB_BUILD_DIR/install/lib/libz.a"
+            if [ ! -f "$ZLIB_LIB" ]; then
+              echo "Failed to build libz.a"
+              exit 1
+            fi
           fi
           cp -f "$OPENSSL_SSL" "./td/tdlib/lib/"
           cp -f "$OPENSSL_CRYPTO" "./td/tdlib/lib/"
