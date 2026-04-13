@@ -116,6 +116,7 @@ jobs:
               exit 1
             fi
           fi
+          mkdir -p ./td/tdlib/lib
           cp -f "$OPENSSL_SSL" "./td/tdlib/lib/"
           cp -f "$OPENSSL_CRYPTO" "./td/tdlib/lib/"
           cp -f "$ZLIB_LIB" "./td/tdlib/lib/"
