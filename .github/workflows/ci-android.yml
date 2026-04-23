@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [aarch64-linux-android, x86_64-linux-android]
-        feature: ["download-tdlib,static", "local-tdlib,static"]
+        feature: ["static-download", "local-tdlib,static"]
 
     runs-on: ubuntu-latest
 
