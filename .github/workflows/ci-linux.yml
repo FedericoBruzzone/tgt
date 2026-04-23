@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        feature: [local-tdlib, pkg-config, download-tdlib, "local-tdlib,static", "download-tdlib,static"]
+        feature: [local-tdlib, pkg-config, download-tdlib, static-download, "local-tdlib,static"]
         os: [ubuntu-latest, ubuntu-24.04-arm]
 
     runs-on: ${{ matrix.os }}
@@ -153,7 +153,7 @@ jobs:
       # needs it in LD_LIBRARY_PATH when it runs. Pre-build tdlib-rs so we can locate
       # the lib and set LD_LIBRARY_PATH for the rest of the job.
       - name: Set LD_LIBRARY_PATH for download-tdlib
-        if: contains(matrix.feature, 'download-tdlib')
+        if: contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download'
         run: |
           cargo build --no-default-features --features tdlib-rs/download-tdlib -p tdlib-rs 2>/dev/null || true
           TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)
@@ -171,7 +171,7 @@ jobs:
 
       - name: Run cargo clippy
         run: |
-          if [ "${{ matrix.feature }}" = "download-tdlib" ]; then
+          if [ "${{ matrix.feature }}" = "download-tdlib" ] || [ "${{ matrix.feature }}" = "static-download" ]; then
             TDLIB_LIB=$(find target -name 'libtdjson*.so*' 2>/dev/null | head -1)
             if [ -n "$TDLIB_LIB" ]; then
               export LD_LIBRARY_PATH="$(dirname "$TDLIB_LIB"):${LD_LIBRARY_PATH:-}"
