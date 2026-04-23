@@ -531,45 +531,42 @@ pub async fn handle_app_actions(
                     }
                 }
             }
-            Action::GetChatHistory => {
-                if !app_context.tg_context().is_history_loading() {
-                    app_context.tg_context().set_history_loading(true);
-                    let chat_id = app_context.tg_context().open_chat_id().as_i64();
-                    let cache_len_before = app_context.tg_context().open_chat_messages().len();
+            Action::GetChatHistory if !app_context.tg_context().is_history_loading() => {
+                app_context.tg_context().set_history_loading(true);
+                let chat_id = app_context.tg_context().open_chat_id().as_i64();
+                let cache_len_before = app_context.tg_context().open_chat_messages().len();
 
-                    // If cache is empty (initial load), load 100 messages to fill the window
-                    // Otherwise, load just ONE batch (50 messages) for incremental scrolling
-                    let target_load = if cache_len_before == 0 { 100 } else { 50 };
-                    let mut loaded_count = 0;
+                // If cache is empty (initial load), load 100 messages to fill the window
+                // Otherwise, load just ONE batch (50 messages) for incremental scrolling
+                let target_load = if cache_len_before == 0 { 100 } else { 50 };
+                let mut loaded_count = 0;
 
-                    while loaded_count < target_load {
-                        if app_context.tg_context().open_chat_id().as_i64() != chat_id {
-                            break;
-                        }
-
-                        // Always use the oldest message in cache (or 0 if empty) to ensure continuity
-                        let from_message_id =
-                            app_context.tg_context().oldest_message_id().unwrap_or(0);
-                        let (entries, _has_more) = tg_backend
-                            .get_chat_history_one_batch(chat_id, from_message_id)
-                            .await;
-
-                        if entries.is_empty() {
-                            break;
-                        }
-
-                        if app_context.tg_context().open_chat_id().as_i64() != chat_id {
-                            break;
-                        }
-
-                        let tg = app_context.tg_context();
-                        loaded_count += entries.len();
-                        tg.open_chat_messages().insert_messages(entries.clone());
+                while loaded_count < target_load {
+                    if app_context.tg_context().open_chat_id().as_i64() != chat_id {
+                        break;
                     }
 
-                    app_context.tg_context().set_history_loading(false);
-                    let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
+                    // Always use the oldest message in cache (or 0 if empty) to ensure continuity
+                    let from_message_id = app_context.tg_context().oldest_message_id().unwrap_or(0);
+                    let (entries, _has_more) = tg_backend
+                        .get_chat_history_one_batch(chat_id, from_message_id)
+                        .await;
+
+                    if entries.is_empty() {
+                        break;
+                    }
+
+                    if app_context.tg_context().open_chat_id().as_i64() != chat_id {
+                        break;
+                    }
+
+                    let tg = app_context.tg_context();
+                    loaded_count += entries.len();
+                    tg.open_chat_messages().insert_messages(entries.clone());
                 }
+
+                app_context.tg_context().set_history_loading(false);
+                let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
             }
             Action::LoadPinnedMessages => {
                 let chat_id = app_context.tg_context().open_chat_id().as_i64();
@@ -581,45 +578,38 @@ pub async fn handle_app_actions(
                     app_context.tg_context().set_open_chat_pinned(pins);
                 }
             }
-            Action::GetChatHistoryNewer => {
-                if !app_context.tg_context().is_history_loading() {
-                    let chat_id = app_context.tg_context().open_chat_id().as_i64();
-                    let newest = app_context
-                        .tg_context()
-                        .open_chat_messages()
-                        .newest_message_id();
-                    if let Some(from_id) = newest {
-                        app_context.tg_context().set_history_loading(true);
-                        // TDLib: offset -N = from_message_id + N newer messages; limit >= -offset
-                        // Use offset -49 to get from_id (which we already have) + 49 newer, then filter out from_id
-                        const NEWER_BATCH: i32 = 50;
-                        let (entries, _) = tg_backend
-                            .get_chat_history_batch(
-                                chat_id,
-                                from_id,
-                                -(NEWER_BATCH - 1),
-                                NEWER_BATCH,
-                            )
-                            .await;
-                        if app_context.tg_context().open_chat_id().as_i64() == chat_id
-                            && !entries.is_empty()
-                        {
-                            // Skip the first message if it's the boundary message we already have
-                            let new_messages = if entries.first().map(|e| e.id()) == Some(from_id) {
-                                &entries[1..]
-                            } else {
-                                &entries[..]
-                            };
-                            if !new_messages.is_empty() {
-                                app_context
-                                    .tg_context()
-                                    .open_chat_messages()
-                                    .insert_messages(new_messages.iter().cloned());
-                            }
+            Action::GetChatHistoryNewer if !app_context.tg_context().is_history_loading() => {
+                let chat_id = app_context.tg_context().open_chat_id().as_i64();
+                let newest = app_context
+                    .tg_context()
+                    .open_chat_messages()
+                    .newest_message_id();
+                if let Some(from_id) = newest {
+                    app_context.tg_context().set_history_loading(true);
+                    // TDLib: offset -N = from_message_id + N newer messages; limit >= -offset
+                    // Use offset -49 to get from_id (which we already have) + 49 newer, then filter out from_id
+                    const NEWER_BATCH: i32 = 50;
+                    let (entries, _) = tg_backend
+                        .get_chat_history_batch(chat_id, from_id, -(NEWER_BATCH - 1), NEWER_BATCH)
+                        .await;
+                    if app_context.tg_context().open_chat_id().as_i64() == chat_id
+                        && !entries.is_empty()
+                    {
+                        // Skip the first message if it's the boundary message we already have
+                        let new_messages = if entries.first().map(|e| e.id()) == Some(from_id) {
+                            &entries[1..]
+                        } else {
+                            &entries[..]
+                        };
+                        if !new_messages.is_empty() {
+                            app_context
+                                .tg_context()
+                                .open_chat_messages()
+                                .insert_messages(new_messages.iter().cloned());
                         }
-                        app_context.tg_context().set_history_loading(false);
-                        let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
                     }
+                    app_context.tg_context().set_history_loading(false);
+                    let _ = app_context.action_tx().send(Action::ChatHistoryAppended);
                 }
             }
             Action::SearchChatMessages(ref query) => {

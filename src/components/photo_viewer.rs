@@ -217,17 +217,16 @@ impl Component for PhotoViewer {
                 // These actions are handled by CoreWindow, which forwards them to ChatWindow
                 // No action needed here
             }
-            Action::Key(key_code, _modifiers) => {
-                if self.visible {
-                    match key_code {
-                        crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::Char('q') => {
-                            self.hide();
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                tx.send(Action::HidePhotoViewer).unwrap_or(());
-                            }
-                        }
-                        _ => {}
-                    }
+            Action::Key(crossterm::event::KeyCode::Esc, _modifiers) if self.visible => {
+                self.hide();
+                if let Some(tx) = self.action_tx.as_ref() {
+                    tx.send(Action::HidePhotoViewer).unwrap_or(());
+                }
+            }
+            Action::Key(crossterm::event::KeyCode::Char('q'), _modifiers) if self.visible => {
+                self.hide();
+                if let Some(tx) = self.action_tx.as_ref() {
+                    tx.send(Action::HidePhotoViewer).unwrap_or(());
                 }
             }
             _ => {}

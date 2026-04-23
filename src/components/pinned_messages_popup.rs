@@ -123,10 +123,8 @@ impl Component for PinnedMessagesPopup {
                     let _ = tx.send(Action::PlayVoiceMessage(id));
                 }
             }
-            Action::LoadPinnedMessages => {
-                if self.visible {
-                    self.reload_from_context();
-                }
+            Action::LoadPinnedMessages if self.visible => {
+                self.reload_from_context();
             }
             _ => {}
         }
