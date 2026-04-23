@@ -578,39 +578,37 @@ impl Component for ChatListWindow {
             Action::FocusComponent(ComponentName::ChatList) => {
                 self.rebuild_visible_chats();
             }
-            Action::Key(key_code, modifiers) => {
-                if self.search_mode {
-                    match key_code {
-                        KeyCode::Char(c)
-                            if !modifiers.control && !modifiers.alt && !modifiers.shift =>
-                        {
-                            self.handle_search_char(c);
-                        }
-                        KeyCode::Backspace => {
-                            self.handle_search_backspace();
-                        }
-                        KeyCode::Enter => {
-                            // Open selected chat and exit search mode
-                            self.confirm_selection();
-                            self.stop_search();
-                        }
-                        KeyCode::Esc => {
-                            self.stop_search();
-                        }
-                        KeyCode::Down => {
-                            // Allow arrow key navigation in search mode
-                            self.next();
-                        }
-                        KeyCode::Up => {
-                            // Allow arrow key navigation in search mode
-                            self.previous();
-                        }
-                        KeyCode::Tab => {
-                            // Allow tab navigation in search mode
-                            self.next();
-                        }
-                        _ => {}
+            Action::Key(key_code, modifiers) if self.search_mode => {
+                match key_code {
+                    KeyCode::Char(c)
+                        if !modifiers.control && !modifiers.alt && !modifiers.shift =>
+                    {
+                        self.handle_search_char(c);
                     }
+                    KeyCode::Backspace => {
+                        self.handle_search_backspace();
+                    }
+                    KeyCode::Enter => {
+                        // Open selected chat and exit search mode
+                        self.confirm_selection();
+                        self.stop_search();
+                    }
+                    KeyCode::Esc => {
+                        self.stop_search();
+                    }
+                    KeyCode::Down => {
+                        // Allow arrow key navigation in search mode
+                        self.next();
+                    }
+                    KeyCode::Up => {
+                        // Allow arrow key navigation in search mode
+                        self.previous();
+                    }
+                    KeyCode::Tab => {
+                        // Allow tab navigation in search mode
+                        self.next();
+                    }
+                    _ => {}
                 }
             }
             _ => {}

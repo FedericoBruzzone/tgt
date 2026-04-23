@@ -171,22 +171,18 @@ impl FileDownloadExplorer {
                     let _ = tx.send(Action::HideFileDownloadExplorer);
                 }
             }
-            KeyCode::Enter => {
-                if self.sanitized_filename().is_some() {
-                    self.phase = DownloadPhase::PickFolder;
-                    self.explorer
-                        .set_theme(Self::build_explorer_theme(Arc::clone(&self.app_context)));
-                    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-                    let _ = self.explorer.set_cwd(home_dir);
-                }
+            KeyCode::Enter if self.sanitized_filename().is_some() => {
+                self.phase = DownloadPhase::PickFolder;
+                self.explorer
+                    .set_theme(Self::build_explorer_theme(Arc::clone(&self.app_context)));
+                let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+                let _ = self.explorer.set_cwd(home_dir);
             }
             KeyCode::Left if !modifiers.contains(KeyModifiers::ALT) => {
                 self.filename_cursor = self.filename_cursor.saturating_sub(1);
             }
-            KeyCode::Right => {
-                if self.filename_cursor < self.filename_chars.len() {
-                    self.filename_cursor += 1;
-                }
+            KeyCode::Right if self.filename_cursor < self.filename_chars.len() => {
+                self.filename_cursor += 1;
             }
             KeyCode::Home => {
                 self.filename_cursor = 0;
@@ -194,22 +190,16 @@ impl FileDownloadExplorer {
             KeyCode::End => {
                 self.filename_cursor = self.filename_chars.len();
             }
-            KeyCode::Backspace => {
-                if self.filename_cursor > 0 {
-                    self.filename_cursor -= 1;
-                    self.filename_chars.remove(self.filename_cursor);
-                }
+            KeyCode::Backspace if self.filename_cursor > 0 => {
+                self.filename_cursor -= 1;
+                self.filename_chars.remove(self.filename_cursor);
             }
-            KeyCode::Delete => {
-                if self.filename_cursor < self.filename_chars.len() {
-                    self.filename_chars.remove(self.filename_cursor);
-                }
+            KeyCode::Delete if self.filename_cursor < self.filename_chars.len() => {
+                self.filename_chars.remove(self.filename_cursor);
             }
-            KeyCode::Char(c) if !modifiers.contains(KeyModifiers::CONTROL) => {
-                if !c.is_control() {
-                    self.filename_chars.insert(self.filename_cursor, c);
-                    self.filename_cursor += 1;
-                }
+            KeyCode::Char(c) if !modifiers.contains(KeyModifiers::CONTROL) && !c.is_control() => {
+                self.filename_chars.insert(self.filename_cursor, c);
+                self.filename_cursor += 1;
             }
             _ => {}
         }

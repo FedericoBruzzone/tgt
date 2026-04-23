@@ -465,40 +465,38 @@ impl Component for ChatWindow {
                 // Handled by CoreWindow: opens search overlay or focuses ChatList
             }
             Action::LoadPinnedMessages => {}
-            Action::Key(key_code, modifiers) => {
-                if self.focused {
-                    let has_message_pins = !self
-                        .app_context
-                        .tg_context()
-                        .open_chat_pinned_snapshot()
-                        .is_empty();
-                    match key_code {
-                        KeyCode::Char('r') if modifiers.alt => {
-                            // Alt+R: switch to ChatList search (handled by CoreWindow)
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                let _ = tx.send(Action::ChatListSearch);
-                            }
+            Action::Key(key_code, modifiers) if self.focused => {
+                let has_message_pins = !self
+                    .app_context
+                    .tg_context()
+                    .open_chat_pinned_snapshot()
+                    .is_empty();
+                match key_code {
+                    KeyCode::Char('r') if modifiers.alt => {
+                        // Alt+R: switch to ChatList search (handled by CoreWindow)
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            let _ = tx.send(Action::ChatListSearch);
                         }
-                        // Shift+Tab: open pinned popup when keymap misses modifier quirks.
-                        KeyCode::BackTab if has_message_pins => {
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                let _ = tx.send(Action::ShowPinnedMessagesPopup);
-                            }
-                        }
-                        KeyCode::Tab if modifiers.shift && has_message_pins => {
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                let _ = tx.send(Action::ShowPinnedMessagesPopup);
-                            }
-                        }
-                        KeyCode::Up => self.next(),
-                        KeyCode::Down => {
-                            self.previous();
-                        }
-                        KeyCode::Tab if !modifiers.shift => {
-                            self.next();
-                        }
-                        _ => {}
                     }
+                    // Shift+Tab: open pinned popup when keymap misses modifier quirks.
+                    KeyCode::BackTab if has_message_pins => {
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            let _ = tx.send(Action::ShowPinnedMessagesPopup);
+                        }
+                    }
+                    KeyCode::Tab if modifiers.shift && has_message_pins => {
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            let _ = tx.send(Action::ShowPinnedMessagesPopup);
+                        }
+                    }
+                    KeyCode::Up => self.next(),
+                    KeyCode::Down => {
+                        self.previous();
+                    }
+                    KeyCode::Tab if !modifiers.shift => {
+                        self.next();
+                    }
+                    _ => {}
                 }
             }
             _ => {}

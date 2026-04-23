@@ -1207,77 +1207,73 @@ impl TgBackend {
                                 }
                             }
                             Update::MessageEdited(_) => {}
-                            Update::MessageContent(message) => {
+                            Update::MessageContent(message)
                                 // Only touch open_chat_messages when update is for the open chat.
-                                if tg_context.open_chat_id().as_i64() == message.chat_id {
-                                    if let Some(entry) = tg_context
-                                        .open_chat_messages()
-                                        .get_message_mut(message.message_id)
-                                    {
-                                        entry.set_message_content(&message.new_content);
-                                        entry.set_is_edited(true);
-                                    }
+                                if tg_context.open_chat_id().as_i64() == message.chat_id =>
+                            {
+                                if let Some(entry) = tg_context
+                                    .open_chat_messages()
+                                    .get_message_mut(message.message_id)
+                                {
+                                    entry.set_message_content(&message.new_content);
+                                    entry.set_is_edited(true);
                                 }
                             }
-                            Update::MessageIsPinned(pin) => {
-                                if tg_context.open_chat_id().as_i64() == pin.chat_id {
-                                    let _ = action_tx.send(Action::LoadPinnedMessages);
-                                    let _ = wake_tx.send(());
-                                }
+                            Update::MessageIsPinned(pin)
+                                if tg_context.open_chat_id().as_i64() == pin.chat_id =>
+                            {
+                                let _ = action_tx.send(Action::LoadPinnedMessages);
+                                let _ = wake_tx.send(());
                             }
-                            Update::DeleteMessages(update_delete_messages) => {
+                            Update::DeleteMessages(update_delete_messages)
                                 // Only touch open_chat_messages when update is for the open chat.
                                 if tg_context.open_chat_id().as_i64()
-                                    == update_delete_messages.chat_id
-                                {
-                                    // When from_cache is true, TDLib evicted messages from its local cache
-                                    // (e.g. GC/sync after ~60s). They were NOT deleted on the server.
-                                    // Do not remove from our UI; optionally re-fetch so user sees them again.
-                                    if update_delete_messages.from_cache {
-                                        tracing::info!(
+                                    == update_delete_messages.chat_id =>
+                            {
+                                // When from_cache is true, TDLib evicted messages from its local cache
+                                // (e.g. GC/sync after ~60s). They were NOT deleted on the server.
+                                // Do not remove from our UI; optionally re-fetch so user sees them again.
+                                if update_delete_messages.from_cache {
+                                    tracing::info!(
                                         chat_id = update_delete_messages.chat_id,
                                         count = update_delete_messages.message_ids.len(),
                                         "TDLib DeleteMessages from_cache=true: ignoring (cache eviction, not server delete); re-fetching history"
                                     );
-                                        let _ = action_tx.send(Action::GetChatHistory);
-                                        let _ = wake_tx.send(());
-                                        continue;
-                                    }
-                                    let ids = &update_delete_messages.message_ids;
-                                    let count = ids.len();
-                                    let sample_first: Vec<i64> =
-                                        ids.iter().take(5).copied().collect();
-                                    let sample_last: Vec<i64> =
-                                        ids.iter().rev().take(5).copied().collect();
-                                    let (min_id, max_id) =
-                                        ids.iter().fold((i64::MAX, i64::MIN), |(min, max), &id| {
-                                            (min.min(id), max.max(id))
-                                        });
-                                    tracing::info!(
-                                        chat_id = update_delete_messages.chat_id,
-                                        count,
-                                        sample_first = ?sample_first,
-                                        sample_last = ?sample_last,
-                                        min_id,
-                                        max_id,
-                                        "TDLib DeleteMessages: removed messages from open chat (server delete)"
-                                    );
-                                    let mut store = tg_context.open_chat_messages();
-                                    for id in ids {
-                                        store.remove_message(*id);
-                                    }
-                                    // Send rate-limited chat list rebuild to update chat list (last message may have changed)
-                                    let now = std::time::Instant::now();
-                                    if now.duration_since(last_chat_list_update).as_millis()
-                                        >= rate_limit_ms
-                                    {
-                                        let _ = action_tx.send(Action::ChatHistoryAppended);
-                                        let _ = wake_tx.send(());
-                                        last_chat_list_update = now;
-                                        needs_chat_list_update = false;
-                                    } else {
-                                        needs_chat_list_update = true;
-                                    }
+                                    let _ = action_tx.send(Action::GetChatHistory);
+                                    let _ = wake_tx.send(());
+                                    continue;
+                                }
+                                let ids = &update_delete_messages.message_ids;
+                                let count = ids.len();
+                                let sample_first: Vec<i64> = ids.iter().take(5).copied().collect();
+                                let sample_last: Vec<i64> = ids.iter().rev().take(5).copied().collect();
+                                let (min_id, max_id) =
+                                    ids.iter().fold((i64::MAX, i64::MIN), |(min, max), &id| {
+                                        (min.min(id), max.max(id))
+                                    });
+                                tracing::info!(
+                                    chat_id = update_delete_messages.chat_id,
+                                    count,
+                                    sample_first = ?sample_first,
+                                    sample_last = ?sample_last,
+                                    min_id,
+                                    max_id,
+                                    "TDLib DeleteMessages: removed messages from open chat (server delete)"
+                                );
+                                let mut store = tg_context.open_chat_messages();
+                                for id in ids {
+                                    store.remove_message(*id);
+                                }
+                                // Send rate-limited chat list rebuild to update chat list (last message may have changed)
+                                let now = std::time::Instant::now();
+                                if now.duration_since(last_chat_list_update).as_millis() >= rate_limit_ms
+                                {
+                                    let _ = action_tx.send(Action::ChatHistoryAppended);
+                                    let _ = wake_tx.send(());
+                                    last_chat_list_update = now;
+                                    needs_chat_list_update = false;
+                                } else {
+                                    needs_chat_list_update = true;
                                 }
                             }
                             // Update::Option(option) => {

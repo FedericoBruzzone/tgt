@@ -257,35 +257,31 @@ impl Component for CommandGuide {
             Action::HideCommandGuide => {
                 self.hide();
             }
-            Action::Key(key_code, _modifiers) => {
-                if self.visible {
-                    match key_code {
-                        crossterm::event::KeyCode::Up => {
-                            self.scroll_offset = self.scroll_offset.saturating_sub(1);
-                        }
-                        crossterm::event::KeyCode::Down => {
-                            let max_scroll =
-                                self.last_content_lines
-                                    .saturating_sub(self.last_inner_height as usize)
-                                    .min(u16::MAX as usize) as u16;
-                            self.scroll_offset = (self.scroll_offset + 1).min(max_scroll);
-                        }
-                        crossterm::event::KeyCode::PageUp => {
-                            let page = self.last_inner_height;
-                            self.scroll_offset = self.scroll_offset.saturating_sub(page);
-                        }
-                        crossterm::event::KeyCode::PageDown => {
-                            let max_scroll =
-                                self.last_content_lines
-                                    .saturating_sub(self.last_inner_height as usize)
-                                    .min(u16::MAX as usize) as u16;
-                            let page = self.last_inner_height;
-                            self.scroll_offset = (self.scroll_offset + page).min(max_scroll);
-                        }
-                        _ => {}
-                    }
+            Action::Key(key_code, _modifiers) if self.visible => match key_code {
+                crossterm::event::KeyCode::Up => {
+                    self.scroll_offset = self.scroll_offset.saturating_sub(1);
                 }
-            }
+                crossterm::event::KeyCode::Down => {
+                    let max_scroll = self
+                        .last_content_lines
+                        .saturating_sub(self.last_inner_height as usize)
+                        .min(u16::MAX as usize) as u16;
+                    self.scroll_offset = (self.scroll_offset + 1).min(max_scroll);
+                }
+                crossterm::event::KeyCode::PageUp => {
+                    let page = self.last_inner_height;
+                    self.scroll_offset = self.scroll_offset.saturating_sub(page);
+                }
+                crossterm::event::KeyCode::PageDown => {
+                    let max_scroll = self
+                        .last_content_lines
+                        .saturating_sub(self.last_inner_height as usize)
+                        .min(u16::MAX as usize) as u16;
+                    let page = self.last_inner_height;
+                    self.scroll_offset = (self.scroll_offset + page).min(max_scroll);
+                }
+                _ => {}
+            },
             _ => {}
         }
     }

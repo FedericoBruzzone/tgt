@@ -190,24 +190,22 @@ impl Component for ThemeSelector {
             Action::HideThemeSelector => {
                 self.hide();
             }
-            Action::Key(key_code, _modifiers) => {
-                if self.visible {
-                    match key_code {
-                        crossterm::event::KeyCode::Up => {
-                            self.select_previous();
-                        }
-                        crossterm::event::KeyCode::Down => {
-                            self.select_next();
-                        }
-                        crossterm::event::KeyCode::Enter => {
-                            // Apply current selection and close
-                            self.hide();
-                            if let Some(tx) = self.action_tx.as_ref() {
-                                tx.send(Action::HideThemeSelector).unwrap_or(());
-                            }
-                        }
-                        _ => {}
+            Action::Key(key_code, _modifiers) if self.visible => {
+                match key_code {
+                    crossterm::event::KeyCode::Up => {
+                        self.select_previous();
                     }
+                    crossterm::event::KeyCode::Down => {
+                        self.select_next();
+                    }
+                    crossterm::event::KeyCode::Enter => {
+                        // Apply current selection and close
+                        self.hide();
+                        if let Some(tx) = self.action_tx.as_ref() {
+                            tx.send(Action::HideThemeSelector).unwrap_or(());
+                        }
+                    }
+                    _ => {}
                 }
             }
             _ => {}
