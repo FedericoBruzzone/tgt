@@ -93,9 +93,28 @@ jobs:
       - name: Copy static TDLib archives for local-tdlib,static
         if: matrix.feature == 'local-tdlib,static'
         run: |
-          OPENSSL_SSL="$(find /opt/homebrew /usr/local -maxdepth 6 -type f -name 'libssl.a' 2>/dev/null | head -n 1)"
-          OPENSSL_CRYPTO="$(find /opt/homebrew /usr/local -maxdepth 6 -type f -name 'libcrypto.a' 2>/dev/null | head -n 1)"
-          ZLIB_LIB="$(find /opt/homebrew /usr/local -maxdepth 6 -type f -name 'libz.a' 2>/dev/null | head -n 1)"
+          OPENSSL_PREFIX="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || brew --prefix openssl@1.1 2>/dev/null || true)"
+          ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || true)"
+
+          OPENSSL_SSL=""
+          OPENSSL_CRYPTO=""
+          if [ -n "$OPENSSL_PREFIX" ]; then
+            OPENSSL_SSL="$OPENSSL_PREFIX/lib/libssl.a"
+            OPENSSL_CRYPTO="$OPENSSL_PREFIX/lib/libcrypto.a"
+          fi
+
+          ZLIB_LIB=""
+          if [ -n "$ZLIB_PREFIX" ]; then
+            ZLIB_LIB="$ZLIB_PREFIX/lib/libz.a"
+          fi
+
+          if [ ! -f "$OPENSSL_SSL" ] || [ ! -f "$OPENSSL_CRYPTO" ]; then
+            OPENSSL_SSL="$(find /opt/homebrew /usr/local -maxdepth 10 -type f -name 'libssl.a' 2>/dev/null | head -n 1)"
+            OPENSSL_CRYPTO="$(find /opt/homebrew /usr/local -maxdepth 10 -type f -name 'libcrypto.a' 2>/dev/null | head -n 1)"
+          fi
+          if [ ! -f "$ZLIB_LIB" ]; then
+            ZLIB_LIB="$(find /opt/homebrew /usr/local -maxdepth 10 -type f -name 'libz.a' 2>/dev/null | head -n 1)"
+          fi
           if [ -z "$OPENSSL_SSL" ] || [ -z "$OPENSSL_CRYPTO" ]; then
             echo "OpenSSL static libs not found"
             find /opt/homebrew /usr/local -type f \( -name 'libssl.a' -o -name 'libcrypto.a' \) | head -n 20
@@ -116,10 +135,36 @@ jobs:
               exit 1
             fi
           fi
+          # Put archives into the TDLib prefix that LOCAL_TDLIB_PATH points to (copied later as ./tdlib),
+          # and also into the cached build tree (./td/tdlib) so the cache stays self-contained.
           mkdir -p ./td/tdlib/lib
           cp -f "$OPENSSL_SSL" "./td/tdlib/lib/"
           cp -f "$OPENSSL_CRYPTO" "./td/tdlib/lib/"
           cp -f "$ZLIB_LIB" "./td/tdlib/lib/"
+          if [ -d "./tdlib/lib" ]; then
+            cp -f "$OPENSSL_SSL" "./tdlib/lib/" || true
+            cp -f "$OPENSSL_CRYPTO" "./tdlib/lib/" || true
+            cp -f "$ZLIB_LIB" "./tdlib/lib/" || true
+          fi
+
+      - name: Ensure OpenSSL/zlib static archives exist in LOCAL_TDLIB_PATH
+        if: matrix.feature == 'local-tdlib,static'
+        run: |
+          # This runs after Extract TDLib and before cargo build, so LOCAL_TDLIB_PATH has the archives.
+          if [ ! -d "./tdlib/lib" ]; then
+            echo "tdlib/lib not found; did Extract TDLib run?"
+            ls -la
+            exit 1
+          fi
+          if ls ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a >/dev/null 2>&1; then
+            ls -la ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a
+            exit 0
+          fi
+          echo "Static archives missing from ./tdlib/lib; copying from cached td/tdlib/lib"
+          cp -f ./td/tdlib/lib/libssl.a ./tdlib/lib/ || true
+          cp -f ./td/tdlib/lib/libcrypto.a ./tdlib/lib/ || true
+          cp -f ./td/tdlib/lib/libz.a ./tdlib/lib/ || true
+          ls -la ./tdlib/lib || true
 
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download')
