@@ -147,25 +147,6 @@ jobs:
             cp -f "$ZLIB_LIB" "./tdlib/lib/" || true
           fi
 
-      - name: Ensure OpenSSL/zlib static archives exist in LOCAL_TDLIB_PATH
-        if: matrix.feature == 'local-tdlib,static'
-        run: |
-          # This runs after Extract TDLib and before cargo build, so LOCAL_TDLIB_PATH has the archives.
-          if [ ! -d "./tdlib/lib" ]; then
-            echo "tdlib/lib not found; did Extract TDLib run?"
-            ls -la
-            exit 1
-          fi
-          if ls ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a >/dev/null 2>&1; then
-            ls -la ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a
-            exit 0
-          fi
-          echo "Static archives missing from ./tdlib/lib; copying from cached td/tdlib/lib"
-          cp -f ./td/tdlib/lib/libssl.a ./tdlib/lib/ || true
-          cp -f ./td/tdlib/lib/libcrypto.a ./tdlib/lib/ || true
-          cp -f ./td/tdlib/lib/libz.a ./tdlib/lib/ || true
-          ls -la ./tdlib/lib || true
-
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download')
         uses: actions/cache/save@v5
@@ -185,6 +166,24 @@ jobs:
           cp -r ./td/tdlib ./
           # sudo cp ./tdlib/lib/libtdjson.*.dylib /usr/local/lib/
        
+      - name: Ensure OpenSSL/zlib static archives exist in LOCAL_TDLIB_PATH
+        if: matrix.feature == 'local-tdlib,static'
+        run: |
+          if [ ! -d "./tdlib/lib" ]; then
+            echo "tdlib/lib not found; did Extract TDLib run?"
+            ls -la
+            exit 1
+          fi
+          if ls ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a >/dev/null 2>&1; then
+            ls -la ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a
+            exit 0
+          fi
+          echo "Static archives missing from ./tdlib/lib; copying from cached td/tdlib/lib"
+          cp -f ./td/tdlib/lib/libssl.a ./tdlib/lib/
+          cp -f ./td/tdlib/lib/libcrypto.a ./tdlib/lib/
+          cp -f ./td/tdlib/lib/libz.a ./tdlib/lib/
+          ls -la ./tdlib/lib || true
+
       - name: Fix TDLib permissions (files + directories)
         if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download'
         run: |
