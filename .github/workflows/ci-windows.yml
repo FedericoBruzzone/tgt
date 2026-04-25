@@ -139,12 +139,21 @@ jobs:
             TRIPLET=arm64-windows-static
           fi
           mkdir -p ./tdlib/lib
-          for lib in libssl.a libcrypto.a libz.a ssl.lib crypto.lib zlib.lib; do
+          # tdlib-rs expects libssl.lib + libcrypto.lib + zlib.lib on Windows when `static` is enabled.
+          for lib in libssl.lib libcrypto.lib zlib.lib ssl.lib crypto.lib; do
             path=$(find ./td/vcpkg/installed/$TRIPLET -type f -name "$lib" 2>/dev/null | head -n 1 || true)
             if [ -n "$path" ]; then
               cp -f "$path" ./tdlib/lib/
             fi
           done
+          # Some toolchains provide ssl.lib/crypto.lib; create the names tdlib-rs looks for.
+          if [ -f ./tdlib/lib/ssl.lib ] && [ ! -f ./tdlib/lib/libssl.lib ]; then
+            cp -f ./tdlib/lib/ssl.lib ./tdlib/lib/libssl.lib
+          fi
+          if [ -f ./tdlib/lib/crypto.lib ] && [ ! -f ./tdlib/lib/libcrypto.lib ]; then
+            cp -f ./tdlib/lib/crypto.lib ./tdlib/lib/libcrypto.lib
+          fi
+          ls -la ./tdlib/lib || true
         shell: bash
 
       - name: Install pkg-config
