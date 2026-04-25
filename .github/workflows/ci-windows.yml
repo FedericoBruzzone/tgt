@@ -140,8 +140,9 @@ jobs:
           fi
           mkdir -p ./tdlib/lib
           # tdlib-rs expects libssl.lib + libcrypto.lib + zlib.lib on Windows when `static` is enabled.
-          for lib in libssl.lib libcrypto.lib zlib.lib ssl.lib crypto.lib; do
-            path=$(find ./td/vcpkg/installed/$TRIPLET -type f -name "$lib" 2>/dev/null | head -n 1 || true)
+          # vcpkg sometimes uses alternate names like libssl_static.lib or zlibstatic.lib.
+          for lib in libssl.lib libcrypto.lib zlib.lib libssl_static.lib libcrypto_static.lib zlibstatic.lib ssl.lib crypto.lib; do
+            path=$(find ./td/vcpkg/installed/$TRIPLET -maxdepth 20 -type f -name "$lib" 2>/dev/null | head -n 1 || true)
             if [ -n "$path" ]; then
               cp -f "$path" ./tdlib/lib/
             fi
@@ -153,6 +154,10 @@ jobs:
           if [ -f ./tdlib/lib/crypto.lib ] && [ ! -f ./tdlib/lib/libcrypto.lib ]; then
             cp -f ./tdlib/lib/crypto.lib ./tdlib/lib/libcrypto.lib
           fi
+          # zlib may be shipped as zlibstatic.lib; duplicate it to zlib.lib for tdlib-rs.
+          if [ -f ./tdlib/lib/zlibstatic.lib ] && [ ! -f ./tdlib/lib/zlib.lib ]; then
+            cp -f ./tdlib/lib/zlibstatic.lib ./tdlib/lib/zlib.lib
+          fi
           echo "--- tdlib/lib contents ---"
           ls -la ./tdlib/lib || true
           echo "--- required files ---"
@@ -160,7 +165,7 @@ jobs:
             if [ ! -f "$f" ]; then
               echo "Missing required static lib: $f"
               echo "vcpkg search locations:"
-              find ./td/vcpkg/installed/$TRIPLET -maxdepth 5 -type f \( -name 'libssl.lib' -o -name 'libcrypto.lib' -o -name 'zlib.lib' -o -name 'ssl.lib' -o -name 'crypto.lib' \) 2>/dev/null | head -n 50 || true
+              find ./td/vcpkg/installed/$TRIPLET -maxdepth 20 -type f \( -name 'libssl.lib' -o -name 'libcrypto.lib' -o -name 'zlib.lib' -o -name 'libssl_static.lib' -o -name 'libcrypto_static.lib' -o -name 'zlibstatic.lib' -o -name 'ssl.lib' -o -name 'crypto.lib' \) 2>/dev/null | head -n 200 || true
               exit 1
             fi
           done

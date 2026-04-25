@@ -174,15 +174,58 @@ jobs:
             ls -la
             exit 1
           fi
-          if ls ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a >/dev/null 2>&1; then
-            ls -la ./tdlib/lib/libssl.a ./tdlib/lib/libcrypto.a ./tdlib/lib/libz.a
-            exit 0
+          # Prefer copying from Homebrew prefixes; caches may not include these.
+          OPENSSL_PREFIX="$(brew --prefix openssl@3 2>/dev/null || brew --prefix openssl 2>/dev/null || brew --prefix openssl@1.1 2>/dev/null || true)"
+          ZLIB_PREFIX="$(brew --prefix zlib 2>/dev/null || true)"
+
+          if [ -n "$OPENSSL_PREFIX" ]; then
+            if [ -f "$OPENSSL_PREFIX/lib/libssl.a" ]; then
+              cp -f "$OPENSSL_PREFIX/lib/libssl.a" ./tdlib/lib/
+            fi
+            if [ -f "$OPENSSL_PREFIX/lib/libcrypto.a" ]; then
+              cp -f "$OPENSSL_PREFIX/lib/libcrypto.a" ./tdlib/lib/
+            fi
           fi
-          echo "Static archives missing from ./tdlib/lib; copying from cached td/tdlib/lib"
-          cp -f ./td/tdlib/lib/libssl.a ./tdlib/lib/
-          cp -f ./td/tdlib/lib/libcrypto.a ./tdlib/lib/
-          cp -f ./td/tdlib/lib/libz.a ./tdlib/lib/
+
+          if [ -n "$ZLIB_PREFIX" ] && [ -f "$ZLIB_PREFIX/lib/libz.a" ]; then
+            cp -f "$ZLIB_PREFIX/lib/libz.a" ./tdlib/lib/
+          fi
+
+          # Fallback: search common prefixes.
+          if [ ! -f ./tdlib/lib/libssl.a ] || [ ! -f ./tdlib/lib/libcrypto.a ]; then
+            SSL_FALLBACK="$(find /opt/homebrew /usr/local -maxdepth 10 -type f -name 'libssl.a' 2>/dev/null | head -n 1 || true)"
+            CRYPTO_FALLBACK="$(find /opt/homebrew /usr/local -maxdepth 10 -type f -name 'libcrypto.a' 2>/dev/null | head -n 1 || true)"
+            if [ -n "$SSL_FALLBACK" ]; then cp -f "$SSL_FALLBACK" ./tdlib/lib/; fi
+            if [ -n "$CRYPTO_FALLBACK" ]; then cp -f "$CRYPTO_FALLBACK" ./tdlib/lib/; fi
+          fi
+
+          if [ ! -f ./tdlib/lib/libz.a ]; then
+            Z_FALLBACK="$(find /opt/homebrew /usr/local -maxdepth 10 -type f -name 'libz.a' 2>/dev/null | head -n 1 || true)"
+            if [ -n "$Z_FALLBACK" ]; then
+              cp -f "$Z_FALLBACK" ./tdlib/lib/
+            else
+              echo "libz.a not found; building zlib from source"
+              ZLIB_BUILD_DIR="$(mktemp -d)"
+              trap 'rm -rf "$ZLIB_BUILD_DIR"' EXIT
+              curl -L https://zlib.net/zlib-1.3.2.tar.gz | tar -xzf - -C "$ZLIB_BUILD_DIR"
+              cd "$ZLIB_BUILD_DIR"/zlib-1.3.2
+              ./configure --static --prefix="$ZLIB_BUILD_DIR/install"
+              make -j"$(sysctl -n hw.ncpu)"
+              make install
+              cp -f "$ZLIB_BUILD_DIR/install/lib/libz.a" "$GITHUB_WORKSPACE/tdlib/lib/"
+            fi
+          fi
+
+          echo "--- tdlib/lib after ensuring static archives ---"
           ls -la ./tdlib/lib || true
+
+          if [ ! -f ./tdlib/lib/libssl.a ] || [ ! -f ./tdlib/lib/libcrypto.a ] || [ ! -f ./tdlib/lib/libz.a ]; then
+            echo "Missing required static archives in ./tdlib/lib"
+            echo "libssl.a:   $(test -f ./tdlib/lib/libssl.a && echo OK || echo MISSING)"
+            echo "libcrypto.a:$(test -f ./tdlib/lib/libcrypto.a && echo OK || echo MISSING)"
+            echo "libz.a:     $(test -f ./tdlib/lib/libz.a && echo OK || echo MISSING)"
+            exit 1
+          fi
 
       - name: Fix TDLib permissions (files + directories)
         if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download'
