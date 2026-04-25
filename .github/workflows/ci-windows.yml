@@ -153,7 +153,17 @@ jobs:
           if [ -f ./tdlib/lib/crypto.lib ] && [ ! -f ./tdlib/lib/libcrypto.lib ]; then
             cp -f ./tdlib/lib/crypto.lib ./tdlib/lib/libcrypto.lib
           fi
+          echo "--- tdlib/lib contents ---"
           ls -la ./tdlib/lib || true
+          echo "--- required files ---"
+          for f in ./tdlib/lib/libssl.lib ./tdlib/lib/libcrypto.lib ./tdlib/lib/zlib.lib; do
+            if [ ! -f "$f" ]; then
+              echo "Missing required static lib: $f"
+              echo "vcpkg search locations:"
+              find ./td/vcpkg/installed/$TRIPLET -maxdepth 5 -type f \( -name 'libssl.lib' -o -name 'libcrypto.lib' -o -name 'zlib.lib' -o -name 'ssl.lib' -o -name 'crypto.lib' \) 2>/dev/null | head -n 50 || true
+              exit 1
+            fi
+          done
         shell: bash
 
       - name: Install pkg-config
@@ -189,7 +199,11 @@ jobs:
 
       - name: Set LOCAL_TDLIB_PATH
         if: contains(matrix.feature, 'local-tdlib')
-        run: echo "LOCAL_TDLIB_PATH=$((Get-Item .).FullName)\tdlib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        run: |
+          $root = (Get-Item .).FullName
+          $tdlib = Join-Path $root "tdlib"
+          echo "LOCAL_TDLIB_PATH=$tdlib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: pwsh
       # - name: Cache cargo
       #   uses: actions/cache@v4
       #   with:
