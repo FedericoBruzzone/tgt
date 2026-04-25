@@ -147,6 +147,16 @@ jobs:
               cp -f "$path" ./tdlib/lib/
             fi
           done
+          # Last-resort fallback: search any installed triplet for these libs (helps when triplet naming differs).
+          if [ ! -f ./tdlib/lib/libssl.lib ] || [ ! -f ./tdlib/lib/libcrypto.lib ] || [ ! -f ./tdlib/lib/zlib.lib ]; then
+            echo "Required libs not found in $TRIPLET; searching all vcpkg installed triplets..."
+            for lib in libssl.lib libcrypto.lib zlib.lib libssl_static.lib libcrypto_static.lib zlibstatic.lib ssl.lib crypto.lib; do
+              path=$(find ./td/vcpkg/installed -maxdepth 40 -type f -name "$lib" 2>/dev/null | head -n 1 || true)
+              if [ -n "$path" ]; then
+                cp -f "$path" ./tdlib/lib/ || true
+              fi
+            done
+          fi
           # Some toolchains provide ssl.lib/crypto.lib; create the names tdlib-rs looks for.
           if [ -f ./tdlib/lib/ssl.lib ] && [ ! -f ./tdlib/lib/libssl.lib ]; then
             cp -f ./tdlib/lib/ssl.lib ./tdlib/lib/libssl.lib
