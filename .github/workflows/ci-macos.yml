@@ -169,6 +169,7 @@ jobs:
       - name: Ensure OpenSSL/zlib static archives exist in LOCAL_TDLIB_PATH
         if: matrix.feature == 'local-tdlib,static'
         run: |
+          WORKSPACE="$(pwd)"
           if [ ! -d "./tdlib/lib" ]; then
             echo "tdlib/lib not found; did Extract TDLib run?"
             ls -la
@@ -212,7 +213,9 @@ jobs:
               ./configure --static --prefix="$ZLIB_BUILD_DIR/install"
               make -j"$(sysctl -n hw.ncpu)"
               make install
-              cp -f "$ZLIB_BUILD_DIR/install/lib/libz.a" "$GITHUB_WORKSPACE/tdlib/lib/"
+              mkdir -p "$WORKSPACE/tdlib/lib"
+              cp -f "$ZLIB_BUILD_DIR/install/lib/libz.a" "$WORKSPACE/tdlib/lib/"
+              cd "$WORKSPACE"
             fi
           fi
 
