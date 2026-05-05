@@ -29,8 +29,7 @@
 [![GitHub CI Linux][github-ci-linux-shield]][github-ci-linux]
 [![GitHub CI Windows][github-ci-windows-shield]][github-ci-windows]
 [![GitHub CI macOS][github-ci-macos-shield]][github-ci-macos]
-[![GitHub CI Android][github-ci-android-shield]][github-ci-android]
-
+<!-- [![GitHub CI Android][github-ci-android-shield]][github-ci-android] -->
 <!-- [![GitHub License][github-license-shield]][github-license-apache] -->
 
 ![license](https://img.shields.io/crates/l/tgt)
