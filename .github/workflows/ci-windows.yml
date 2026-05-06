@@ -66,7 +66,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: td/
-          key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
+          key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}-${{ contains(matrix.feature, 'static') && 'static' || 'dynamic' }}
 
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config'))
@@ -140,8 +140,9 @@ jobs:
           fi
           mkdir -p ./tdlib/lib
           # tdlib-rs expects libssl.lib + libcrypto.lib + zlib.lib on Windows when `static` is enabled.
-          # vcpkg sometimes uses alternate names like libssl_static.lib or zlibstatic.lib.
-          for lib in libssl.lib libcrypto.lib zlib.lib libssl_static.lib libcrypto_static.lib zlibstatic.lib ssl.lib crypto.lib; do
+          # vcpkg uses several naming conventions: zlib.lib, zlibstatic.lib, or zs.lib (used by vcpkg's
+          # x64/arm64-windows-static ports as of zlib 1.3.2).
+          for lib in libssl.lib libcrypto.lib zlib.lib libssl_static.lib libcrypto_static.lib zlibstatic.lib ssl.lib crypto.lib zs.lib; do
             path=$(find ./td/vcpkg/installed/$TRIPLET -maxdepth 20 -type f -name "$lib" 2>/dev/null | head -n 1 || true)
             if [ -n "$path" ]; then
               cp -f "$path" ./tdlib/lib/
@@ -150,7 +151,7 @@ jobs:
           # Last-resort fallback: search any installed triplet for these libs (helps when triplet naming differs).
           if [ ! -f ./tdlib/lib/libssl.lib ] || [ ! -f ./tdlib/lib/libcrypto.lib ] || [ ! -f ./tdlib/lib/zlib.lib ]; then
             echo "Required libs not found in $TRIPLET; searching all vcpkg installed triplets..."
-            for lib in libssl.lib libcrypto.lib zlib.lib libssl_static.lib libcrypto_static.lib zlibstatic.lib ssl.lib crypto.lib; do
+            for lib in libssl.lib libcrypto.lib zlib.lib libssl_static.lib libcrypto_static.lib zlibstatic.lib ssl.lib crypto.lib zs.lib; do
               path=$(find ./td/vcpkg/installed -maxdepth 40 -type f -name "$lib" 2>/dev/null | head -n 1 || true)
               if [ -n "$path" ]; then
                 cp -f "$path" ./tdlib/lib/ || true
@@ -164,9 +165,12 @@ jobs:
           if [ -f ./tdlib/lib/crypto.lib ] && [ ! -f ./tdlib/lib/libcrypto.lib ]; then
             cp -f ./tdlib/lib/crypto.lib ./tdlib/lib/libcrypto.lib
           fi
-          # zlib may be shipped as zlibstatic.lib; duplicate it to zlib.lib for tdlib-rs.
+          # zlib may be shipped as zlibstatic.lib or zs.lib; normalise to zlib.lib for tdlib-rs.
           if [ -f ./tdlib/lib/zlibstatic.lib ] && [ ! -f ./tdlib/lib/zlib.lib ]; then
             cp -f ./tdlib/lib/zlibstatic.lib ./tdlib/lib/zlib.lib
+          fi
+          if [ -f ./tdlib/lib/zs.lib ] && [ ! -f ./tdlib/lib/zlib.lib ]; then
+            cp -f ./tdlib/lib/zs.lib ./tdlib/lib/zlib.lib
           fi
           echo "--- tdlib/lib contents ---"
           ls -la ./tdlib/lib || true
@@ -175,7 +179,7 @@ jobs:
             if [ ! -f "$f" ]; then
               echo "Missing required static lib: $f"
               echo "vcpkg search locations:"
-              find ./td/vcpkg/installed/$TRIPLET -maxdepth 20 -type f \( -name 'libssl.lib' -o -name 'libcrypto.lib' -o -name 'zlib.lib' -o -name 'libssl_static.lib' -o -name 'libcrypto_static.lib' -o -name 'zlibstatic.lib' -o -name 'ssl.lib' -o -name 'crypto.lib' \) 2>/dev/null | head -n 200 || true
+              find ./td/vcpkg/installed/$TRIPLET -maxdepth 20 -type f \( -name 'libssl.lib' -o -name 'libcrypto.lib' -o -name 'zlib.lib' -o -name 'libssl_static.lib' -o -name 'libcrypto_static.lib' -o -name 'zlibstatic.lib' -o -name 'ssl.lib' -o -name 'crypto.lib' -o -name 'zs.lib' \) 2>/dev/null | head -n 200 || true
               exit 1
             fi
           done
