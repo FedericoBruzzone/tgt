@@ -338,8 +338,8 @@ impl Component for PhotoViewer {
                     }
                     _ => {
                         let font_size = self.picker.font_size();
-                        let font_width = font_size.0 as f32;
-                        let font_height = font_size.1 as f32;
+                        let font_width = font_size.width as f32;
+                        let font_height = font_size.height as f32;
                         let (img_width, img_height) = (*width as f32, *height as f32);
 
                         let available_width_px = content_area.width as f32 * font_width;
