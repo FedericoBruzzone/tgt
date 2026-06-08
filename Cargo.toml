@@ -64,7 +64,7 @@ tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "chrono"] }
 tracing-appender = "0.2"
-chrono = "0.4.44"
+chrono = "0.4.45"
 # Default: no chafa. Enable via chafa- dyn or chafa-static (not supported on Windows ARM).
 ratatui-image = { version = "11.0.3", default-features = false, features = ["crossterm", "image-defaults"] }
 image = "0.25.10"
