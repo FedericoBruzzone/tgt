@@ -40,7 +40,7 @@ jobs:
             binary: tgt.exe
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -67,7 +67,7 @@ jobs:
     needs: create_release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Publish to crates.io
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
