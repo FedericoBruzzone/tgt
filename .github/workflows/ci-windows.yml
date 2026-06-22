@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Chafa (for ratatui-image): MSYS2 UCRT64 has pkg-config + chafa only for x64; Windows ARM64 builds without chafa (target-specific dep)
       - name: Install Chafa (MSYS2 UCRT64)
