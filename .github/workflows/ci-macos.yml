@@ -51,7 +51,7 @@ jobs:
       - name: Restore cache TDLib
         if: contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download'
         id: cache-tdlib-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: td/
           key: ${{ runner.os }}-${{ runner.arch }}-TDLib-${{ env.TDLIB_VERSION }}
@@ -149,7 +149,7 @@ jobs:
 
       - name: Save cache TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download')
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: td/
           key: ${{ steps.cache-tdlib-restore.outputs.cache-primary-key }}
