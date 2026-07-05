@@ -5,8 +5,9 @@ keymap = [
   # { keys = ["w", "w"], command = "quit", description = "Quit the application"},
 
   # Quit the application
-  # Note: To allow typing "q" in the prompt, override this binding in the [prompt] section.
-  # If not overridden, "q" will trigger quit even when typing in the prompt.
+  # Note: The prompt effective keymap automatically filters out inherited
+  # "try_quit" bindings so that "q" is typed as text while the prompt is focused.
+  # To re-enable "q" as quit in the prompt, explicitly bind it in the [prompt] section.
   { keys = ["q"], command = "try_quit", description = "Quit the application"},
   # Quit the application
   { keys = ["ctrl+c"], command = "try_quit", description = "Quit the application"},
