@@ -1163,4 +1163,20 @@ mod tests {
             "달"
         );
     }
+
+    #[test]
+    fn letter_q_is_inserted_as_text() {
+        let mut window = create_test_prompt_window();
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Char('q'), modifiers));
+
+        assert_eq!(window.input.text.len(), 1);
+        assert_eq!(
+            window.input.text[0]
+                .iter()
+                .map(|cell| cell.c)
+                .collect::<String>(),
+            "q"
+        );
+    }
 }

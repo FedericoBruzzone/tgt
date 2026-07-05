@@ -365,6 +365,20 @@ impl KeymapConfig {
         self.merged_chat = self.core_window.clone();
         self.merged_chat.extend(self.chat.clone());
         self.merged_prompt = self.core_window.clone();
+        // Prevent inherited core_window "try_quit" (bound to "q" by default) from being
+        // consumed by the keymap when the prompt is focused. The prompt handles printable
+        // characters as text input, so inherited quit bindings must not swallow them.
+        // Deliberate [prompt] overrides are still honored because they are extended after
+        // this filter.
+        self.merged_prompt.retain(|_, binding| {
+            !matches!(
+                binding,
+                ActionBinding::Single {
+                    action: Action::TryQuit,
+                    ..
+                }
+            )
+        });
         self.merged_prompt.extend(self.prompt.clone());
         self.merged_command_guide = self.core_window.clone();
         self.merged_command_guide.extend(self.command_guide.clone());
@@ -1023,6 +1037,124 @@ mod tests {
         assert!(
             !show_guide_keys.is_empty(),
             "default-added show_command_guide should be present after merge"
+        );
+    }
+
+    /// Inherited core_window try_quit (bound to "q" by default) must not appear in the
+    /// effective prompt keymap, so that pressing "q" while typing a message inserts the
+    /// character instead of quitting.
+    #[test]
+    fn test_merged_prompt_excludes_inherited_try_quit() {
+        use crate::component_name::ComponentName;
+        use crate::configs::config_merge::merge_keymap_raw;
+        use crate::event::Event;
+        use std::str::FromStr;
+
+        let default_raw = KeymapRaw {
+            core_window: Some(KeymapMode {
+                keymap: vec![
+                    KeymapEntry {
+                        keys: vec!["q".to_string()],
+                        command: "try_quit".to_string(),
+                        description: None,
+                    },
+                    KeymapEntry {
+                        keys: vec!["alt+f1".to_string()],
+                        command: "show_command_guide".to_string(),
+                        description: None,
+                    },
+                ],
+            }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
+            photo_viewer: None,
+            file_upload_explorer: None,
+            file_download_explorer: None,
+            pinned_messages_popup: None,
+        };
+        let config = KeymapConfig::from(merge_keymap_raw(default_raw, None));
+        let prompt_map = config.get_map_of(Some(ComponentName::Prompt));
+        let q_event = Event::from_str("q").unwrap();
+
+        assert!(
+            !prompt_map.contains_key(&q_event),
+            "merged prompt should not contain inherited 'q' binding"
+        );
+
+        // Non-text core_window hotkeys must remain available in the merged prompt map.
+        let alt_f1 = Event::from_str("alt+f1").unwrap();
+        assert!(
+            prompt_map.contains_key(&alt_f1),
+            "merged prompt should still contain core_window alt+f1 binding"
+        );
+    }
+
+    /// A deliberate [prompt] override that binds "q" to try_quit must still be honored,
+    /// since the filter only removes inherited core_window try_quit.
+    #[test]
+    fn test_merged_prompt_honors_explicit_try_quit_override() {
+        use crate::component_name::ComponentName;
+        use crate::configs::config_merge::merge_keymap_raw;
+        use crate::event::Event;
+        use std::str::FromStr;
+
+        let default_raw = KeymapRaw {
+            core_window: Some(KeymapMode {
+                keymap: vec![KeymapEntry {
+                    keys: vec!["q".to_string()],
+                    command: "try_quit".to_string(),
+                    description: None,
+                }],
+            }),
+            chat_list: Some(KeymapMode { keymap: vec![] }),
+            chat: Some(KeymapMode { keymap: vec![] }),
+            prompt: Some(KeymapMode { keymap: vec![] }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
+            photo_viewer: None,
+            file_upload_explorer: None,
+            file_download_explorer: None,
+            pinned_messages_popup: None,
+        };
+        let user_raw = KeymapRaw {
+            core_window: None,
+            chat_list: None,
+            chat: None,
+            prompt: Some(KeymapMode {
+                keymap: vec![KeymapEntry {
+                    keys: vec!["q".to_string()],
+                    command: "try_quit".to_string(),
+                    description: None,
+                }],
+            }),
+            command_guide: None,
+            theme_selector: None,
+            search_overlay: None,
+            photo_viewer: None,
+            file_upload_explorer: None,
+            file_download_explorer: None,
+            pinned_messages_popup: None,
+        };
+        let merged = merge_keymap_raw(default_raw, Some(user_raw));
+        let config = KeymapConfig::from(merged);
+        let prompt_map = config.get_map_of(Some(ComponentName::Prompt));
+        let q_event = Event::from_str("q").unwrap();
+
+        assert!(
+            prompt_map.contains_key(&q_event),
+            "explicit [prompt] q -> try_quit override must be honored"
+        );
+        assert_eq!(
+            prompt_map.get(&q_event).unwrap(),
+            &ActionBinding::Single {
+                action: Action::from_str("try_quit").unwrap(),
+                description: None,
+            }
         );
     }
 }
