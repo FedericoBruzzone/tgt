@@ -668,6 +668,29 @@ impl PromptWindow {
     pub(crate) fn current_mode(&self) -> &Mode {
         &self.input.mode
     }
+
+    fn reply_title(preview: &str) -> String {
+        if preview.is_empty() {
+            return "Replying to message".into();
+        }
+
+        const MAX_TITLE_CHARS: usize = 40;
+        const PREVIEW_CHARS: usize = MAX_TITLE_CHARS - 1;
+
+        let mut cutoff = None;
+        for (char_index, (byte_index, _)) in preview.char_indices().enumerate() {
+            if char_index == PREVIEW_CHARS {
+                cutoff = Some(byte_index);
+            }
+
+            if char_index == MAX_TITLE_CHARS {
+                let cutoff = cutoff.unwrap_or(byte_index);
+                return format!("Replying to: {}…", &preview[..cutoff]);
+            }
+        }
+
+        format!("Replying to: {preview}")
+    }
     /// Update the input area of the `PromptWindow`.
     /// It is used to update the input area of the `PromptWindow` when a new
     /// line is inserted or deleted.
@@ -1031,17 +1054,9 @@ impl Component for PromptWindow {
             Mode::SearchChatMessages => "Search messages".into(),
             Mode::Edit(_) => "Editing message".into(),
             Mode::Reply(_) => {
-                let preview: String = self.app_context.tg_context().reply_message_text().clone();
-                let truncated = if preview.len() > 40 {
-                    format!("{}…", &preview[..39])
-                } else {
-                    preview
-                };
-                if truncated.is_empty() {
-                    "Replying to message".into()
-                } else {
-                    format!("Replying to: {}", truncated)
-                }
+                let tg_context = self.app_context.tg_context();
+                let preview = tg_context.reply_message_text();
+                Self::reply_title(&preview)
             }
             Mode::Normal => self.name.clone(),
         };
@@ -1085,6 +1100,21 @@ mod tests {
         window.register_action_handler(tx).unwrap();
         window.update(Action::ReplyMessage(42, "hello".to_string()));
         assert!(matches!(window.current_mode(), Mode::Reply(42)));
+    }
+
+    #[test]
+    fn reply_title_handles_multibyte_preview_at_byte_cutoff() {
+        let preview = "й".repeat(21);
+        assert_eq!(
+            PromptWindow::reply_title(&preview),
+            format!("Replying to: {preview}")
+        );
+
+        let long_preview = "й".repeat(41);
+        assert_eq!(
+            PromptWindow::reply_title(&long_preview),
+            format!("Replying to: {}…", "й".repeat(39))
+        );
     }
 
     #[test]
