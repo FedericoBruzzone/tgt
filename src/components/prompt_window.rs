@@ -1113,7 +1113,7 @@ mod tests {
         let long_preview = "й".repeat(41);
         assert_eq!(
             PromptWindow::reply_title(&long_preview),
-            format!("Replying to: {}…", "й".repeat(39))
+            format!("Replying to: {}...", "й".repeat(39))
         );
     }
 
