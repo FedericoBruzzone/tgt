@@ -685,7 +685,7 @@ impl PromptWindow {
 
             if char_index == MAX_TITLE_CHARS {
                 let cutoff = cutoff.unwrap_or(byte_index);
-                return format!("Replying to: {}…", &preview[..cutoff]);
+                return format!("Replying to: {}...", &preview[..cutoff]);
             }
         }
 
