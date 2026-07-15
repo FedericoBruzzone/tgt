@@ -340,7 +340,7 @@ impl HandleFocus for CoreWindow {
 impl Component for CoreWindow {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> std::io::Result<()> {
         self.action_tx = Some(tx.clone());
-        for (_, component) in self.components.iter_mut() {
+        for component in self.components.values_mut() {
             component.register_action_handler(tx.clone())?;
         }
         Ok(())
@@ -429,7 +429,7 @@ impl Component for CoreWindow {
                 self.show_file_upload_explorer = false;
                 self.show_file_download_explorer = false;
                 self.show_pinned_messages_popup = false;
-                for (_, component) in self.components.iter_mut() {
+                for component in self.components.values_mut() {
                     component.unfocus();
                 }
             }
