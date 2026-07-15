@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Occasional startup hangs and chat list refresh hangs.
 - Chat search reliability and clearer failure feedback via the status bar.
 - `q` incorrectly triggering quit while typing in the prompt (context-aware key handling).
+- The prompt send shortcut is configurable as `prompt_send_message`, allowing terminals that reserve `Alt+Enter` to use another key.
 - Chat list: scrolling, unread badge refresh when opening chats, refresh on launch, wrong unread count when a message arrives in the open chat, updates after server-side deletes, and `DeleteMessages` from cache vs real deletes.
 - Duplicate last message when scrolling; chat history performance regressions; config creation/loading issues; popup and list quirks.
 - Reply flow, reply styling, and copying messages with history restore.
