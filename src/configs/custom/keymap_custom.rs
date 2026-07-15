@@ -761,28 +761,28 @@ mod tests {
         // prompt can be empty, so no assertion needed (len() >= 0 is always true)
 
         // Verify that all keybindings are valid (no Unknown events)
-        for (event, _binding) in keymap_config.core_window.iter() {
+        for event in keymap_config.core_window.keys() {
             assert_ne!(
                 *event,
                 Event::Unknown,
                 "core_window should not have Unknown events"
             );
         }
-        for (event, _binding) in keymap_config.chat_list.iter() {
+        for event in keymap_config.chat_list.keys() {
             assert_ne!(
                 *event,
                 Event::Unknown,
                 "chat_list should not have Unknown events"
             );
         }
-        for (event, _binding) in keymap_config.chat.iter() {
+        for event in keymap_config.chat.keys() {
             assert_ne!(
                 *event,
                 Event::Unknown,
                 "chat should not have Unknown events"
             );
         }
-        for (event, _binding) in keymap_config.prompt.iter() {
+        for event in keymap_config.prompt.keys() {
             assert_ne!(
                 *event,
                 Event::Unknown,
