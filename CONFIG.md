@@ -116,7 +116,7 @@ _Prompt_
 Note that when the prompt is focused, you can **NOT** use `q` or `ctrl+c` to quit the application, you need to press `esc` to return to the "None" state.
 
 ```bash
-alt+enter:                        Send the message
+alt+enter:                        Send the message (configurable as `prompt_send_message`)
 
 left | right | up | down:         Move the cursor
 ctrl+left | ctrl+b:               Move the cursor to the previous word

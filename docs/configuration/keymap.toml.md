@@ -80,7 +80,17 @@ keymap = [
 # The prompt key bindings are only usable in the prompt component.
 # When the prompt is focused, the prompt key bindings will be active.
 [prompt]
-keymap = []
+keymap = [
+  # Send the current message, edit, reply, or search.
+  { keys = ["alt+enter"], command = "prompt_send_message", description = "Send the message"},
+  # Copy the selected text
+  { keys = ["ctrl+c"], command = "prompt_copy", description = "Copy the selected text"},
+  # Focus chat list / chat
+  { keys = ["alt+left"], command = "focus_chat_list", description = "Focus the chat list"},
+  { keys = ["alt+right"], command = "focus_chat", description = "Focus the chat"},
+  # Open message search
+  { keys = ["alt+r"], command = "chat_window_search", description = "Open message search overlay"},
+]
 
 [file_upload_explorer]
 keymap = [
@@ -90,6 +100,23 @@ keymap = [
 ]
 
 ```
+
+## Rebinding message sending
+
+The `prompt_send_message` command controls the key used to send the current
+message, edit, reply, or search. To avoid a terminal-reserved shortcut such as
+`Alt+Enter` on Windows, bind the command to another key in your custom
+`keymap.toml`:
+
+```toml
+[prompt]
+keymap = [
+  { keys = ["ctrl+enter"], command = "prompt_send_message", description = "Send the message"},
+]
+```
+
+Keymaps are merged by command name, so this custom entry replaces the default
+`Alt+Enter` binding instead of adding a second send binding.
 
 ## Custom configuration
 

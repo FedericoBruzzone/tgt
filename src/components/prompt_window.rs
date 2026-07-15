@@ -747,6 +747,10 @@ impl Component for PromptWindow {
 
     fn update(&mut self, action: Action) {
         match action {
+            Action::PromptSendMessage => {
+                self.input.unselect_all();
+                self.input.send_message(Arc::clone(&self.app_context));
+            }
             Action::PromptCopy => {
                 self.input.copy_selected();
                 self.input.unselect_all();
@@ -878,11 +882,6 @@ impl Component for PromptWindow {
                 (KeyCode::Right | KeyCode::Char('f'), Modifiers { control: true, .. }) => {
                     self.input.unselect_all();
                     self.input.move_cursor_to_next_word();
-                }
-
-                (KeyCode::Enter, Modifiers { alt: true, .. }) => {
-                    self.input.unselect_all();
-                    self.input.send_message(Arc::clone(&self.app_context));
                 }
 
                 (KeyCode::Backspace, Modifiers { control: true, .. })
@@ -1208,5 +1207,70 @@ mod tests {
                 .collect::<String>(),
             "q"
         );
+    }
+    #[test]
+    fn configured_prompt_send_action_sends_current_text() {
+        use crate::configs::{
+            custom::keymap_custom::{ActionBinding, KeymapConfig},
+            raw::keymap_raw::KeymapRaw,
+        };
+
+        let raw: KeymapRaw = toml::from_str(include_str!("../../config/keymap.toml")).unwrap();
+        let keymap = KeymapConfig::from(raw);
+        let event = Event::Key(KeyCode::Enter, KeyModifiers::ALT);
+        let send_action = match keymap.get_map_of(Some(ComponentName::Prompt)).get(&event) {
+            Some(ActionBinding::Single { action, .. }) => action.clone(),
+            binding => panic!("expected alt+enter prompt binding, got {binding:?}"),
+        };
+        assert_eq!(send_action, Action::PromptSendMessage);
+
+        let app_context = create_test_app_context();
+        let (event_tx, mut event_rx) = unbounded_channel();
+        app_context.tg_context().set_event_tx(event_tx);
+
+        let mut window = PromptWindow::new(Arc::clone(&app_context));
+        let (action_tx, _action_rx) = unbounded_channel();
+        window.register_action_handler(action_tx).unwrap();
+        let modifiers = Modifiers::from(KeyModifiers::empty());
+        window.update(Action::Key(KeyCode::Char('h'), modifiers.clone()));
+        window.update(Action::Key(KeyCode::Char('i'), modifiers));
+        window.update(send_action);
+
+        match event_rx.try_recv().unwrap() {
+            Event::SendMessage(text, None) => assert_eq!(text, "hi"),
+            event => panic!("expected send-message event, got {event:?}"),
+        }
+    }
+
+    #[test]
+    fn custom_prompt_send_binding_replaces_default() {
+        use crate::configs::{
+            config_merge::merge_keymap_raw,
+            custom::keymap_custom::{ActionBinding, KeymapConfig},
+            raw::keymap_raw::KeymapRaw,
+        };
+
+        let default_raw: KeymapRaw =
+            toml::from_str(include_str!("../../config/keymap.toml")).unwrap();
+        let user_raw: KeymapRaw = toml::from_str(
+            r#"
+            [prompt]
+            keymap = [
+              { keys = ["ctrl+enter"], command = "prompt_send_message" },
+            ]
+            "#,
+        )
+        .unwrap();
+        let keymap = KeymapConfig::from(merge_keymap_raw(default_raw, Some(user_raw)));
+        let prompt_map = keymap.get_map_of(Some(ComponentName::Prompt));
+
+        assert!(!prompt_map.contains_key(&Event::Key(KeyCode::Enter, KeyModifiers::ALT)));
+        assert!(matches!(
+            prompt_map.get(&Event::Key(KeyCode::Enter, KeyModifiers::CONTROL)),
+            Some(ActionBinding::Single {
+                action: Action::PromptSendMessage,
+                ..
+            })
+        ));
     }
 }

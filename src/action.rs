@@ -291,6 +291,8 @@ pub enum Action {
 
     /// StatusMessage: short message to show in the status bar (e.g. "Message yanked").
     StatusMessage(String),
+    /// Send the prompt contents using the current prompt mode.
+    PromptSendMessage,
     /// PromptCopy: copy selected text in the prompt (overrides try_quit when prompt focused).
     PromptCopy,
 
@@ -376,6 +378,7 @@ impl FromStr for Action {
             "show_theme_selector" => Ok(Action::ShowThemeSelector),
             "hide_theme_selector" => Ok(Action::HideThemeSelector),
             "switch_theme" => Ok(Action::SwitchTheme),
+            "prompt_send_message" => Ok(Action::PromptSendMessage),
             "prompt_copy" => Ok(Action::PromptCopy),
             "close_search_overlay" => Ok(Action::CloseSearchOverlay),
             "show_search_overlay" => Ok(Action::ShowSearchOverlay),
