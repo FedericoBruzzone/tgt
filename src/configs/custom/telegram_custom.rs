@@ -1,12 +1,61 @@
 use crate::{
     app_error::AppError,
     configs::{
-        self, config_file::ConfigFile, config_type::ConfigType, raw::telegram_raw::TelegramRaw,
+        self,
+        config_file::ConfigFile,
+        config_type::ConfigType,
+        raw::telegram_raw::{ProxyRaw, TelegramRaw},
     },
     utils,
 };
 use std::path::Path;
 use std::path::PathBuf;
+
+#[derive(Clone, Debug, PartialEq)]
+/// The proxy type.
+pub enum ProxyType {
+    Socks5,
+    Http,
+    Mtproto,
+}
+
+#[derive(Clone, Debug)]
+/// The proxy configuration.
+pub struct ProxyConfig {
+    /// Proxy type.
+    pub r#type: ProxyType,
+    /// Proxy server domain or IP address.
+    pub server: String,
+    /// Proxy server port.
+    pub port: i32,
+    /// Username for SOCKS5 or HTTP proxy (empty if unused).
+    pub username: String,
+    /// Password for SOCKS5 or HTTP proxy (empty if unused).
+    pub password: String,
+    /// HTTP proxy only: true if the proxy supports only HTTP requests.
+    pub http_only: bool,
+    /// MTProto proxy only: hex-encoded secret (empty if unused).
+    pub secret: String,
+}
+
+impl From<ProxyRaw> for ProxyConfig {
+    fn from(raw: ProxyRaw) -> Self {
+        let proxy_type = match raw.r#type.as_deref() {
+            Some("http") => ProxyType::Http,
+            Some("mtproto") => ProxyType::Mtproto,
+            _ => ProxyType::Socks5,
+        };
+        Self {
+            r#type: proxy_type,
+            server: raw.server.unwrap_or_default(),
+            port: raw.port.unwrap_or(1080),
+            username: raw.username.unwrap_or_default(),
+            password: raw.password.unwrap_or_default(),
+            http_only: raw.http_only.unwrap_or(false),
+            secret: raw.secret.unwrap_or_default(),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 /// The telegram configuration.
@@ -37,6 +86,8 @@ pub struct TelegramConfig {
     pub log_path: String,
     /// A flag that indicates if the log to stderr should be also redirected.
     pub redirect_stderr: bool,
+    /// Optional proxy configuration.
+    pub proxy: Option<ProxyConfig>,
 }
 /// The telegram configuration implementation.
 impl TelegramConfig {
@@ -122,6 +173,21 @@ impl ConfigFile for TelegramConfig {
                 if let Some(redirect_stderr) = _other.redirect_stderr {
                     self.redirect_stderr = redirect_stderr;
                 }
+                if let Some(proxy_raw) = _other.proxy {
+                    let config: ProxyConfig = proxy_raw.into();
+                    if !config.server.is_empty() {
+                        tracing::info!(
+                            "Proxy configured: {:?} {}:{}",
+                            config.r#type,
+                            config.server,
+                            config.port
+                        );
+                        self.proxy = Some(config);
+                    } else {
+                        tracing::info!("Proxy section present but server is empty, skipping");
+                        self.proxy = None;
+                    }
+                }
                 self.clone()
             }
         }
@@ -191,6 +257,15 @@ impl From<TelegramRaw> for TelegramConfig {
             }
         }
 
+        let proxy = raw.proxy.and_then(|p| {
+            let config: ProxyConfig = p.into();
+            if config.server.is_empty() {
+                None
+            } else {
+                Some(config)
+            }
+        });
+
         Self {
             api_id: raw.api_id.unwrap(),
             api_hash: raw.api_hash.unwrap(),
@@ -203,6 +278,7 @@ impl From<TelegramRaw> for TelegramConfig {
             verbosity_level: raw.verbosity_level.unwrap(),
             log_path,
             redirect_stderr: raw.redirect_stderr.unwrap(),
+            proxy,
         }
     }
 }
@@ -238,6 +314,7 @@ mod tests {
             verbosity_level: Some(1),
             log_path: Some(".data/tdlib_rs/tdlib_rs.log".to_string()),
             redirect_stderr: Some(true),
+            proxy: None,
         };
         let telegram_config = TelegramConfig::from(telegram_raw);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -281,6 +358,7 @@ mod tests {
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
+            proxy: None,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -294,6 +372,7 @@ mod tests {
             verbosity_level: Some(2),
             log_path: None,
             redirect_stderr: Some(true),
+            proxy: None,
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -326,6 +405,7 @@ mod tests {
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
+            proxy: None,
         };
         let telegram_config = telegram_config.merge(None);
         assert_eq!(telegram_config.api_id, "api_id");
@@ -355,6 +435,7 @@ mod tests {
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
+            proxy: None,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -368,6 +449,7 @@ mod tests {
             verbosity_level: None,
             log_path: None,
             redirect_stderr: Some(true),
+            proxy: None,
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
@@ -402,6 +484,7 @@ mod tests {
             verbosity_level: 1,
             log_path: ".data/tdlib_rs/tdlib_rs.log".to_string(),
             redirect_stderr: false,
+            proxy: None,
         };
         let telegram_raw = TelegramRaw {
             api_id: Some("api_id_2".to_string()),
@@ -415,6 +498,7 @@ mod tests {
             verbosity_level: Some(2),
             log_path: None,
             redirect_stderr: Some(true),
+            proxy: None,
         };
         let telegram_config = telegram_config.merge(Some(telegram_raw));
         assert_eq!(telegram_config.api_id, "api_id_2");
