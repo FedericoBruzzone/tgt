@@ -1,6 +1,25 @@
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
+/// The proxy raw configuration.
+pub struct ProxyRaw {
+    /// Proxy type: "socks5", "http", or "mtproto".
+    pub r#type: Option<String>,
+    /// Proxy server domain or IP address.
+    pub server: Option<String>,
+    /// Proxy server port.
+    pub port: Option<i32>,
+    /// Username for SOCKS5 or HTTP proxy (optional).
+    pub username: Option<String>,
+    /// Password for SOCKS5 or HTTP proxy (optional).
+    pub password: Option<String>,
+    /// HTTP proxy only: true if the proxy supports only HTTP requests.
+    pub http_only: Option<bool>,
+    /// MTProto proxy only: hex-encoded secret.
+    pub secret: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 /// The telegram raw configuration.
 pub struct TelegramRaw {
     /// The API ID.
@@ -29,4 +48,6 @@ pub struct TelegramRaw {
     pub log_path: Option<String>,
     /// A flag that indicates if the log to stderr should be also redirected.
     pub redirect_stderr: Option<bool>,
+    /// Optional proxy configuration.
+    pub proxy: Option<ProxyRaw>,
 }

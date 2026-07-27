@@ -539,6 +539,57 @@ impl TgBackend {
         }
     }
 
+    /// Configure and enable the proxy from telegram config, if one is set.
+    async fn setup_proxy(&self, proxy_cfg: &crate::configs::custom::telegram_custom::ProxyConfig) {
+        if proxy_cfg.server.is_empty() {
+            tracing::info!("Proxy server is empty, skipping");
+            return;
+        }
+
+        tracing::info!(
+            "Setting up {:?} proxy: {}:{}",
+            proxy_cfg.r#type,
+            proxy_cfg.server,
+            proxy_cfg.port
+        );
+
+        let proxy_type = match proxy_cfg.r#type {
+            crate::configs::custom::telegram_custom::ProxyType::Socks5 => {
+                tdlib_rs::enums::ProxyType::Socks5(tdlib_rs::types::ProxyTypeSocks5 {
+                    username: proxy_cfg.username.clone(),
+                    password: proxy_cfg.password.clone(),
+                })
+            }
+            crate::configs::custom::telegram_custom::ProxyType::Http => {
+                tdlib_rs::enums::ProxyType::Http(tdlib_rs::types::ProxyTypeHttp {
+                    username: proxy_cfg.username.clone(),
+                    password: proxy_cfg.password.clone(),
+                    http_only: proxy_cfg.http_only,
+                })
+            }
+            crate::configs::custom::telegram_custom::ProxyType::Mtproto => {
+                tdlib_rs::enums::ProxyType::Mtproto(tdlib_rs::types::ProxyTypeMtproto {
+                    secret: proxy_cfg.secret.clone(),
+                })
+            }
+        };
+
+        let proxy = tdlib_rs::types::Proxy {
+            server: proxy_cfg.server.clone(),
+            port: proxy_cfg.port,
+            r#type: proxy_type,
+        };
+
+        match functions::add_proxy(proxy, true, self.client_id).await {
+            Ok(tdlib_rs::enums::AddedProxy::AddedProxy(added)) => {
+                tracing::info!("Proxy added and enabled: id={}", added.id);
+            }
+            Err(e) => {
+                tracing::error!("Failed to add proxy: {} (code: {})", e.message, e.code);
+            }
+        }
+    }
+
     #[allow(clippy::await_holding_lock)]
     pub async fn handle_authorization_state(&mut self) {
         tracing::info!("Handling authorization state");
@@ -584,6 +635,7 @@ impl TgBackend {
         let use_message_database = telegram_config.use_message_database;
         let system_language_code = telegram_config.system_language_code.clone();
         let device_model = telegram_config.device_model.clone();
+        let proxy_cfg = telegram_config.proxy.clone();
 
         while let Some(state) = self.auth_rx.recv().await {
             match state {
@@ -609,6 +661,11 @@ impl TgBackend {
 
                     if let Err(error) = response {
                         println!("{}", error.message);
+                    }
+
+                    // Set up proxy before TDLib establishes connections
+                    if let Some(ref cfg) = proxy_cfg {
+                        self.setup_proxy(cfg).await;
                     }
                 }
                 AuthorizationState::WaitPhoneNumber => loop {

@@ -38,3 +38,20 @@ verbosity_level = 2
 log_path = ".data/tdlib_rs/tdlib_rs.log"
 # Pass true to additionally redirect stderr to the log file. Ignored on Windows
 redirect_stderr = false
+# =========== proxy ===========
+# Optional proxy for connecting to Telegram. Uncomment and fill in to enable.
+# [proxy]
+# Proxy type: "socks5", "http", or "mtproto"
+# type = "socks5"
+# Proxy server address (domain or IP)
+# server = "127.0.0.1"
+# Proxy server port
+# port = 1080
+# Username for SOCKS5/HTTP proxy (optional, can be omitted)
+# username = ""
+# Password for SOCKS5/HTTP proxy (optional, can be omitted)
+# password = ""
+# HTTP proxy only: set to true if the proxy handles only HTTP requests (no CONNECT tunneling)
+# http_only = false
+# MTProto proxy only: hex-encoded secret
+# secret = ""
