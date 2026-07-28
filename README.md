@@ -38,6 +38,10 @@
 
 ## About
 
+> [!NOTE]
+> 
+> `tgt` was created before the AI ​​era as a personal project to learn Rust.
+
 `tgt` is a terminal user interface for Telegram, written in Rust.
 
 <p align="center">
