@@ -524,4 +524,256 @@ mod tests {
             crate::configs::config_type::ConfigType::Telegram
         );
     }
+
+    // ── Proxy tests ──
+
+    use crate::configs::{
+        custom::telegram_custom::{ProxyConfig, ProxyType},
+        raw::telegram_raw::ProxyRaw,
+    };
+
+    #[test]
+    fn test_proxy_from_raw_socks5() {
+        let raw = ProxyRaw {
+            r#type: Some("socks5".into()),
+            server: Some("10.0.0.1".into()),
+            port: Some(1080),
+            username: Some("user".into()),
+            password: Some("pass".into()),
+            http_only: None,
+            secret: None,
+        };
+        let cfg: ProxyConfig = raw.into();
+        assert_eq!(cfg.r#type, ProxyType::Socks5);
+        assert_eq!(cfg.server, "10.0.0.1");
+        assert_eq!(cfg.port, 1080);
+        assert_eq!(cfg.username, "user");
+        assert_eq!(cfg.password, "pass");
+    }
+
+    #[test]
+    fn test_proxy_from_raw_http() {
+        let raw = ProxyRaw {
+            r#type: Some("http".into()),
+            server: Some("proxy.example.com".into()),
+            port: Some(3128),
+            username: Some("u".into()),
+            password: Some("p".into()),
+            http_only: Some(true),
+            secret: None,
+        };
+        let cfg: ProxyConfig = raw.into();
+        assert_eq!(cfg.r#type, ProxyType::Http);
+        assert_eq!(cfg.server, "proxy.example.com");
+        assert_eq!(cfg.port, 3128);
+        assert!(cfg.http_only);
+    }
+
+    #[test]
+    fn test_proxy_from_raw_mtproto() {
+        let raw = ProxyRaw {
+            r#type: Some("mtproto".into()),
+            server: Some("mtp.example.com".into()),
+            port: Some(443),
+            username: None,
+            password: None,
+            http_only: None,
+            secret: Some("deadbeef".into()),
+        };
+        let cfg: ProxyConfig = raw.into();
+        assert_eq!(cfg.r#type, ProxyType::Mtproto);
+        assert_eq!(cfg.secret, "deadbeef");
+    }
+
+    #[test]
+    fn test_proxy_from_raw_unknown_type_defaults_to_socks5() {
+        let raw = ProxyRaw {
+            r#type: Some("invalid".into()),
+            server: Some("127.0.0.1".into()),
+            port: Some(9999),
+            username: None,
+            password: None,
+            http_only: None,
+            secret: None,
+        };
+        let cfg: ProxyConfig = raw.into();
+        assert_eq!(cfg.r#type, ProxyType::Socks5);
+    }
+
+    #[test]
+    fn test_proxy_from_raw_defaults() {
+        let raw = ProxyRaw {
+            r#type: None,
+            server: None,
+            port: None,
+            username: None,
+            password: None,
+            http_only: None,
+            secret: None,
+        };
+        let cfg: ProxyConfig = raw.into();
+        assert_eq!(cfg.r#type, ProxyType::Socks5);
+        assert_eq!(cfg.server, "");
+        assert_eq!(cfg.port, 1080);
+        assert_eq!(cfg.username, "");
+        assert_eq!(cfg.password, "");
+        assert!(!cfg.http_only);
+        assert_eq!(cfg.secret, "");
+    }
+
+    #[test]
+    fn test_telegram_from_raw_with_proxy() {
+        let telegram_raw = TelegramRaw {
+            api_id: Some("1".into()),
+            api_hash: Some("h".into()),
+            database_dir: Some(".data/tg".into()),
+            use_file_database: Some(true),
+            use_chat_info_database: Some(true),
+            use_message_database: Some(true),
+            system_language_code: Some("en".into()),
+            device_model: Some("Desktop".into()),
+            verbosity_level: Some(2),
+            log_path: Some(".data/tdlib_rs/tdlib_rs.log".into()),
+            redirect_stderr: Some(false),
+            proxy: Some(ProxyRaw {
+                r#type: Some("socks5".into()),
+                server: Some("10.0.0.1".into()),
+                port: Some(1080),
+                username: None,
+                password: None,
+                http_only: None,
+                secret: None,
+            }),
+        };
+        let cfg = TelegramConfig::from(telegram_raw);
+        assert!(cfg.proxy.is_some());
+        let p = cfg.proxy.unwrap();
+        assert_eq!(p.r#type, ProxyType::Socks5);
+        assert_eq!(p.server, "10.0.0.1");
+        assert_eq!(p.port, 1080);
+    }
+
+    #[test]
+    fn test_telegram_from_raw_proxy_empty_server() {
+        let telegram_raw = TelegramRaw {
+            api_id: Some("1".into()),
+            api_hash: Some("h".into()),
+            database_dir: Some(".data/tg".into()),
+            use_file_database: Some(true),
+            use_chat_info_database: Some(true),
+            use_message_database: Some(true),
+            system_language_code: Some("en".into()),
+            device_model: Some("Desktop".into()),
+            verbosity_level: Some(2),
+            log_path: Some(".data/tdlib_rs/tdlib_rs.log".into()),
+            redirect_stderr: Some(false),
+            proxy: Some(ProxyRaw {
+                r#type: Some("socks5".into()),
+                server: Some("".into()),
+                port: Some(1080),
+                username: None,
+                password: None,
+                http_only: None,
+                secret: None,
+            }),
+        };
+        let cfg = TelegramConfig::from(telegram_raw);
+        assert!(cfg.proxy.is_none());
+    }
+
+    #[test]
+    fn test_telegram_merge_sets_proxy() {
+        let mut cfg = TelegramConfig {
+            api_id: "1".into(),
+            api_hash: "h".into(),
+            database_dir: ".data/tg".into(),
+            use_file_database: true,
+            use_chat_info_database: true,
+            use_message_database: true,
+            system_language_code: "en".into(),
+            device_model: "Desktop".into(),
+            verbosity_level: 2,
+            log_path: ".data/tdlib_rs/tdlib_rs.log".into(),
+            redirect_stderr: false,
+            proxy: None,
+        };
+        let raw = TelegramRaw {
+            api_id: None,
+            api_hash: None,
+            database_dir: None,
+            use_file_database: None,
+            use_chat_info_database: None,
+            use_message_database: None,
+            system_language_code: None,
+            device_model: None,
+            verbosity_level: None,
+            log_path: None,
+            redirect_stderr: None,
+            proxy: Some(ProxyRaw {
+                r#type: Some("http".into()),
+                server: Some("proxy:8080".into()),
+                port: Some(8080),
+                username: None,
+                password: None,
+                http_only: Some(true),
+                secret: None,
+            }),
+        };
+        let merged = cfg.merge(Some(raw));
+        assert!(merged.proxy.is_some());
+        let p = merged.proxy.unwrap();
+        assert_eq!(p.r#type, ProxyType::Http);
+        assert_eq!(p.server, "proxy:8080");
+        assert!(p.http_only);
+    }
+
+    #[test]
+    fn test_telegram_merge_proxy_empty_server_clears() {
+        let mut cfg = TelegramConfig {
+            api_id: "1".into(),
+            api_hash: "h".into(),
+            database_dir: ".data/tg".into(),
+            use_file_database: true,
+            use_chat_info_database: true,
+            use_message_database: true,
+            system_language_code: "en".into(),
+            device_model: "Desktop".into(),
+            verbosity_level: 2,
+            log_path: ".data/tdlib_rs/tdlib_rs.log".into(),
+            redirect_stderr: false,
+            proxy: Some(ProxyConfig {
+                r#type: ProxyType::Socks5,
+                server: "10.0.0.1".into(),
+                port: 1080,
+                username: "".into(),
+                password: "".into(),
+                http_only: false,
+                secret: "".into(),
+            }),
+        };
+        let raw = TelegramRaw {
+            api_id: None,
+            api_hash: None,
+            database_dir: None,
+            use_file_database: None,
+            use_chat_info_database: None,
+            use_message_database: None,
+            system_language_code: None,
+            device_model: None,
+            verbosity_level: None,
+            log_path: None,
+            redirect_stderr: None,
+            proxy: Some(ProxyRaw {
+                r#type: Some("socks5".into()),
+                server: Some("".into()),
+                port: Some(1080),
+                username: None,
+                password: None,
+                http_only: None,
+                secret: None,
+            }),
+        };
+        let merged = cfg.merge(Some(raw));
+        assert!(merged.proxy.is_none());
+    }
 }
