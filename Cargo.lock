@@ -1133,6 +1133,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "7.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d57d423b3c82e89b9a24ca3091fee61f456a26edbd28d26c65906f4bc1dcd8f"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs-sys"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4511,7 +4520,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22b81aaf77a285bb07e6e5f53d5309964af5a79d2e70fc3d03300a6ae1db4da7"
 dependencies = [
- "dirs",
+ "dirs 6.0.0",
  "futures-channel",
  "log",
  "once_cell",
@@ -4639,7 +4648,7 @@ dependencies = [
  "clap",
  "config",
  "crossterm",
- "dirs",
+ "dirs 7.0.0",
  "futures",
  "image",
  "lazy_static",
