@@ -33,7 +33,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [macos-13, macos-14]
         os: [macos-15-intel, macos-14]
         feature: [local-tdlib, download-tdlib, static-download, pkg-config, "local-tdlib,static"]
 
@@ -58,7 +57,6 @@ jobs:
       - name: Build TDLib
         if: steps.cache-tdlib-restore.outputs.cache-hit != 'true' && (contains(matrix.feature, 'local-tdlib') || contains(matrix.feature, 'pkg-config') || contains(matrix.feature, 'download-tdlib') || matrix.feature == 'static-download')
         run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           brew install gperf openssl zlib
           git clone https://github.com/tdlib/td.git
           cd td
