@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         feature: [local-tdlib, pkg-config, download-tdlib, static-download, "local-tdlib,static"]
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
 
     runs-on: ${{ matrix.os }}
 
